@@ -1,0 +1,61 @@
+{
+  "protocol_version": 2,
+  "purpose": "Validation-only grouped cross-validation selection and deployable uncertainty intervals",
+  "claim_boundary": "No test labels may be loaded, inspected, scored, or used for calibration selection, fitting, or conformal quantiles.",
+  "source_identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+    "size_bytes": 2875660
+  },
+  "partition": {
+    "allowed": "validation",
+    "forbidden": "test",
+    "validation_rows_are_selected_before_label_parsing": true
+  },
+  "grouped_cross_validation": {
+    "folds": 5,
+    "seed": 0,
+    "group_id": "cluster from the frozen MMseqs homology split manifest",
+    "group_cross_fold_count": 0,
+    "candidate_order_simplest_first": [
+      "identity",
+      "scalar",
+      "affine_variance"
+    ],
+    "fit_scope": "fit each candidate on validation-fold training groups and score held-out validation groups",
+    "refit_scope": "refit the selected candidate on all validation outputs"
+  },
+  "selection": {
+    "primary_metric": "mean out-of-fold Gaussian NLL",
+    "secondary_metric": "mean out-of-fold Gaussian CRPS",
+    "nll_tolerance": 1e-12,
+    "crps_tolerance": 1e-12,
+    "tie_rule": "Within NLL tolerance compare CRPS; within both tolerances retain the earlier simpler candidate."
+  },
+  "conformal_intervals": {
+    "coverage_levels": [
+      0.9,
+      0.95
+    ],
+    "variants": [
+      "unnormalized absolute residual",
+      "absolute residual normalized by selected calibrated standard deviation"
+    ],
+    "quantile_rank": "ceil((n_validation + 1) * coverage)",
+    "tie_policy": "higher order statistic with boundary ties covered",
+    "fit_scope": "all validation outputs only"
+  },
+  "artifact": {
+    "format_version": 2,
+    "bind_to": [
+      "checkpoint binary identity",
+      "task"
+    ],
+    "predict_output": "calibrated standard deviation plus normalized and unnormalized 90/95 conformal bounds"
+  }
+}

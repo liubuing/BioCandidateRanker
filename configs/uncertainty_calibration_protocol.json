@@ -1,0 +1,40 @@
+{
+  "protocol_version": 1,
+  "purpose": "Validation-only scalar calibration of heteroscedastic standard deviations",
+  "claim_boundary": "The internal test was observed before this protocol. Calibration quality is post-hoc internal evidence and not external uncertainty validation.",
+  "source_identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+    "size_bytes": 2875660
+  },
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "checkpoint_runs": "artifacts/fusion-three-seed/task-query-seed{seed}/best.pt",
+  "task": "log10_kcat",
+  "method": {
+    "name": "validation_gaussian_nll_scalar",
+    "scale_formula": "sqrt(mean(validation_squared_error / predicted_variance))",
+    "fitted_parameters_per_checkpoint": 1,
+    "test_labels_used_for_fit": false
+  },
+  "reported_test_metrics": [
+    "coverage_1sigma_before",
+    "coverage_1sigma_after",
+    "coverage_2sigma_before",
+    "coverage_2sigma_after",
+    "gaussian_nll_before",
+    "gaussian_nll_after"
+  ],
+  "nominal_gaussian_coverage": {
+    "coverage_1sigma": 0.682689492,
+    "coverage_2sigma": 0.954499736
+  }
+}

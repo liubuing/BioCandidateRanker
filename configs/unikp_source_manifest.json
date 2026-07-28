@@ -1,0 +1,18 @@
+{
+  "adapter": {
+    "accepted_rows": 16838,
+    "conflicting_duplicate_rows": 215,
+    "duplicate_rows": 395,
+    "rejected_rows": 172,
+    "total_rows": 17010
+  },
+  "identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "license_status": "redistribution_not_verified",
+  "source_dataset": "UniKP/DLKcat kcat development corpus",
+  "source_path_is_external_and_read_only": true,
+  "upstream_record_provenance": "corpus_level_only"
+}

@@ -1,0 +1,46 @@
+{
+  "protocol_version": 1,
+  "purpose": "Complete informative low-cost internal architecture ablations",
+  "claim_boundary": "The internal test was observed before this protocol. Results are post-hoc diagnostics and cannot support confirmatory architecture selection.",
+  "source_identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+    "size_bytes": 2875660
+  },
+  "seed": 42,
+  "baseline": "task_query_seed42",
+  "variants": {
+    "no_context": {
+      "arguments": ["--disable-context"]
+    },
+    "shared_task_query": {
+      "arguments": ["--shared-task-query"]
+    },
+    "global_mean_protein": {
+      "arguments": ["--protein-encoder", "global_mean"]
+    }
+  },
+  "training": {
+    "epochs": 3,
+    "batch_size": 32,
+    "learning_rate": 0.0002,
+    "checkpoint_selection": "lowest validation Gaussian NLL",
+    "d_model": 64,
+    "num_heads": 8,
+    "protein_layers": 2,
+    "molecule_layers": 2,
+    "fusion_layers": 1,
+    "protein_chunk_size": 128,
+    "context_buckets": 4096
+  },
+  "non_identifiable_ablations": {
+    "remove_fba_context": "All UniKP fba_context masks are false.",
+    "remove_evidence_weighting": "All UniKP records have the same unknown evidence tier and constant weight.",
+    "remove_uncertainty": "Deferred because it changes the training objective and requires a separately governed multi-seed protocol."
+  }
+}

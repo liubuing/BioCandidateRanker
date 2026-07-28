@@ -1,0 +1,15 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "example-enzyme-1",
+      "sequence": "MSTAGKVIKCKAAVLWELKKP",
+      "substrate_smiles": "CCO",
+      "substrate_name": "ethanol",
+      "organism": "Escherichia coli",
+      "ec": "1.1.1.1",
+      "enzyme_type": "wildtype",
+      "reaction": "ethanol + NAD -> acetaldehyde + NADH",
+      "fba_context": [0.1, 0.0, 1.0]
+    }
+  ]
+}

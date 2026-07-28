@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biocandidate-ranker"
+version = "0.1.0"
+description = "Host-aware multimodal enzyme candidate scoring research system"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.2",
+    "rdkit>=2023.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+baseline = ["scikit-learn>=1.5"]
+simulation = ["cobra>=0.30"]
+esm2 = ["fair-esm>=2.0"]
+full = ["scikit-learn>=1.5", "cobra>=0.30", "fair-esm>=2.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

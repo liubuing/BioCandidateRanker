@@ -1,0 +1,85 @@
+{
+  "protocol_version": 1,
+  "frozen_on": "2026-07-20",
+  "purpose": "Prospective temporal and homology-cold absolute enzyme kinetics benchmark",
+  "development_corpus": {
+    "name": "UniKP/DLKcat kcat development corpus",
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719,
+    "rows": 17010,
+    "record_level_citations_available": false
+  },
+  "temporal_gate": {
+    "primary_measurement_article_published_on_or_after": "2023-01-01",
+    "deposit_date_alone_is_not_sufficient": true,
+    "preprints_require_a_stable_doi_and_explicit_dataset_license": true
+  },
+  "license_gate": {
+    "accepted": [
+      "CC0-1.0",
+      "CC-BY-4.0"
+    ],
+    "deposit_license_must_cover_the_measurement_table": true,
+    "third_party_database_compilations_require_source_level_redistribution_rights": true
+  },
+  "record_inclusion": {
+    "direct_experimental_measurement": true,
+    "accepted_endpoints": [
+      "kcat_s-1",
+      "km_molar",
+      "kcat_per_km_M-1_s-1"
+    ],
+    "primary_endpoint": "log10_kcat_s-1",
+    "full_protein_sequence_or_unambiguous_accession_and_variant": true,
+    "single_defined_substrate_with_structure_identifier": true,
+    "required_provenance": [
+      "measurement_article_doi",
+      "dataset_doi_or_stable_record_url",
+      "source_file",
+      "source_row_or_table_cell",
+      "organism",
+      "enzyme_identity",
+      "substrate_name",
+      "endpoint",
+      "value",
+      "unit",
+      "assay_temperature_if_reported",
+      "assay_pH_if_reported"
+    ],
+    "derived_kcat_requires_enzyme_concentration_and_documented_formula": true,
+    "model_predictions_pseudolabels_and_relative_activity_are_excluded": true,
+    "bulk_environmental_or_community_apparent_kinetics_are_excluded": true
+  },
+  "leakage_gates": {
+    "exact_sequence_substrate_overlap_with_development": 0,
+    "mmseqs_min_identity": 0.3,
+    "mmseqs_coverage": 0.8,
+    "mmseqs_coverage_mode": 0,
+    "exclude_all_sequences_with_development_hit": true,
+    "publication_overlap": "exclude_when_known; report unavailable when development citations are absent",
+    "substrate_exact_and_murcko_scaffold_overlap": "report_and_stratify"
+  },
+  "diversity_and_size_gate": {
+    "minimum_records": 300,
+    "minimum_mmseqs_families": 30,
+    "minimum_unique_substrates": 50,
+    "maximum_records_per_family": 20,
+    "minimum_records_per_reported_family_metric": 3
+  },
+  "freeze_policy": {
+    "candidate_metadata_and_homology_may_be_audited_before_freeze": true,
+    "model_predictions_are_prohibited_before_final_selection_freeze": true,
+    "labels_may_not_drive_record_caps_or_family_selection": true,
+    "primary_model_checkpoint_and_metrics_must_be_frozen_before_evaluation": true,
+    "one_final_evaluation_only": true,
+    "failed_readiness_gate_means_no_model_evaluation": true
+  },
+  "planned_comparators": [
+    "train_mean",
+    "morgan_mlp",
+    "late_concat",
+    "task_query",
+    "DLKcat_when_training_overlap_is_reported_as_unavailable"
+  ],
+  "claim_boundary": "Until every readiness gate passes, collected records are a curation pool and not an external benchmark. No model may be selected or tuned from this pool."
+}

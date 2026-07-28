@@ -1,0 +1,32 @@
+{
+  "protocol_version": 1,
+  "purpose": "Prospective candidate-ranking benchmark, separate from EnzEngDB and IMDH",
+  "readiness_gates": {
+    "minimum_campaigns": 3,
+    "minimum_families": 3,
+    "minimum_candidates_per_campaign": 20
+  },
+  "campaign_metrics": [
+    "spearman",
+    "pairwise_accuracy",
+    "top_10pct_recall",
+    "top_10pct_enrichment"
+  ],
+  "candidate_policy": {
+    "complete_roster_required": true,
+    "required_dispositions": "Retain every assayed candidate as active, inactive, or censored",
+    "selection_must_be_label_independent": true
+  },
+  "leakage_policy": {
+    "family_nonoverlap_required_with": [
+      "all development data",
+      "all closed tests including EnzEngDB and IMDH"
+    ]
+  },
+  "freeze_policy": {
+    "checkpoints_frozen_before_labels": true,
+    "blind_prediction_deposit_required": true,
+    "one_final_join_and_evaluation": true
+  },
+  "claim_boundary": "This example defines gates only. It contains no candidates, labels, predictions, scores, or readiness claim."
+}

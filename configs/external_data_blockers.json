@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-07-27",
+  "default_status": "blocked_pending_external_data",
+  "discovery_policy": "Do not use broad literature discovery as the primary workstream. Use targeted repository requests, author requests, or experimental collaboration.",
+  "failure_policy": "Attempt one bounded correction for an isolated acquisition or schema problem; if unresolved, record it, skip it, and continue. HTTP 404 responses are not retried in the same cycle.",
+  "workstreams": [
+    {
+      "id": "absolute_kinetics_expansion",
+      "status": "blocked_pending_external_data",
+      "current": {"records": 192, "global_families": 25, "unique_substrates": 54},
+      "required": {"records": 300, "global_families": 30, "unique_substrates": 50},
+      "minimum_external_delta": {"records": 108, "new_global_families": 5, "unique_substrates": 0},
+      "latest_targeted_acquisition_receipt": "artifacts/external/temporal-absolute-kinetics/targeted-acquisition-receipt-2026-07-27.json",
+      "unblock_when": "All frozen temporal, license, exact-construct, saturation, provenance, exact-overlap, and MMseqs gates pass and the final record list is frozen.",
+      "priority_requests": ["Purdue Cdc14 deposited workbooks and construct files", "authors of already audited zero-hit families with unresolved exact constructs or saturation evidence", "new experimental collaboration spanning at least five unrelated families"]
+    },
+    {
+      "id": "governed_km_training",
+      "status": "blocked_pending_external_data",
+      "local_blocker_evidence": "artifacts/unikp-km-training-blocker-audit.json",
+      "latest_targeted_acquisition_blocker": "artifacts/external/governed-km-sabio-rk/blocker.json",
+      "unblock_when": "A permission-compatible direct experimental Km corpus supplies original linear values and units, row-level measurement provenance, exact sequences and structures, aggregation membership, and a frozen family-aware split.",
+      "priority_requests": ["Kroll/BRENDA source-row export and original frozen split", "SABIO-RK independent rows with stable accessions and licensing evidence"]
+    },
+    {
+      "id": "governed_absolute_activity_training",
+      "status": "blocked_pending_external_data",
+      "local_blocker_evidence": "artifacts/absolute-activity-training-blocker-audit.json",
+      "unblock_when": "Enough direct measurements share an explicit canonical physical unit and denominator, exact constructs, defined substrates, compatible assay semantics, row-level provenance, and multiple family-aware partitions.",
+      "prohibited_shortcuts": ["EnzEngDB fitness as an absolute label", "Lunzer values before absolute-unit resolution", "kcat relabeled as mass-specific activity", "instrument-relative RFU/min pooled across assays"]
+    },
+    {
+      "id": "experimental_flux_training",
+      "status": "blocked_pending_external_data",
+      "engineering_smoke": "artifacts/simulated-flux-smoke/manifest.json",
+      "latest_targeted_acquisition_blocker": "artifacts/experimental-yeast-flux/blocker.json",
+      "unblock_when": "Experimental flux rows provide reaction mapping, strain, medium, condition, method, canonical units, uncertainty, model mapping, and provenance; family/condition splits and target-leakage checks are frozen.",
+      "claim_boundary": "The existing FBA smoke is simulated and cannot unblock experimental flux."
+    },
+    {
+      "id": "prospective_candidate_ranking",
+      "status": "blocked_pending_external_data",
+      "implemented_gate": "src/biocandidate/prospective_benchmark.py",
+      "latest_external_dependency_receipt": "artifacts/external/prospective-candidate-ranking/external-dependency-receipt.json",
+      "collaborator_handoff": "artifacts/external/prospective-candidate-ranking/handoff",
+      "unblock_when": "An independent custodian supplies complete unobserved campaign rosters; readiness and checkpoints are frozen before labels; blind predictions are deposited; labels are exposed once; one evaluation receipt is produced."
+    }
+  ]
+}

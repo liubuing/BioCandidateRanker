@@ -1,0 +1,52 @@
+{
+  "protocol_version": 1,
+  "purpose": "Post-hoc robustness comparison of two already evaluated fusion modes",
+  "claim_boundary": "The internal test was observed before this protocol. Results measure seed stability and are not a new confirmatory test or an architecture-selection surface.",
+  "source_identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+    "size_bytes": 2875660
+  },
+  "conflict_policy": "median_log10_by_sequence_smiles",
+  "fusion_modes": [
+    "task_query",
+    "late_concat"
+  ],
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "training": {
+    "epochs": 3,
+    "batch_size": 32,
+    "learning_rate": 0.0002,
+    "optimizer": "AdamW",
+    "weight_decay": 0.01,
+    "checkpoint_selection": "lowest validation Gaussian NLL",
+    "d_model": 64,
+    "num_heads": 8,
+    "protein_layers": 2,
+    "molecule_layers": 2,
+    "fusion_layers": 1,
+    "protein_chunk_size": 128,
+    "context_buckets": 4096
+  },
+  "reported_test_metrics": [
+    "rmse",
+    "mae",
+    "pearson",
+    "coverage_1sigma",
+    "coverage_2sigma"
+  ],
+  "summary": {
+    "per_mode": "seed mean and sample standard deviation",
+    "paired": "late_concat minus task_query for each seed, with mean and sample standard deviation",
+    "no_additional_runs_after_test": true
+  }
+}

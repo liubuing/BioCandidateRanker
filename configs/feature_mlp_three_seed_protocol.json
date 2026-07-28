@@ -1,0 +1,56 @@
+{
+  "protocol_version": 1,
+  "purpose": "Complete fixed-budget amino-acid-composition and Morgan MLP baselines",
+  "claim_boundary": "The internal test was observed before this protocol. Results are post-hoc baseline completeness evidence, not confirmatory model selection.",
+  "source_identity": {
+    "row_count": 17010,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+    "size_bytes": 12132719
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+    "size_bytes": 2875660
+  },
+  "conflict_policy": "median_log10_by_sequence_smiles",
+  "features": {
+    "amino_acid_composition": {
+      "dimension": 20,
+      "definition": "normalized canonical amino-acid counts"
+    },
+    "morgan_r2_2048": {
+      "dimension": 2048,
+      "radius": 2,
+      "definition": "RDKit Morgan bit fingerprint"
+    }
+  },
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "training": {
+    "epochs": 40,
+    "batch_size": 256,
+    "learning_rate": 0.001,
+    "optimizer": "AdamW",
+    "weight_decay": 0.0001,
+    "hidden_dimensions": [
+      128,
+      64
+    ],
+    "dropout": 0.1,
+    "loss": "mean_squared_error",
+    "feature_scaling": "train_mean_and_population_std_with_zero_std_replaced_by_one",
+    "checkpoint_selection": "lowest validation RMSE"
+  },
+  "reported_test_metrics": [
+    "rmse",
+    "mae",
+    "pearson"
+  ],
+  "summary": {
+    "per_feature": "seed mean and sample standard deviation",
+    "no_hyperparameter_changes_after_test": true
+  }
+}
