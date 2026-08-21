@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,6 +58,55 @@ class HomologySplitTest(unittest.TestCase):
             )
             parsed = read_mmseqs_clusters(cluster_file)
         self.assertEqual(len(parsed), 2)
+
+    def test_apply_manifest_rejects_source_identity_mismatch(self):
+        records = [record("AAAA", 0), record("AAAT", 1)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "split.json"
+            path.write_text(json.dumps({
+                "format_version": 1,
+                "parameters": {
+                    "source_identity": {
+                        "sha256": "a" * 64, "size_bytes": 10, "row_count": 2,
+                    },
+                },
+                "rows": [
+                    {"source_row": 0, "split": "train"},
+                    {"source_row": 1, "split": "validation"},
+                ],
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "source identity"):
+                apply_split_manifest(records, path, source_identity={
+                    "sha256": "b" * 64, "size_bytes": 10, "row_count": 2,
+                })
+            with self.assertRaisesRegex(ValueError, "declares a source_identity"):
+                apply_split_manifest(records, path)
+
+    def test_apply_manifest_rejects_duplicate_rows_invalid_split_and_unknown_rows(self):
+        records = [record("AAAA", 0), record("AAAT", 1), record("CCCC", 2)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "split.json"
+            path.write_text(json.dumps({
+                "format_version": 1,
+                "rows": [
+                    {"source_row": 0, "split": "train"},
+                    {"source_row": 0, "split": "train"},
+                    {"source_row": 1, "split": "validation"},
+                    {"source_row": 9, "split": "test"},
+                ],
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate source_row"):
+                apply_split_manifest(records, path)
+            path.write_text(json.dumps({
+                "format_version": 1,
+                "rows": [
+                    {"source_row": 0, "split": "train"},
+                    {"source_row": 1, "split": "not-a-split"},
+                    {"source_row": 2, "split": "test"},
+                ],
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "invalid split"):
+                apply_split_manifest(records, path)
 
 
 if __name__ == "__main__":

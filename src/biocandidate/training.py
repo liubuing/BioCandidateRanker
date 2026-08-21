@@ -100,6 +100,43 @@ class CampaignBatchSampler(Sampler[list[int]]):
         return sum(ceil(len(indices) / self.batch_size) for _, indices in self._groups)
 
 
+class CampaignGroupedBatchSampler:
+    """Yield every record of one campaign together as a single batch.
+
+    Ranking pairs are then complete within each campaign instead of being restricted to
+    the sub-chunk produced by a fixed ``batch_size``. Memory cost is quadratic in the
+    largest campaign; consumers with very large groups should downsample pairs instead.
+    """
+
+    def __init__(self, records: Sequence[EnzymeSubstrateRecord], *, shuffle: bool = False,
+                 seed: int = 42) -> None:
+        self.shuffle = shuffle
+        self.seed = seed
+        self.epoch = 0
+        groups: dict[str, list[int]] = {}
+        for index, record in enumerate(records):
+            if not isinstance(record, EnzymeSubstrateRecord):
+                raise TypeError("CampaignGroupedBatchSampler requires EnzymeSubstrateRecord items")
+            groups.setdefault(record.campaign_group, []).append(index)
+        self._groups = tuple((name, tuple(indices)) for name, indices in groups.items())
+
+    def set_epoch(self, epoch: int) -> None:
+        self.epoch = epoch
+
+    def __iter__(self) -> Iterator[list[int]]:
+        groups = [(name, list(indices)) for name, indices in self._groups]
+        if self.shuffle:
+            generator = random.Random(self.seed + self.epoch)
+            generator.shuffle(groups)
+            for _, indices in groups:
+                generator.shuffle(indices)
+        for _, indices in groups:
+            yield indices
+
+    def __len__(self) -> int:
+        return len(self._groups)
+
+
 def move_batch(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
     return {name: value.to(device) for name, value in batch.items()}
 
@@ -155,7 +192,16 @@ def run_epoch(model: BioCandidateRanker, loader: DataLoader, device: torch.devic
 def run_epoch_accum(model: BioCandidateRanker, loader: DataLoader, device: torch.device,
                     optimizer: torch.optim.Optimizer, *,
                     accum_steps: int = 1) -> EpochMetrics:
-    """Training epoch with gradient accumulation for memory-constrained GPUs."""
+    """Training epoch with gradient accumulation for memory-constrained GPUs.
+
+    Each accumulation window joins its micro-batches into the same objective as a single
+    batch of the combined rows: the loss is ``sum(numerator)/sum(denominator)`` over the
+    window with numerator and denominator accumulated *before* per-batch normalization.
+    A micro-batch carrying few observed labels therefore contributes exactly as many
+    gradient units as its share of the window's total observed-label weight. Each window
+    backpropagates once with that window's total denominator; a trailing partial window is
+    normalized by its own denominator, not the nominal ``accum_steps``.
+    """
     if accum_steps < 1:
         raise ValueError("accum_steps must be positive")
     model.train()
@@ -164,39 +210,64 @@ def run_epoch_accum(model: BioCandidateRanker, loader: DataLoader, device: torch
     saw_batch = False
     observed = 0
     optimizer.zero_grad(set_to_none=True)
-    micro_step = 0
+    window_batches: list[tuple[dict[str, torch.Tensor], torch.Tensor, torch.Tensor]] = []
+    window_denominator = 0.0
     for batch in loader:
         saw_batch = True
         batch = move_batch(batch, device)
         output = model(batch)
         if model.config.uncertainty_mode == "heteroscedastic":
-            loss, _, loss_numerator, loss_denominator = masked_multitask_gaussian_loss(
+            _, _, loss_numerator, loss_denominator = masked_multitask_gaussian_loss(
                 output["mean"], output["log_variance"], batch["labels"],
                 batch["label_mask"], batch["evidence_weight"], return_components=True)
         else:
-            loss, _, loss_numerator, loss_denominator = masked_multitask_mse_loss(
+            _, _, loss_numerator, loss_denominator = masked_multitask_mse_loss(
                 output["mean"], batch["labels"], batch["label_mask"],
                 batch["evidence_weight"], return_components=True)
-        # Scale loss by accumulation steps for correct gradient magnitude
-        (loss / accum_steps).backward()
-        total_loss_numerator += float(loss_numerator.detach())
-        total_loss_denominator += float(loss_denominator.detach())
+        numerator = loss_numerator.detach()
+        denominator = loss_denominator.detach()
+        window_batches.append((batch, numerator, denominator))
+        window_denominator += float(denominator)
+        total_loss_numerator += float(numerator)
+        total_loss_denominator += float(denominator)
         observed += int(batch["label_mask"].sum())
-        micro_step += 1
-        if micro_step % accum_steps == 0:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            optimizer.zero_grad(set_to_none=True)
-    # Flush remaining gradients
-    if micro_step % accum_steps != 0:
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-        optimizer.zero_grad(set_to_none=True)
+        if len(window_batches) >= accum_steps:
+            _backprop_window(model, device, window_batches, window_denominator, optimizer)
+            window_batches = []
+            window_denominator = 0.0
+    if window_batches:
+        _backprop_window(model, device, window_batches, window_denominator, optimizer)
     if not saw_batch:
         raise ValueError("data loader is empty")
     if total_loss_denominator <= 0:
         raise ValueError("data loader contains no observed labels with positive evidence weight")
     return EpochMetrics(total_loss_numerator / total_loss_denominator, observed)
+
+
+def _backprop_window(model: BioCandidateRanker, device: torch.device,
+                     window_batches: list[tuple[dict[str, torch.Tensor], torch.Tensor, torch.Tensor]],
+                     window_denominator: float,
+                     optimizer: torch.optim.Optimizer) -> None:
+    """Backpropagate one accumulated window as ``sum(numerator)/sum(denominator)``."""
+    if window_denominator <= 0:
+        return
+    scale = 1.0 / window_denominator
+    for batch, numerator, denominator in window_batches:
+        if float(denominator) > 0:
+            batch = move_batch(batch, device)
+            output = model(batch)
+            if model.config.uncertainty_mode == "heteroscedastic":
+                loss, _, _, _ = masked_multitask_gaussian_loss(
+                    output["mean"], output["log_variance"], batch["labels"],
+                    batch["label_mask"], batch["evidence_weight"], return_components=True)
+            else:
+                loss, _, _, _ = masked_multitask_mse_loss(
+                    output["mean"], batch["labels"], batch["label_mask"],
+                    batch["evidence_weight"], return_components=True)
+            (loss * (scale * float(denominator))).backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
 
 
 def run_ranking_epoch(
@@ -251,7 +322,7 @@ def save_checkpoint(path: str | Path, model: BioCandidateRanker,
         "epoch": epoch,
         "data_manifest": data_manifest,
         "metrics": metrics,
-        "torch_version": torch.__version__,
+        "torch_version": str(torch.__version__),
         "torch_rng_state": torch.get_rng_state(),
         "cuda_rng_state_all": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
         "data_loader_generator_state": data_loader_generator_state,
@@ -267,7 +338,7 @@ def save_checkpoint(path: str | Path, model: BioCandidateRanker,
 
 
 def load_checkpoint(path: str | Path, device: torch.device) -> tuple[BioCandidateRanker, dict]:
-    payload = torch.load(path, map_location=device, weights_only=False)
+    payload = torch.load(path, map_location=device, weights_only=True)
     if payload.get("format_version") != 1:
         raise ValueError("unsupported checkpoint format")
     model = BioCandidateRanker(ModelConfig.from_dict(payload["model_config"]))

@@ -66,7 +66,8 @@ def test_fit_calibration_uses_only_validation_and_explicit_method(tmp_path, monk
         return SimpleNamespace(records=records)
 
     monkeypatch.setattr(cli, "read_unikp_json", read_validation)
-    monkeypatch.setattr(cli, "apply_split_manifest", lambda values, path: values)
+    monkeypatch.setattr(cli, "apply_split_manifest",
+                     lambda values, path, source_identity: values)
     monkeypatch.setattr(cli, "load_checkpoint", lambda path, device: (FakeModel(), {
         "data_manifest": run_manifest,
     }))
@@ -224,7 +225,8 @@ def test_grouped_cv_calibration_never_requests_test_rows(tmp_path, monkeypatch):
 
     monkeypatch.setattr(cli, "verify_manifest", lambda *args: None)
     monkeypatch.setattr(cli, "read_unikp_json", read_rows)
-    monkeypatch.setattr(cli, "apply_split_manifest", lambda records, path: records)
+    monkeypatch.setattr(cli, "apply_split_manifest",
+                     lambda records, path, source_identity: records)
     monkeypatch.setattr(cli, "load_checkpoint", lambda path, device: (FakeModel(), {
         "data_manifest": run_manifest,
     }))

@@ -73,6 +73,7 @@ from .evaluation import (
 )
 from .training import (
     CampaignBatchSampler,
+    CampaignGroupedBatchSampler,
     RecordDataset,
     create_lr_scheduler,
     run_epoch,
@@ -858,7 +859,7 @@ def train_enzengdb_ranker_command(args: argparse.Namespace) -> None:
     )
     train_sampler = CampaignBatchSampler(
         train_records, args.batch_size, shuffle=True, seed=args.seed)
-    validation_sampler = CampaignBatchSampler(validation_records, args.batch_size)
+    validation_sampler = CampaignGroupedBatchSampler(validation_records)
     train_loader = DataLoader(
         RecordDataset(train_records), batch_sampler=train_sampler,
         collate_fn=collator, num_workers=0)
@@ -933,7 +934,8 @@ def train_command(args: argparse.Namespace) -> None:
         source_records = read_result.records
         if args.conflict_policy == "median":
             if args.split_manifest:
-                source_records = apply_split_manifest(source_records, args.split_manifest)
+                source_records = apply_split_manifest(
+                    source_records, args.split_manifest, source_identity=identity)
             source_records = aggregate_pair_measurements(source_records)
     else:
         source_records = read_normalized_kinetics_jsonl(args.data).records
@@ -946,7 +948,7 @@ def train_command(args: argparse.Namespace) -> None:
         records = (
             source_records
             if args.data_format == "unikp" and args.conflict_policy == "median"
-            else apply_split_manifest(source_records, args.split_manifest)
+            else apply_split_manifest(source_records, args.split_manifest, source_identity=identity)
         )
     else:
         records = split_records(source_records, args.split_strategy, seed=args.seed)
@@ -1150,9 +1152,33 @@ def predict_command(args: argparse.Namespace) -> None:
     rows = payload.get("candidates", payload) if isinstance(payload, dict) else payload
     if not isinstance(rows, list):
         raise ValueError("candidate input must be a JSON list or a candidates list")
-    from .data import EnzymeSubstrateRecord
+    from .data import EnzymeSubstrateRecord, FBAFeatureMetadata
+    fba_metadata = None
+    fba_features_path = getattr(args, "fba_features", None)
+    if fba_features_path:
+        fba_payload = json.loads(Path(fba_features_path).read_text(encoding="utf-8"))
+        try:
+            fba_metadata = FBAFeatureMetadata(
+                schema_version=fba_payload["schema_version"],
+                feature_ids=tuple(fba_payload["feature_ids"]),
+                model_id=fba_payload["model_id"],
+                solver_id=fba_payload["solver_id"],
+                objective_id=fba_payload["objective_id"],
+                condition_id=fba_payload["condition_id"],
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"invalid FBA feature metadata in {fba_features_path}: {exc}") from exc
+        if len(fba_metadata.feature_ids) != model.config.fba_context_dim:
+            raise ValueError(
+                f"FBA feature metadata width {len(fba_metadata.feature_ids)} does not match "
+                f"checkpoint configured width {model.config.fba_context_dim}")
     records = []
     for index, row in enumerate(rows):
+        fba_context = tuple(row.get("fba_context", ()))
+        if fba_context and fba_metadata is None:
+            raise ValueError(
+                "candidate supplies fba_context but --fba-features metadata was not provided")
         records.append(EnzymeSubstrateRecord(
             candidate_id=str(row.get("candidate_id", index)),
             sequence=row["sequence"],
@@ -1162,7 +1188,8 @@ def predict_command(args: argparse.Namespace) -> None:
             ec=str(row.get("ec", "")),
             enzyme_type=str(row.get("enzyme_type", "unknown")),
             reaction=str(row.get("reaction", "")),
-            fba_context=tuple(row.get("fba_context", ())),
+            fba_context=fba_context,
+            fba_feature_metadata=fba_metadata,
             source_dataset=str(Path(args.input).resolve()),
             source_row=index,
         ))
@@ -1263,7 +1290,8 @@ def evaluate_command(args: argparse.Namespace) -> None:
             raise ValueError(
                 f"requested tasks are not supported by normalized kinetics: "
                 f"{', '.join(unsupported)}")
-    records = apply_split_manifest(records, args.split_manifest)
+    records = apply_split_manifest(
+        records, args.split_manifest, source_identity=source_manifest["identity"])
     if args.data_format == "unikp" and args.conflict_policy == "median":
         records = aggregate_pair_measurements(records)
     train_records = [record for record in records if record.split == "train"]
@@ -1318,7 +1346,9 @@ def evaluate_classical_baselines_command(args: argparse.Namespace) -> None:
 
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**source_manifest["identity"]))
-    records = apply_split_manifest(read_unikp_json(args.data).records, args.split_manifest)
+    records = apply_split_manifest(
+        read_unikp_json(args.data).records, args.split_manifest,
+        source_identity=source_manifest["identity"])
     records = aggregate_pair_measurements(records)
     partitions = {
         name: [record for record in records if record.split == name]
@@ -1443,7 +1473,9 @@ def train_feature_mlp_command(args: argparse.Namespace) -> None:
     split_identity = _manifest_dict(build_manifest(args.split_manifest))
     if split_identity != protocol.get("split_identity"):
         raise ValueError("feature MLP protocol split identity mismatch")
-    records = apply_split_manifest(read_unikp_json(args.data).records, args.split_manifest)
+    records = apply_split_manifest(
+        read_unikp_json(args.data).records, args.split_manifest,
+        source_identity=source_manifest["identity"])
     records = aggregate_pair_measurements(records)
     partitions = {
         name: [record for record in records if record.split == name]
@@ -1541,7 +1573,7 @@ def summarize_feature_mlp_runs_command(args: argparse.Namespace) -> None:
                 raise ValueError(f"feature MLP source mismatch: {feature} seed {seed}")
             if payload.get("split_identity") != protocol.get("split_identity"):
                 raise ValueError(f"feature MLP split mismatch: {feature} seed {seed}")
-            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
             if (checkpoint.get("feature") != feature or checkpoint.get("seed") != seed
                     or checkpoint.get("protocol_identity") != protocol_identity):
                 raise ValueError(f"feature MLP checkpoint mismatch: {feature} seed {seed}")
@@ -1731,7 +1763,8 @@ def fit_calibration_command(args: argparse.Namespace) -> None:
     if not validation_rows:
         raise ValueError("validation partition is empty")
     records = read_unikp_json(args.data, source_rows=set(validation_rows)).records
-    records = apply_split_manifest(records, args.split_manifest)
+    records = apply_split_manifest(
+        records, args.split_manifest, source_identity=source_manifest["identity"])
     if args.conflict_policy == "median":
         records = aggregate_pair_measurements(records)
     validation_records = [record for record in records if record.split == "validation"]
@@ -1810,7 +1843,9 @@ def calibrate_uncertainty_command(args: argparse.Namespace) -> None:
     if (checkpoint_manifest.get("source", {}).get("identity") != protocol["source_identity"]
             or checkpoint_manifest.get("split", {}).get("identity") != split_identity):
         raise ValueError("uncertainty calibration checkpoint identity mismatch")
-    records = apply_split_manifest(read_unikp_json(args.data).records, args.split_manifest)
+    records = apply_split_manifest(
+        read_unikp_json(args.data).records, args.split_manifest,
+        source_identity=source_manifest["identity"])
     records = aggregate_pair_measurements(records)
     validation_records = [record for record in records if record.split == "validation"]
     test_records = [record for record in records if record.split == "test"]
@@ -2038,6 +2073,10 @@ def build_parser() -> argparse.ArgumentParser:
     predict.add_argument("--input", required=True)
     predict.add_argument("--output", required=True)
     predict.add_argument("--calibration-artifact")
+    predict.add_argument(
+        "--fba-features",
+        help="JSON with FBAFeatureMetadata (schema_version, feature_ids, model_id, solver_id, "
+             "objective_id, condition_id); required when candidates supply fba_context")
     predict.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     predict.set_defaults(func=predict_command)
 

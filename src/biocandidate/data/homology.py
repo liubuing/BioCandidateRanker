@@ -5,7 +5,7 @@ import json
 import subprocess
 from dataclasses import replace
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 from .schema import EnzymeSubstrateRecord
 
@@ -223,11 +223,35 @@ def write_split_manifest(records: Sequence[EnzymeSubstrateRecord], clusters: Map
     target.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def apply_split_manifest(records: Sequence[EnzymeSubstrateRecord], path: str | Path):
+def apply_split_manifest(records: Sequence[EnzymeSubstrateRecord], path: str | Path,
+                         *, source_identity: Mapping[str, Any] | None = None):
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("format_version") != 1:
         raise ValueError("unsupported split manifest format")
-    assignments = {int(row["source_row"]): row["split"] for row in payload["rows"]}
+    declared = payload.get("parameters", {}).get("source_identity")
+    if source_identity is not None:
+        if declared is not None and declared != dict(source_identity):
+            raise ValueError(
+                "split manifest source identity does not match the supplied data source")
+    elif declared is not None:
+        raise ValueError(
+            "split manifest declares a source_identity; pass the matching data source "
+            "identity instead of relying on the raw manifest")
+    assignments: dict[int, str] = {}
+    allowed = {"train", "validation", "test"}
+    for row in payload["rows"]:
+        source_row = int(row["source_row"])
+        if source_row in assignments:
+            raise ValueError(f"split manifest contains duplicate source_row {source_row}")
+        split = row["split"]
+        if split not in allowed:
+            raise ValueError(f"split manifest has invalid split {split!r} at source_row {source_row}")
+        assignments[source_row] = split
+    record_rows = {record.source_row for record in records}
+    unknown = sorted(assignments.keys() - record_rows)
+    if unknown:
+        raise ValueError(
+            f"split manifest assigns {len(unknown)} source rows absent from the records")
     missing = [record.source_row for record in records if record.source_row not in assignments]
     if missing:
         raise ValueError(f"split manifest is missing {len(missing)} accepted source rows")

@@ -8,13 +8,13 @@ checkpoints, and reports stay under this repository.
 
 ## Software Implementation Release
 
-The current software implementation is formally closed as `software-implementation-v3`.
+The current software implementation is formally closed as `software-implementation-v4`.
 Its file-level SHA256 freeze and claim boundary are in
-`configs/software_implementation_release_v3.json`; v1 and v2 remain as historical records
+`configs/software_implementation_release_v4.json`; v1 through v3 remain as historical records
 under `configs/software_implementation_release_v*.json`. Verify the closed baseline with:
 
 ```powershell
-python scripts\verify_software_release.py --manifest configs\software_implementation_release_v3.json
+python scripts\verify_software_release.py --manifest configs\software_implementation_release_v4.json
 ```
 
 Absolute-kinetics benchmark expansion, governed Km training, governed absolute-activity
