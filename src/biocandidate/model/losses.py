@@ -4,12 +4,61 @@ import torch
 import torch.nn.functional as F
 
 
+def _same_campaign_pairs(
+    scores: torch.Tensor,
+    labels: torch.Tensor,
+    campaign_ids: torch.Tensor,
+    *,
+    max_pairs: int | None,
+    pair_seed: int,
+) -> tuple[torch.Tensor, torch.Tensor, int]:
+    """Enumerate comparable same-campaign pairs without dense matrices.
+
+    Each campaign's rows are scanned once, so peak memory is linear in the number of
+    pairs actually formed instead of quadratic in the batch size. When ``max_pairs`` is
+    set, a deterministic random subset is selected afterwards.
+    """
+    device = scores.device
+    best_rows: list[int] = []
+    second_rows: list[int] = []
+    seen_campaigns: dict[int, list[int]] = {}
+    for row in range(len(scores)):
+        prior = seen_campaigns.get(int(campaign_ids[row]), [])
+        for index in prior:
+            if labels[index] != labels[row]:
+                best_rows.append(index)
+                second_rows.append(row)
+        seen_campaigns.setdefault(int(campaign_ids[row]), []).append(row)
+    pair_count = len(best_rows)
+    if pair_count == 0:
+        return (torch.empty((0,), dtype=torch.long, device=device),
+                torch.empty((0,), dtype=torch.long, device=device),
+                0)
+    if max_pairs is not None and pair_count > max_pairs:
+        generator = torch.Generator(device=device).manual_seed(pair_seed)
+        keep = torch.randperm(pair_count, generator=generator)[:max_pairs].tolist()
+        best_rows = [best_rows[i] for i in keep]
+        second_rows = [second_rows[i] for i in keep]
+        pair_count = max_pairs
+    return (torch.tensor(best_rows, dtype=torch.long, device=device),
+            torch.tensor(second_rows, dtype=torch.long, device=device),
+            pair_count)
+
+
 def pairwise_logistic_ranking_loss(
     scores: torch.Tensor,
     labels: torch.Tensor,
     campaign_ids: torch.Tensor,
+    *,
+    max_pairs: int | None = None,
+    pair_seed: int = 0,
 ) -> tuple[torch.Tensor, int]:
-    """Logistic ranking loss over same-campaign unordered pairs with unequal labels."""
+    """Logistic ranking loss over same-campaign unordered pairs with unequal labels.
+
+    Pairs are enumerated campaign-wise without dense matrices, so peak memory is linear in
+    the number of pairs. ``max_pairs`` caps the number of pairs with a deterministic
+    subsample; ``None`` keeps exhaustive enumeration.
+    """
     if scores.ndim != 1 or labels.ndim != 1 or campaign_ids.ndim != 1:
         raise ValueError("scores, labels, and campaign_ids must be one-dimensional")
     if scores.shape != labels.shape or scores.shape != campaign_ids.shape:
@@ -22,22 +71,18 @@ def pairwise_logistic_ranking_loss(
         raise ValueError("scores, labels, and campaign_ids must be on the same device")
     if not torch.isfinite(scores).all() or not torch.isfinite(labels).all():
         raise ValueError("scores and labels must contain only finite values")
+    if max_pairs is not None and max_pairs < 1:
+        raise ValueError("max_pairs must be positive when provided")
+    if not isinstance(pair_seed, int):
+        raise TypeError("pair_seed must be an integer")
 
-    upper_triangle = torch.triu(
-        torch.ones((scores.numel(), scores.numel()), dtype=torch.bool, device=scores.device),
-        diagonal=1,
-    )
-    comparable = (
-        upper_triangle
-        & campaign_ids[:, None].eq(campaign_ids[None, :])
-        & labels[:, None].ne(labels[None, :])
-    )
-    pair_count = int(comparable.sum().item())
+    best, second, pair_count = _same_campaign_pairs(
+        scores, labels, campaign_ids, max_pairs=max_pairs, pair_seed=pair_seed)
     if pair_count == 0:
         return scores.sum() * 0.0, 0
-    score_differences = scores[:, None] - scores[None, :]
-    directions = torch.sign(labels[:, None] - labels[None, :])
-    return F.softplus(-directions[comparable] * score_differences[comparable]).mean(), pair_count
+    directions = torch.sign(labels[best] - labels[second])
+    score_differences = scores[best] - scores[second]
+    return F.softplus(-directions * score_differences).mean(), pair_count
 
 
 def masked_multitask_gaussian_loss(

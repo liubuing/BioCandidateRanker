@@ -186,6 +186,21 @@ class PairwiseRankingLossTest(unittest.TestCase):
         loss.backward()
         self.assertEqual(scores.grad.tolist(), [0.0, 0.0])
 
+    def test_max_pairs_subsamples_deterministically(self):
+        labels = torch.tensor([0.0, 1.0, 0.5, 0.3], dtype=torch.float32)
+        campaign_ids = torch.tensor([1, 1, 1, 1], dtype=torch.int64)
+        scores = torch.tensor([-1.0, 1.0, 0.2, -0.4], dtype=torch.float32)
+        full_loss, full_count = pairwise_logistic_ranking_loss(scores, labels, campaign_ids)
+        self.assertEqual(full_count, 6)
+
+        capped_loss, capped_count = pairwise_logistic_ranking_loss(
+            scores, labels, campaign_ids, max_pairs=3, pair_seed=7)
+        self.assertEqual(capped_count, 3)
+        repeat_loss, _ = pairwise_logistic_ranking_loss(
+            scores, labels, campaign_ids, max_pairs=3, pair_seed=7)
+        self.assertEqual(capped_loss.item(), repeat_loss.item())
+        self.assertNotEqual(capped_count, full_count)
+
 
 class ClassicalFeatureTest(unittest.TestCase):
     def test_composition_and_morgan_features_are_stable(self):

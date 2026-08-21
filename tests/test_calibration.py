@@ -9,6 +9,7 @@ from biocandidate.calibration import (
     IdentityGaussianCalibrator,
     ScalarGaussianCalibrator,
     SplitConformalCalibrator,
+    conformal_calibrator_from_dict,
     deterministic_group_folds,
     gaussian_crps,
     gaussian_nll,
@@ -103,6 +104,21 @@ def test_conformal_finite_sample_rank_normalization_and_tie_policy():
 
     finite_sample = SplitConformalCalibrator.fit(mean, labels, alpha=0.1)
     assert math.isinf(finite_sample.radius)
+
+
+def test_infinite_radius_round_trips_through_json_artifact_without_crashing():
+    mean = torch.tensor([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], dtype=torch.float64)
+    labels = torch.tensor([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], dtype=torch.float64)
+    infinite_radius = SplitConformalCalibrator.fit(mean, labels, alpha=0.05)
+    assert math.isinf(infinite_radius.radius)
+    assert infinite_radius.to_dict()["radius"] is None
+
+    serialized = json.dumps(infinite_radius.to_dict(), allow_nan=False)
+    restored = conformal_calibrator_from_dict(json.loads(serialized))
+    assert math.isinf(restored.radius)
+    lower, upper = restored.interval(torch.tensor([4.0]))
+    assert not math.isfinite(float(lower[0]))
+    assert not math.isfinite(float(upper[0]))
 
 
 def test_group_folds_are_deterministic_and_isolate_groups():

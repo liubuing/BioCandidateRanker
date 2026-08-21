@@ -114,12 +114,37 @@ class TestESM2Encoder(unittest.TestCase):
         out2, mask2 = encoder(padded_tokens, padded_mask)
         # Both produce 1 chunk
         self.assertEqual(out1.shape, out2.shape)
-        # Outputs should be highly correlated (attention context differs slightly)
-        flat1 = out1.flatten()
-        flat2 = out2.flatten()
-        correlation = torch.nn.functional.cosine_similarity(
-            flat1.unsqueeze(0), flat2.unsqueeze(0))
-        self.assertGreater(float(correlation), 0.95)
+        # EOS now sits immediately after the valid residues, so representations (and
+        # therefore chunk-pooled outputs) must be identical regardless of trailing padding.
+        self.assertTrue(torch.allclose(out1, out2, atol=1e-4),
+                        f"padding-dependent output: {out1.flatten()[:4]} vs {out2.flatten()[:4]}")
+        # Padded positions still masked out of chunk pooling.
+
+    def test_output_is_invariant_to_batch_composition(self):
+        from biocandidate.model.encoders import ESM2ProteinEncoder
+        encoder = ESM2ProteinEncoder(d_model=64, chunk_size=4, dropout=0.0)
+        encoder.eval()
+        torch.manual_seed(0)
+        width = 20  # collator pads all rows of a batch to the same width
+        token_ids = torch.randint(2, 22, (1, width))
+        short_len = 6
+        short_mask = torch.ones(1, width, dtype=torch.bool)
+        short_mask[0, short_len:] = False
+        solo, _ = encoder(token_ids, short_mask)
+
+        # Same 6-residue sequence batched beside a genuinely longer 15-residue sequence.
+        batch = torch.cat((token_ids, torch.randint(2, 22, (1, width))), dim=0)
+        long_mask = torch.ones(2, width, dtype=torch.bool)
+        long_mask[0, short_len:] = False
+        long_mask[1, 15:] = False
+        joined, _ = encoder(batch, long_mask)
+
+        # EOS sits immediately after each row's own residues, so the short sequence's
+        # framing and therefore its chunk-pooled embedding are unchanged by batch neighbors.
+        self.assertEqual(solo.shape[1], joined.shape[1])
+        self.assertTrue(
+            torch.allclose(solo.flatten(), joined[0].flatten(), atol=1e-4),
+            "short-sequence embedding changed when batched beside a longer sequence")
 
     def test_padded_chunks_are_zero(self):
         from biocandidate.model.encoders import ESM2ProteinEncoder

@@ -165,7 +165,7 @@
     }
   ],
   "identity_policy": "file-level SHA256 freeze; this workspace is not a Git repository",
-  "package_version": "0.2.0",
+  "package_version": "0.1.0",
   "predecessor": "software-implementation-v2",
   "release_id": "software-implementation-v3",
   "schema_version": 1,

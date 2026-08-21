@@ -5,12 +5,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 
 def verify_release(root: Path, manifest_path: Path) -> list[str]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     issues: list[str] = []
+    pyproject = root / "pyproject.toml"
+    if pyproject.is_file():
+        project = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {})
+        package_version = project.get("version")
+        declared = manifest.get("package_version")
+        if package_version and declared is not None and package_version != declared:
+            issues.append(
+                f"package_version mismatch: manifest {declared!r} vs pyproject {package_version!r}")
     for entry in manifest["frozen_files"]:
         path = root / entry["path"]
         if not path.is_file():

@@ -27,7 +27,6 @@
     "validation_only_grouped_uncertainty_calibration": "implemented_and_verified"
   },
   "claim_boundary": "This release does not claim a ready independent absolute-kinetics benchmark, a trained governed Km or absolute-activity model, an experimental-flux model, or a completed prospective candidate-ranking benchmark. v2 adds ESM-2 encoder and LR scheduling as engineering capabilities; no new scientific validation is claimed.",
-  "closed_on": "2026-07-28",
   "frozen_files": [
     {
       "path": "pyproject.toml",
@@ -121,8 +120,8 @@
     },
     {
       "path": "src/biocandidate/calibration.py",
-      "sha256": "ba0a6d74b9cc86a37753614bd498e8796bf5919bbc077ed6f6551fbc9725f130",
-      "size_bytes": 25411
+      "sha256": "a7f457ab276f15482fda6a94c76c71c3f2b822a34061c8542a8a098ed24561aa",
+      "size_bytes": 25517
     },
     {
       "path": "src/biocandidate/prospective_benchmark.py",
@@ -141,8 +140,8 @@
     },
     {
       "path": "src/biocandidate/model/encoders.py",
-      "sha256": "b1f3f090c27a93cb5f4f594d00b9f5c6123ba5411358ab873594db7663f5d1c6",
-      "size_bytes": 12272
+      "sha256": "a68d0c043e8a87b5223c15bf6bc7a471d45dd7d914d7259fe96e58f52c82012a",
+      "size_bytes": 13695
     },
     {
       "path": "src/biocandidate/model/ranker.py",
@@ -151,26 +150,81 @@
     },
     {
       "path": "src/biocandidate/training.py",
-      "sha256": "49f06fc0e567fbd13aadc321cd626ec7980d96540f33df5e2429ba81fec213bf",
-      "size_bytes": 9003
+      "sha256": "176c0f79f0a62522f754642f79d674ab4700200efae994710bc73f4f5ebacd06",
+      "size_bytes": 14751
     },
     {
       "path": "src/biocandidate/cli.py",
-      "sha256": "2513fac1544adf980d2338b1f4be2c96b83a269e6b328e4eb637c825d72d87fb",
-      "size_bytes": 107457
+      "sha256": "1db1adc175fbf9133d13b3cbb7732c2ca7f36ec6f5180a014de6b57b7b1039a0",
+      "size_bytes": 110440
     },
     {
       "path": "tests/test_esm2_encoder.py",
-      "sha256": "d357b06b4a586a317e4495ffdfef4e7dc42e3e65e5be4c8b33261b9ace1f06fd",
-      "size_bytes": 7526
+      "sha256": "58376a971b61a72a81ce9d8ebfb9cedbd8c970c9ac3da202798aa976121e300a",
+      "size_bytes": 8947
+    },
+    {
+      "path": "src/biocandidate/data/homology.py",
+      "sha256": "5f632c0c664abd5e71369997c6e45f2411f549dd870824070ddb719be63a062d",
+      "size_bytes": 10720
+    },
+    {
+      "path": "tests/test_training.py",
+      "sha256": "436ae3498a8fa8360e43072e3744894f38c71284b20e9fdd5a4eab5961ae9c31",
+      "size_bytes": 11578
+    },
+    {
+      "path": "tests/test_data_homology.py",
+      "sha256": "7c1e02cfcaecffe00f5a1919478d9dd0cba5608a0f8a8a27bb80329051cb91f6",
+      "size_bytes": 4580
+    },
+    {
+      "path": "tests/test_cli_calibration.py",
+      "sha256": "dacdee04405c9c5d2bc3d3e6b1dbc7429c6a230c9047ef1b7bc37f73f6e537a3",
+      "size_bytes": 10859
+    },
+    {
+      "path": "tests/test_cli_predict_fba.py",
+      "sha256": "fccd7d044b1b7f18aabbd138f5b137a6a896d69a65e1960da1e8157b2db05166",
+      "size_bytes": 5830
+    },
+    {
+      "path": "src/biocandidate/model/losses.py",
+      "sha256": "b08df671b4cf3ee65b9dbbd6cab1f50f6bc3a69c98dea6ae6f84791fb0c8f9fe",
+      "size_bytes": 6074
+    },
+    {
+      "path": "src/biocandidate/evaluation.py",
+      "sha256": "5f9a2cc37ca1228a128bfa6af8e02cf905b86eb1090694eb266c1093f96724f1",
+      "size_bytes": 13919
+    },
+    {
+      "path": "scripts/verify_software_release.py",
+      "sha256": "49a5b8e5f74f198dc646931ba8fdff36ffcd05920e980c47d120abf6eac7df0d",
+      "size_bytes": 1874
+    },
+    {
+      "path": "tests/test_calibration.py",
+      "sha256": "447fcd895ad694995c06e87d5ab9ffb311353c7691c87fddc448ca22a2c657c2",
+      "size_bytes": 8721
+    },
+    {
+      "path": "tests/test_evaluation.py",
+      "sha256": "7ac42f057418f581d322fefd8ffc6a3536bde26535ecaa53462ce6fb0012325a",
+      "size_bytes": 4658
+    },
+    {
+      "path": "tests/test_model.py",
+      "sha256": "95f69aa217b8d74ea707bb8150d3c17c2554332d41ae770cfc1ffc05a38803f1",
+      "size_bytes": 9451
     }
   ],
   "identity_policy": "file-level SHA256 freeze; this workspace is not a Git repository",
   "package_version": "0.1.0",
-  "predecessor": "software-implementation-v1",
-  "release_id": "software-implementation-v2",
+  "predecessor": "software-implementation-v4",
+  "release_id": "software-implementation-v5",
   "schema_version": 1,
-  "scope": "ESM-2 pretrained protein encoder, cosine LR scheduling, expanded model capacity",
+  "scope": "Re-freeze of the current working tree at the same capability scope; regenerated on this machine because source files were edited after the v2 freeze. Includes governed fixes: predict FBAFeatureMetadata support, window-correct gradient accumulation, campaign-grouped validation ranking, split-manifest source identity validation, and weights_only checkpoint loading. Includes: conformal infinite-radius JSON round-trip, campaign-summary None handling for fully-undefined metrics, ESM-2 per-sequence EOS framing with pad-token padding, linear-memory pairwise ranking loss with max_pairs, and package_version consistency enforced by verify_software_release.py.",
   "temporal_pool": {
     "accepted_sources": 18,
     "global_mmseqs_families": 25,

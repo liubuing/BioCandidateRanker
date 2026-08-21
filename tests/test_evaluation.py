@@ -49,6 +49,25 @@ class CampaignRunSummaryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "different frozen selections"):
             summarize_campaign_runs([run(0.1), run(0.2, selection="other")])
 
+    def test_metric_undefined_for_every_campaign_returns_none_instead_of_crashing(self):
+        runs = []
+        for value in (0.1, 0.3):
+            run_payload = run(value)
+            for campaign in run_payload["campaign_metrics"]:
+                run_payload["campaign_metrics"][campaign] = {
+                    key: (None if key == "spearman" else run_payload["campaign_metrics"][campaign][key])
+                    for key in run_payload["campaign_metrics"][campaign]
+                }
+            run_payload["macro_metrics"]["spearman"] = None
+            runs.append(run_payload)
+        summary = summarize_campaign_runs(runs, bootstrap_samples=50, seed=3)
+        spearman = summary["metrics"]["spearman"]
+        self.assertIsNone(spearman["seed_mean"])
+        self.assertIsNone(spearman["campaign_bootstrap_mean"])
+        self.assertIsNone(spearman["campaign_bootstrap_95pct_ci"])
+        self.assertEqual(spearman["seed_values"], [None, None])
+        self.assertIsNotNone(summary["metrics"]["pairwise_accuracy"]["seed_mean"])
+
     def test_summarizes_paired_fusion_differences(self):
         names = ("rmse", "mae", "pearson", "coverage_1sigma", "coverage_2sigma")
         task = {

@@ -97,6 +97,7 @@ class ESM2ProteinEncoder(nn.Module):
         self.esm2_model_name = esm2_model_name
         self.esm2_frozen = esm2_frozen
         self.max_length = max_length
+        self.truncation_count = 0
 
         loader = getattr(esm.pretrained, esm2_model_name, None)
         if loader is None:
@@ -145,33 +146,58 @@ class ESM2ProteinEncoder(nn.Module):
         batch_size, length = tokens.shape
         device = tokens.device
 
-        # Truncate long sequences to prevent OOM in full-sequence attention
-        if length > self.max_length:
+        truncated = length > self.max_length
+        if truncated:
             tokens = tokens[:, :self.max_length]
             mask = mask[:, :self.max_length]
             length = self.max_length
+            self.truncation_count += batch_size
+        else:
+            self.truncation_count += 0
 
         # Remap project tokens to ESM-2 vocabulary
-        esm_tokens = self.token_remap[tokens.clamp(0, 21)]
+        esm_tokens = self.token_remap[tokens.clamp(0, 21)]  # [B, L]
 
-        # Add <cls> and <eos> framing expected by ESM-2
-        cls_col = torch.full((batch_size, 1), self.cls_id, dtype=torch.long, device=device)
-        eos_col = torch.full((batch_size, 1), self.eos_id, dtype=torch.long, device=device)
-        framed_tokens = torch.cat((cls_col, esm_tokens, eos_col), dim=1)
+        # Give every sequence its own <eos> immediately after its valid residues and pad
+        # only after that EOS with the ESM-2 padding token (embedding is fixed at 0). ESM-2
+        # uses positional embeddings, and a single shared trailing EOS after batch-wide
+        # padding would shift the seen positions of short sequences and make scores depend
+        # on batch composition; own-EOS-per-row + pad-token padding minimizes that coupling.
+        valid_lengths = mask.sum(dim=1).clamp(max=length)  # [B]
+        max_keep = int(valid_lengths.max().clamp(min=1))
+        framed = torch.full(
+            (batch_size, max_keep + 2),
+            1,  # ESM-2 <pad> token
+            dtype=torch.long,
+            device=device,
+        )
+        framed[:, 0] = self.cls_id  # <cls>
+        for row in range(batch_size):
+            keep = int(valid_lengths[row])
+            framed[row, 1:1 + keep] = esm_tokens[row, :keep]
+            framed[row, keep + 1] = self.eos_id  # this row's own <eos>
 
         # Run backbone
         with torch.set_grad_enabled(not self.esm2_frozen and self.training):
             backbone_output = self.backbone(
-                framed_tokens,
+                framed,
                 repr_layers=[self.backbone.num_layers],
                 return_contacts=False,
             )
-        # representations shape: [B, L+2, esm2_dim]; strip <cls> and <eos>
-        residue_repr = backbone_output["representations"][self.backbone.num_layers]
-        residue_repr = residue_repr[:, 1:-1, :]  # [B, L, esm2_dim]
+        # representations shape: [B, max_keep+2, esm2_dim]
+        # column 0 is <cls>; columns 1..keep are residues; keep+1 is this row's <eos>.
+        per_row = backbone_output["representations"][self.backbone.num_layers]
 
-        # Zero out padded positions
-        residue_repr = residue_repr * mask.unsqueeze(-1).to(residue_repr.dtype)
+        # Align each row's residue columns back onto the truncated token grid; anything
+        # beyond the row's own length stays zero (padding).
+        residue_repr = torch.zeros(
+            (batch_size, length, per_row.shape[-1]),
+            dtype=per_row.dtype,
+            device=device,
+        )
+        for row in range(batch_size):
+            keep = int(valid_lengths[row])
+            residue_repr[row, :keep] = per_row[row, 1:1 + keep]
 
         # Project to d_model
         projected = self.projection(residue_repr)  # [B, L, d_model]

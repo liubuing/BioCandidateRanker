@@ -177,26 +177,42 @@ def summarize_campaign_runs(runs: list[dict], *, bootstrap_samples: int = 10_000
     rng = random.Random(seed)
     summary = {}
     for name in metric_names:
+        defined_seed = [value for value in per_seed[name] if value is not None]
         campaign_values = {
-            campaign: statistics.mean(
-                run["campaign_metrics"][campaign][name] for run in runs
-                if run["campaign_metrics"][campaign][name] is not None)
+            campaign: [run["campaign_metrics"][campaign][name] for run in runs]
             for campaign in campaigns
         }
-        bootstrap = []
-        for _ in range(bootstrap_samples):
-            sample = [campaigns[rng.randrange(len(campaigns))] for _ in campaigns]
-            bootstrap.append(statistics.mean(campaign_values[campaign] for campaign in sample))
-        bootstrap.sort()
-        lower = bootstrap[int(0.025 * (bootstrap_samples - 1))]
-        upper = bootstrap[int(0.975 * (bootstrap_samples - 1))]
+        defined_campaigns = [
+            campaign for campaign, values in campaign_values.items()
+            if any(value is not None for value in values)
+        ]
+        campaign_means = {
+            campaign: statistics.mean(
+                value for value in values if value is not None)
+            for campaign, values in campaign_values.items()
+            if any(value is not None for value in values)
+        }
+        if defined_campaigns:
+            bootstrap = []
+            for _ in range(bootstrap_samples):
+                sample = [
+                    defined_campaigns[rng.randrange(len(defined_campaigns))]
+                    for _ in defined_campaigns
+                ]
+                bootstrap.append(statistics.mean(campaign_means[c] for c in sample))
+            bootstrap.sort()
+            ci = [bootstrap[int(0.025 * (bootstrap_samples - 1))],
+                  bootstrap[int(0.975 * (bootstrap_samples - 1))]]
+        else:
+            ci = None
         summary[name] = {
             "seed_values": per_seed[name],
-            "seed_mean": statistics.mean(per_seed[name]),
+            "seed_mean": statistics.mean(defined_seed) if defined_seed else None,
             "seed_sample_stddev": (
-                statistics.stdev(per_seed[name]) if len(per_seed[name]) > 1 else None),
-            "campaign_bootstrap_mean": statistics.mean(campaign_values.values()),
-            "campaign_bootstrap_95pct_ci": [lower, upper],
+                statistics.stdev(defined_seed) if len(defined_seed) > 1 else None),
+            "campaign_bootstrap_mean": (
+                statistics.mean(campaign_means.values()) if campaign_means else None),
+            "campaign_bootstrap_95pct_ci": ci,
         }
     return {
         "run_count": len(runs),

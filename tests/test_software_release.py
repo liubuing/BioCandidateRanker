@@ -8,21 +8,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_software_release_manifest_is_internally_consistent():
-    manifest_path = ROOT / "configs/software_implementation_release_v4.json"
+    manifest_path = ROOT / "configs/software_implementation_release_v5.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["release_id"] == "software-implementation-v4"
-    assert manifest["predecessor"] == "software-implementation-v3"
+    assert manifest["release_id"] == "software-implementation-v5"
+    assert manifest["predecessor"] == "software-implementation-v4"
     assert manifest["temporal_pool"]["ready"] is False
     assert manifest["temporal_pool"]["predictions_permitted"] is False
     assert verify_release(ROOT, manifest_path) == []
 
 
-def test_v1_v2_v3_release_manifests_exist_as_historical_records():
+def test_v1_through_v4_release_manifests_exist_as_historical_records():
     for path, release_id, predecessor in (
         ("configs/software_implementation_release_v1.json", "software-implementation-v1", None),
         ("configs/software_implementation_release_v2.json", "software-implementation-v2", "software-implementation-v1"),
         ("configs/software_implementation_release_v3.json", "software-implementation-v3", "software-implementation-v2"),
+        ("configs/software_implementation_release_v4.json", "software-implementation-v4", "software-implementation-v3"),
     ):
         manifest = json.loads((ROOT / path).read_text(encoding="utf-8"))
         assert manifest["release_id"] == release_id

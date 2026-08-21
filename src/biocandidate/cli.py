@@ -1226,8 +1226,10 @@ def predict_command(args: argparse.Namespace) -> None:
                             calibrated if conformal.normalized else None,
                         )
                         intervals[name] = {
-                            "lower": float(bounds[0][0]),
-                            "upper": float(bounds[1][0]),
+                            "lower": (None if not math.isfinite(float(bounds[0][0]))
+                                      else float(bounds[0][0])),
+                            "upper": (None if not math.isfinite(float(bounds[1][0]))
+                                      else float(bounds[1][0])),
                         }
                 else:
                     intervals = None

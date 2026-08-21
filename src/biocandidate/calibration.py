@@ -303,7 +303,7 @@ class SplitConformalCalibrator:
         return {
             "alpha": self.alpha,
             "normalized": self.normalized,
-            "radius": self.radius,
+            "radius": None if math.isinf(self.radius) else self.radius,
             "tie_policy": self.tie_policy,
         }
 
@@ -313,10 +313,13 @@ def conformal_calibrator_from_dict(payload: Mapping[str, Any]) -> SplitConformal
         "alpha", "normalized", "radius", "tie_policy",
     }:
         raise ValueError("invalid conformal calibrator payload")
+    radius = payload["radius"]
+    if radius is None:
+        radius = math.inf
     return SplitConformalCalibrator(
         alpha=payload["alpha"],
         normalized=payload["normalized"],
-        radius=payload["radius"],
+        radius=radius,
         tie_policy=payload["tie_policy"],
     )
 
