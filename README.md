@@ -57,7 +57,7 @@ not experimental flux and not publication validation.
 ```powershell
 $env:PYTHONPATH="src"
 python scripts\run_simulated_flux_smoke.py `
-  --model "C:\biological\Metabolic model prediction\Yeast-MetaTwin\Data\model\Yeast-MetaTwin.yml" `
+  --model "D:\biological\Metabolic model prediction\Yeast-MetaTwin\Data\model\Yeast-MetaTwin.yml" `
   --output-dir artifacts\simulated-flux-smoke
 ```
 

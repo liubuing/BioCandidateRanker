@@ -26,7 +26,7 @@ DEFAULT_MMSEQS = "mmseqs"
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
 DEFAULT_DEVELOPMENT_CORPUS = Path(
-    r"C:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
+    r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
 )
 
