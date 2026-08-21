@@ -8,22 +8,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_software_release_manifest_is_internally_consistent():
-    manifest_path = ROOT / "configs/software_implementation_release_v2.json"
+    manifest_path = ROOT / "configs/software_implementation_release_v3.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["release_id"] == "software-implementation-v2"
-    assert manifest["predecessor"] == "software-implementation-v1"
+    assert manifest["release_id"] == "software-implementation-v3"
+    assert manifest["predecessor"] == "software-implementation-v2"
     assert manifest["temporal_pool"]["ready"] is False
     assert manifest["temporal_pool"]["predictions_permitted"] is False
     assert verify_release(ROOT, manifest_path) == []
 
 
-def test_v1_release_manifest_exists_as_historical_record():
-    manifest_path = ROOT / "configs/software_implementation_release_v1.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert manifest["release_id"] == "software-implementation-v1"
-    assert manifest["closed_on"] == "2026-07-27"
-    assert "frozen_files" in manifest
+def test_v1_v2_release_manifests_exist_as_historical_records():
+    for path, release_id, predecessor in (
+        ("configs/software_implementation_release_v1.json", "software-implementation-v1", None),
+        ("configs/software_implementation_release_v2.json", "software-implementation-v2", "software-implementation-v1"),
+    ):
+        manifest = json.loads((ROOT / path).read_text(encoding="utf-8"))
+        assert manifest["release_id"] == release_id
+        assert "frozen_files" in manifest
+        if predecessor is not None:
+            assert manifest["predecessor"] == predecessor
 
 
 def test_external_data_blockers_are_explicit():

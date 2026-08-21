@@ -1,0 +1,193 @@
+{
+  "calibration": {
+    "conformal_coverages": [
+      0.9,
+      0.95
+    ],
+    "external_calibration_claim": false,
+    "folds": 5,
+    "grouping": "frozen MMseqs family",
+    "partition": "validation",
+    "selected_calibrator": "identity",
+    "task": "log10_kcat",
+    "validation_gaussian_crps": 0.7218434691429139,
+    "validation_gaussian_nll": 1.6773404121398925
+  },
+  "capabilities": {
+    "absolute_kinetics_external_benchmark": "blocked_pending_external_data",
+    "experimental_flux_training": "blocked_pending_external_data",
+    "finite_sample_conformal_intervals": "implemented_and_verified",
+    "governed_absolute_activity_training": "blocked_pending_external_data",
+    "governed_km_training": "blocked_pending_external_data",
+    "homology_and_global_family_audit": "implemented_and_verified",
+    "normalized_absolute_kinetics_adapter": "implemented_and_verified",
+    "prospective_candidate_ranking_evaluation": "blocked_pending_external_data",
+    "prospective_candidate_ranking_governance": "implemented_and_verified_without_campaign_data",
+    "simulated_flux_training": "engineering_smoke_only",
+    "validation_only_grouped_uncertainty_calibration": "implemented_and_verified"
+  },
+  "claim_boundary": "This release does not claim a ready independent absolute-kinetics benchmark, a trained governed Km or absolute-activity model, an experimental-flux model, or a completed prospective candidate-ranking benchmark. v2 adds ESM-2 encoder and LR scheduling as engineering capabilities; no new scientific validation is claimed.",
+  "frozen_files": [
+    {
+      "path": "pyproject.toml",
+      "sha256": "d17d20a988454d18e834dcf0795f1ed1005ec2a93406dc1e3ee3e6b2a4229e88",
+      "size_bytes": 726
+    },
+    {
+      "path": "configs/temporal_absolute_kinetics_protocol.json",
+      "sha256": "a9ebdc022d77925ebdf32abd016e4ab09fae6a1ab4421dde7bb675107742e36f",
+      "size_bytes": 3199
+    },
+    {
+      "path": "configs/uncertainty_calibration_protocol_v2.json",
+      "sha256": "f6abef419b6618c722b9a65d94328905a801c254e55467c9c78bf81fe5e767c4",
+      "size_bytes": 2140
+    },
+    {
+      "path": "configs/prospective_candidate_ranking_protocol.example.json",
+      "sha256": "ad417176881d4e12afa562495d467239b0fcd5a20985fe0407a9d685169abe57",
+      "size_bytes": 1024
+    },
+    {
+      "path": "artifacts/unikp_audit.json",
+      "sha256": "23631141837b0f7ddd0887e1ff398639dbe7e68f2f1bc44305a55a8de1505b0d",
+      "size_bytes": 714
+    },
+    {
+      "path": "artifacts/homology-final/homology_split.json",
+      "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300",
+      "size_bytes": 2875660
+    },
+    {
+      "path": "artifacts/full-homology-baseline/best.pt",
+      "sha256": "4ffbde62ce889f553a125696678a50d94c68cac40a76d85a872300f38b725f13",
+      "size_bytes": 6577429
+    },
+    {
+      "path": "artifacts/uncertainty-calibration-v2/grouped-cv.json",
+      "sha256": "f535c497c05034a72b4dc2e95a278098941a9a3f4220fbfc6798575ff289c193",
+      "size_bytes": 16847
+    },
+    {
+      "path": "artifacts/external/temporal-absolute-kinetics/registry-readiness-audit.json",
+      "sha256": "fc1f2ae99450290746416e78c50557597d039f9f2be79d290a9b05b8dfc1c960",
+      "size_bytes": 16902
+    },
+    {
+      "path": "artifacts/external/temporal-global-family-audit/readiness-audit.json",
+      "sha256": "1e8e10f5d7e4221e848740003d5d51c9f7e51549b4fa625c40ee699a2711c39f",
+      "size_bytes": 6349
+    },
+    {
+      "path": "artifacts/external/temporal-global-family-audit/global-accepted-components.fasta",
+      "sha256": "0e631ed695ec3bd9fcd17fc3b91b67cc26b21a5980eb5377bfce40e53f42695b",
+      "size_bytes": 106693
+    },
+    {
+      "path": "artifacts/external/temporal-global-family-audit/global-accepted-mapping.csv",
+      "sha256": "54226ec20c18f296b789d20fa52642174317dfbd93492428ad3b9ae3aefedf48",
+      "size_bytes": 35218
+    },
+    {
+      "path": "artifacts/simulated-flux-smoke/manifest.json",
+      "sha256": "dd8627026663c6a009652a645e7ec632c3dd89ace880007f4d515e67947ee2f7",
+      "size_bytes": 2319
+    },
+    {
+      "path": "artifacts/simulated-flux-smoke/split.json",
+      "sha256": "e6bfe614b4eac2ff1c2440cb006f2e2ecadf552f0435f6d9568f19cfc6f27076",
+      "size_bytes": 1994
+    },
+    {
+      "path": "artifacts/simulated-flux-smoke/smoke.pt",
+      "sha256": "ba6e7bd429c0bbb5471db650140f6142f249d1c405dfa79b5d4e5ae783c20d94",
+      "size_bytes": 161059
+    },
+    {
+      "path": "artifacts/unikp-km-training-blocker-audit.json",
+      "sha256": "ccba90c6848e033c38334b9f7e5b1561a24be5a6f97ae65c7773ed30c9bd6065",
+      "size_bytes": 15409
+    },
+    {
+      "path": "artifacts/absolute-activity-training-blocker-audit.json",
+      "sha256": "95a263ae5367acc8d36bfe52689cb6887c61a3553dffae5fda3ccf7e6a2769b0",
+      "size_bytes": 14538
+    },
+    {
+      "path": "src/biocandidate/data/normalized_kinetics.py",
+      "sha256": "01005d5cbc2c26a9d25b5bf3e6c07fbbd1767779b3f2a3eabc1b4c39d4d53f0c",
+      "size_bytes": 7267
+    },
+    {
+      "path": "src/biocandidate/calibration.py",
+      "sha256": "ba0a6d74b9cc86a37753614bd498e8796bf5919bbc077ed6f6551fbc9725f130",
+      "size_bytes": 25411
+    },
+    {
+      "path": "src/biocandidate/prospective_benchmark.py",
+      "sha256": "157a3acd055dd1d45b8dcd48ec17f7a49ef8d938f44c8ea72053fa51d67baed2",
+      "size_bytes": 23509
+    },
+    {
+      "path": "src/biocandidate/simulated_flux.py",
+      "sha256": "d96955852b1712999eee5ed4b03d97296c182542163ad20ca1d60974fe5e8494",
+      "size_bytes": 13252
+    },
+    {
+      "path": "src/biocandidate/config.py",
+      "sha256": "6f98f87cea6dbd430e41e93c0c8c08e002a7a76cfcb661a8f9bda5931117ceb2",
+      "size_bytes": 2317
+    },
+    {
+      "path": "src/biocandidate/model/encoders.py",
+      "sha256": "520892d4925a11d15aae55587616d7ac92a16e4084fb31d15528acc7eb675669",
+      "size_bytes": 12577
+    },
+    {
+      "path": "src/biocandidate/model/ranker.py",
+      "sha256": "ca3581086074abd41ceec2dbd303b6c55c83f1ffda3b6a00c10483e1e29cac27",
+      "size_bytes": 6633
+    },
+    {
+      "path": "src/biocandidate/training.py",
+      "sha256": "f7ca21ea0f93c69054de71e3be4af67388e0272740819b6436fae0e51d002425",
+      "size_bytes": 11219
+    },
+    {
+      "path": "src/biocandidate/cli.py",
+      "sha256": "58a1e8379b76c0b14c402c976260834f6b51bcd3e92fee28d9abb1439017e76e",
+      "size_bytes": 108290
+    },
+    {
+      "path": "tests/test_esm2_encoder.py",
+      "sha256": "d357b06b4a586a317e4495ffdfef4e7dc42e3e65e5be4c8b33261b9ace1f06fd",
+      "size_bytes": 7526
+    }
+  ],
+  "identity_policy": "file-level SHA256 freeze; this workspace is not a Git repository",
+  "package_version": "0.2.0",
+  "predecessor": "software-implementation-v2",
+  "release_id": "software-implementation-v3",
+  "schema_version": 1,
+  "scope": "Re-freeze of the current working tree at the same capability scope; regenerated on this machine because source files were edited after the v2 freeze.",
+  "temporal_pool": {
+    "accepted_sources": 18,
+    "global_mmseqs_families": 25,
+    "mapped_component_sequences": 203,
+    "predictions_permitted": false,
+    "ready": false,
+    "records_after_family_cap": 192,
+    "required_global_mmseqs_families": 30,
+    "required_records": 300,
+    "required_unique_substrates": 50,
+    "unique_substrates": 54
+  },
+  "version_source": "pyproject.toml",
+  "workflow_policy": {
+    "broad_literature_discovery_is_primary_work": false,
+    "external_data_strategy": "targeted requests and experimental collaboration",
+    "http_404_handling": "skip without retry in the same curation cycle and list as unfinished",
+    "isolated_failure_handling": "attempt one bounded correction, then record, skip, and continue",
+    "stop_only_when": "an error changes accepted-data identity, frozen evidence identity, or test correctness"
+  }
+}

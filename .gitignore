@@ -25,8 +25,12 @@ Thumbs.db
 # Project artifacts (large binary data, checkpoints, model weights)
 artifacts/
 
-# Data files (large, downloadable separately)
-data/
+# Data files (large, downloadable separately); root-level data/ only,
+# never the src/biocandidate/data source package
+/data/
+!src/biocandidate/data/
+/src/biocandidate/data/*.pyc
+/src/biocandidate/data/__pycache__/
 *.lmdb
 *.pt
 *.pth
