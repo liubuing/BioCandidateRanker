@@ -1,9 +1,25 @@
 # SOTA Baseline Comparison Plan (Pre-Submission Experiment)
 
-Date: 2026-09-16. Status: proposed, not yet frozen. This plan closes the most likely
-reviewer objection against `manuscript/Bioinformatics_Main_Final_EN.md`: Table 1 contains
-only internal baselines, with no published predictor (UniKP, DLKcat, TurNuP, CatPred)
-evaluated on the same frozen homology-cold split.
+Date: 2026-09-16. Status: **executed 2026-09-16** under the frozen protocol
+`configs/sota_homology_cold_comparison_protocol.json`; receipts in
+`artifacts/external/sota-homology-cold/` (data-manifest.json, overlap-audit.json,
+summary.json, per-seed predictions/metrics/models).
+
+## Executed results (frozen homology-cold test, 1,646 records, three seeds)
+
+| Model | RMSE (mean ± SD) | MAE (mean ± SD) | Pearson (mean ± SD) |
+|---|---:|---:|---:|
+| BioCandidateRanker ESM-2 (ours, reference) | **1.3916 ± 0.0183** | **1.0708 ± 0.0117** | **0.3810 ± 0.0222** |
+| UniKP Mode B (retrained, published hyperparameters) | 1.4093 ± 0.0094 | 1.0785 ± 0.0041 | 0.3777 ± 0.0222 |
+| DLKcat Mode B (retrained, published hyperparameters) | 1.7138 ± 0.1415 | 1.3351 ± 0.1251 | 0.1463 ± 0.0764 |
+
+Interpretation guardrails: UniKP's RMSE deficit (−0.018 for ours) is roughly two combined
+seed SDs — suggestive, not decisive; Pearson is statistically indistinguishable. The
+defensible claim is **parity or better under homology-cold discipline**, not superiority.
+DLKcat's from-scratch sequence representation degrades sharply under the cold split with
+large seed variance, consistent with homology leakage inflating its published numbers.
+The overlap audit found 100% of test sequences present in the published training corpus
+(6.5% of exact canonical-SMILES pairs), confirming Mode A was correctly excluded.
 
 ## Goal
 

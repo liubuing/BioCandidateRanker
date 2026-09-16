@@ -1,9 +1,10 @@
 """Aggregate Mode B SOTA comparison results into one summary receipt.
 
-Reads per-predictor summary.json files produced by the Mode B drivers, recomputes the
-BioCandidateRanker ESM-2 reference numbers from its checkpoint metrics, and writes a
-manuscript-ready comparison table with the frozen split identity. Governed by
-configs/sota_homology_cold_comparison_protocol.json.
+Scans per-seed test_metrics.json files under each predictor's run directory (disk is the
+source of truth; driver summary.json files may cover only a subset of seeds after
+incremental runs), recomputes the BioCandidateRanker ESM-2 reference numbers from its
+checkpoint metrics, and writes a manuscript-ready comparison table with the frozen split
+identity. Governed by configs/sota_homology_cold_comparison_protocol.json.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOTA_ROOT = ROOT / "artifacts" / "external" / "sota-homology-cold"
+PROTOCOL_SEEDS = (7, 42, 123)
 
 
 def sha256(path: Path) -> str:
@@ -29,6 +31,14 @@ def mean_sd(values: list[float]) -> dict:
     }
 
 
+def collect_seed_metrics(run_dir: Path) -> dict[int, dict]:
+    metrics: dict[int, dict] = {}
+    for path in sorted(run_dir.glob("seed*/test_metrics.json")):
+        seed = int(path.parent.name.removeprefix("seed"))
+        metrics[seed] = json.loads(path.read_text(encoding="utf-8"))
+    return metrics
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=SOTA_ROOT / "summary.json")
@@ -36,39 +46,38 @@ def main() -> None:
 
     rows: list[dict] = []
 
-    esm2_metrics = []
-    for seed in (7, 42, 123):
-        payload = json.loads(
-            (ROOT / f"artifacts/esm2-t6-opt-seed{seed}/test_metrics.json").read_text(encoding="utf-8")
-        )
-        esm2_metrics.append(payload["model_metrics"]["log10_kcat"])
+    esm2 = {}
+    for path in sorted(ROOT.glob("artifacts/esm2-t6-opt-seed*/test_metrics.json")):
+        seed = int(path.parent.name.removeprefix("esm2-t6-opt-seed"))
+        esm2[seed] = json.loads(path.read_text(encoding="utf-8"))["model_metrics"]["log10_kcat"]
     rows.append({
         "model": "BioCandidateRanker ESM-2 (ours, reference)",
         "kind": "internal",
-        "seeds": [7, 42, 123],
-        "rmse": mean_sd([m["rmse"] for m in esm2_metrics]),
-        "mae": mean_sd([m["mae"] for m in esm2_metrics]),
-        "pearson": mean_sd([m["pearson"] for m in esm2_metrics]),
+        "seeds": sorted(esm2),
+        "rmse": mean_sd([esm2[seed]["rmse"] for seed in sorted(esm2)]),
+        "mae": mean_sd([esm2[seed]["mae"] for seed in sorted(esm2)]),
+        "pearson": mean_sd([esm2[seed]["pearson"] for seed in sorted(esm2)]),
         "source": "artifacts/esm2-t6-opt-seed{7,42,123}/test_metrics.json",
     })
 
-    for predictor, path in (
-        ("UniKP Mode B (retrained)", SOTA_ROOT / "unikp-mode-b" / "summary.json"),
-        ("DLKcat Mode B (retrained)", SOTA_ROOT / "dlkcat-mode-b" / "summary.json"),
+    for predictor, run_dir in (
+        ("UniKP Mode B (retrained)", SOTA_ROOT / "unikp-mode-b"),
+        ("DLKcat Mode B (retrained)", SOTA_ROOT / "dlkcat-mode-b"),
     ):
-        if not path.is_file():
-            print(f"missing, skipped: {path}")
+        seeds_metrics = collect_seed_metrics(run_dir)
+        if not seeds_metrics:
+            print(f"no seed results, skipped: {run_dir}")
             continue
-        summary = json.loads(path.read_text(encoding="utf-8"))
-        seeds = sorted(int(seed) for seed in summary["seeds"])
+        seeds = sorted(seeds_metrics)
         rows.append({
             "model": predictor,
             "kind": "sota-mode-b",
             "seeds": seeds,
-            "rmse": mean_sd([summary["seeds"][str(seed)]["rmse"] for seed in seeds]),
-            "mae": mean_sd([summary["seeds"][str(seed)]["mae"] for seed in seeds]),
-            "pearson": mean_sd([summary["seeds"][str(seed)]["pearson"] for seed in seeds]),
-            "source": str(path.relative_to(ROOT)),
+            "rmse": mean_sd([seeds_metrics[seed]["rmse"] for seed in seeds]),
+            "mae": mean_sd([seeds_metrics[seed]["mae"] for seed in seeds]),
+            "pearson": mean_sd([seeds_metrics[seed]["pearson"] for seed in seeds]),
+            "source": f"{run_dir.relative_to(ROOT)}/seed*/test_metrics.json",
+            "protocol_complete": seeds == list(PROTOCOL_SEEDS),
         })
 
     data_manifest = SOTA_ROOT / "data-manifest.json"
@@ -89,7 +98,8 @@ def main() -> None:
     for row in rows:
         print(f"{row['model']}: RMSE {row['rmse']['mean']:.4f}±{row['rmse']['sd']:.4f} "
               f"MAE {row['mae']['mean']:.4f}±{row['mae']['sd']:.4f} "
-              f"Pearson {row['pearson']['mean']:.4f}±{row['pearson']['sd']:.4f}")
+              f"Pearson {row['pearson']['mean']:.4f}±{row['pearson']['sd']:.4f} "
+              f"seeds {row['seeds']}")
 
 
 if __name__ == "__main__":
