@@ -2,9 +2,16 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RECEIPT = ROOT / "artifacts/project-state-archive-2026-07-27.sha256.json"
+
+pytestmark = pytest.mark.skipif(
+    not RECEIPT.is_file(),
+    reason="local archive receipt under gitignored artifacts/ is required",
+)
 
 
 def test_project_state_archive_files_match_receipt():

@@ -2,10 +2,17 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 QUEUE = ROOT / "artifacts/external/external-request-queue.json"
 TRACKER = ROOT / "artifacts/external/external-response-tracker.csv"
+
+pytestmark = pytest.mark.skipif(
+    not QUEUE.is_file(),
+    reason="local request queue under gitignored artifacts/ is required",
+)
 
 
 def test_external_request_queue_does_not_claim_messages_were_sent():

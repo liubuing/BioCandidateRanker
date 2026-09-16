@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install package with dev extras
+        run: pip install .[dev] --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: Lint
+        run: python -m ruff check .
+      - name: Test
+        run: python -m pytest -q
+      - name: Verify frozen release
+        # The release manifest also freezes gitignored artifact identities (checkpoints,
+        # audit receipts) that only exist in a prepared workspace, not a fresh clone.
+        if: ${{ hashFiles('artifacts/unikp_audit.json') != '' }}
+        run: python scripts/verify_software_release.py --manifest configs/software_implementation_release_v6.json

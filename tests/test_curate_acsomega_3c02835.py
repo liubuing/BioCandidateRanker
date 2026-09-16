@@ -2,8 +2,15 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
+
 
 SOURCE = Path("artifacts/external/temporal-absolute-kinetics/europepmc-PMC10620931")
+
+pytestmark = pytest.mark.skipif(
+    not (SOURCE / "excluded_records.csv").is_file(),
+    reason="local curation evidence under gitignored artifacts/ is required",
+)
 
 
 def test_all_reported_rows_are_retained_but_none_are_admitted():
