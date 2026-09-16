@@ -97,7 +97,7 @@ Replacing the protein encoder with frozen ESM-2 (esm2_t6_8M_UR50D) representatio
 | Morgan MLP | 1.4756 ± 0.0024 | 1.1469 ± 0.0022 | 0.2566 ± 0.0188 |
 | Chunk Transformer multimodal | 1.4699 ± 0.0064 | 1.1268 ± 0.0063 | 0.2471 ± 0.0282 |
 | Late-concat multimodal | 1.4801 ± 0.0230 | 1.1396 ± 0.0114 | 0.2821 ± 0.0278 |
-| **ESM-2 multimodal (ours)** | **1.3916 ± 0.0183** | **1.0708 ± 0.0117** | **0.3810 ± 0.0218** |
+| **ESM-2 multimodal (ours)** | **1.3916 ± 0.0183** | **1.0708 ± 0.0117** | **0.3810 ± 0.0222** |
 
 The improvement over the from-scratch multimodal model is 0.078 RMSE (5.3%) and 0.134 Pearson (54%). The improvement over the strongest single-modality baseline (Morgan MLP) is 0.084 RMSE (5.7%) and 0.124 Pearson (48%). All three seeds show consistent direction; no seed crosses (per-seed breakdown in Supplementary Table S2). The magnitude of improvement is comparable to gains reported when replacing learned embeddings with pretrained representations in protein function prediction (Rives et al., 2021; Hie et al., 2024).
 
