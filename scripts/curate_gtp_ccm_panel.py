@@ -19,7 +19,7 @@ RAW = SOURCE / "raw"
 HOMOLOGY = SOURCE / "homology"
 REFERENCE = ROOT / "artifacts" / "homology-final" / "unique_proteins.fasta"
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
-DEVELOPMENT_CORPUS = Path(
+DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
 )
@@ -202,12 +202,12 @@ def read_fasta_entries(path: Path) -> dict[str, str]:
     return result
 
 
-def exact_overlap(sequences: dict[str, str]) -> dict[str, int | str]:
-    if DEVELOPMENT_CORPUS.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
+def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[str, int | str]:
+    if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise ValueError("frozen development corpus size changed")
-    if sha256(DEVELOPMENT_CORPUS) != DEVELOPMENT_CORPUS_SHA256:
+    if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("frozen development corpus SHA256 changed")
-    development = json.loads(DEVELOPMENT_CORPUS.read_text(encoding="utf-8"))
+    development = json.loads(development_corpus.read_text(encoding="utf-8"))
     sequence_set = set(sequences.values())
     smiles_set = {smiles for _, smiles in SUBSTRATES.values()}
     exact_sequence_rows = [row for row in development if row.get("Sequence") in sequence_set]
@@ -283,11 +283,11 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
-def curate(*, acquire: bool, homology: bool, threads: int) -> None:
+def curate(*, acquire: bool, homology: bool, threads: int, development_corpus: Path) -> None:
     if acquire:
         download()
     sequences = validate_raw()
-    overlap = exact_overlap(sequences)
+    overlap = exact_overlap(sequences, development_corpus)
     SOURCE.mkdir(parents=True, exist_ok=True)
     fasta = SOURCE / "construct_sequences.fasta"
     with fasta.open("w", encoding="ascii", newline="\n") as handle:
@@ -440,8 +440,10 @@ def main() -> None:
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--run-homology", action="store_true")
     parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument("--development-corpus", type=Path, default=DEFAULT_DEVELOPMENT_CORPUS)
     args = parser.parse_args()
-    curate(acquire=args.download, homology=args.run_homology, threads=args.threads)
+    curate(acquire=args.download, homology=args.run_homology, threads=args.threads,
+           development_corpus=args.development_corpus)
 
 
 if __name__ == "__main__":

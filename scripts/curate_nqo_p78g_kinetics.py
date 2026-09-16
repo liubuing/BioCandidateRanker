@@ -19,7 +19,7 @@ HOMOLOGY = SOURCE / "homology"
 DOI = "10.1021/acs.biochem.5c00559"
 REFERENCE = ROOT / "artifacts" / "homology-final" / "unique_proteins.fasta"
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
-DEVELOPMENT_CORPUS = Path(
+DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
 )
@@ -119,12 +119,14 @@ def validate_raw() -> tuple[dict[str, str], dict[str, tuple[int, str]]]:
     return constructs, structures
 
 
-def exact_overlap(constructs: dict[str, str], structures: dict[str, tuple[int, str]]) -> dict[str, object]:
-    if not DEVELOPMENT_CORPUS.is_file() or DEVELOPMENT_CORPUS.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
+def exact_overlap(
+    constructs: dict[str, str], structures: dict[str, tuple[int, str]], development_corpus: Path
+) -> dict[str, object]:
+    if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or changed size")
-    if sha256(DEVELOPMENT_CORPUS) != DEVELOPMENT_CORPUS_SHA256:
+    if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("Frozen development corpus SHA256 changed")
-    rows = json.loads(DEVELOPMENT_CORPUS.read_text(encoding="utf-8"))
+    rows = json.loads(development_corpus.read_text(encoding="utf-8"))
     if not isinstance(rows, list) or len(rows) != 17010:
         raise ValueError("Frozen development corpus row count changed")
     candidate_sequences = set(constructs.values())
@@ -186,11 +188,11 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
-def curate(*, acquire: bool, run_homology: bool) -> None:
+def curate(*, acquire: bool, run_homology: bool, development_corpus: Path) -> None:
     if acquire:
         download_raw()
     constructs, structures = validate_raw()
-    overlap = exact_overlap(constructs, structures)
+    overlap = exact_overlap(constructs, structures, development_corpus)
     SOURCE.mkdir(parents=True, exist_ok=True)
     query = SOURCE / "construct_sequences.fasta"
     query.write_text("".join(
@@ -300,5 +302,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-acquire", action="store_true")
     parser.add_argument("--skip-mmseqs", action="store_true")
+    parser.add_argument("--development-corpus", type=Path, default=DEFAULT_DEVELOPMENT_CORPUS)
     args = parser.parse_args()
-    curate(acquire=not args.no_acquire, run_homology=not args.skip_mmseqs)
+    curate(acquire=not args.no_acquire, run_homology=not args.skip_mmseqs,
+           development_corpus=args.development_corpus)
