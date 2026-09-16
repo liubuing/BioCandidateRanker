@@ -1,13 +1,26 @@
 # Current Results
 
-Date: 2026-07-27
+Results date: 2026-07-27. Software release state updated: 2026-08-21.
 
 ## Software Release State
 
-`software-implementation-v1` is closed at the file identities in
-`configs/software_implementation_release_v1.json`. The normalized kinetics path, frozen
-homology/global audit, grouped validation-only calibration, conformal intervals,
-prospective-ranking governance, and simulated-flux smoke are implemented and tested.
+The scientific results below are unchanged since 2026-07-27. The closed software
+implementation has advanced through maintenance releases:
+
+- `software-implementation-v1` (2026-07-27): initial archived baseline at
+  `configs/software_implementation_release_v1.json`. The normalized kinetics path, frozen
+  homology/global audit, grouped validation-only calibration, conformal intervals,
+  prospective-ranking governance, and simulated-flux smoke are implemented and tested.
+- `software-implementation-v3`: restored tracked data package and refreshed archive receipt.
+- `software-implementation-v4`: fixed governed functional defects in prediction and ranking.
+- `software-implementation-v5` (2026-08-21): fixed medium-severity robustness and
+  engineering issues, added `scripts/verify_software_release.py`.
+- `software-implementation-v6`: engineering closeout release; curated scripts expose the
+  development corpus through `--development-corpus`, and the release verifier default now
+  points at the current closed baseline instead of v1.
+
+The closed baseline is `configs/software_implementation_release_v6.json`; v1 through v5
+remain as historical records.
 
 The following scientific workstreams are `blocked_pending_external_data`:
 

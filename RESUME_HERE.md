@@ -6,14 +6,14 @@ Start with:
 
 1. `docs/PROJECT_STATE_ARCHIVE_2026-07-27.md`
 2. `artifacts/project-state-archive-2026-07-27.json`
-3. `configs/software_implementation_release_v1.json`
+3. `configs/software_implementation_release_v6.json`
 4. `configs/external_data_blockers.json`
 5. `docs/DATA_ARRIVAL_RUNBOOK.md`
 
 Then run:
 
 ```powershell
-python scripts\verify_software_release.py
+python scripts\verify_software_release.py --manifest configs\software_implementation_release_v6.json
 python -m pytest -q
 python -m ruff check .
 ```
