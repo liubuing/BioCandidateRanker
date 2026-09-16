@@ -92,7 +92,9 @@ def main() -> None:
         save_ragged("compounds", compounds[start:start + index[split]])
         save_ragged("adjacencies", adjacencies[start:start + index[split]])
         save_ragged("proteins", proteins[start:start + index[split]])
-        save_ragged("regression", regression[start:start + index[split]])
+        np.save(split_dir / "regression",
+                np.asarray([float(item[0]) for item in regression[start:start + index[split]]],
+                           dtype=np.float64).reshape(-1, 1))
 
     for name, dictionary in (
         ("fingerprint_dict", upstream.fingerprint_dict),

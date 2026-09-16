@@ -50,7 +50,9 @@
   },
   "provenance": {
     "dlkcat_upstream_files": {
-      "run_model.py": "743082bad91a480c6df2584b57acd47084de5a437c10075b78763871fc66fbba",
+      "run_model.py": "bea200bc911cb09305fa31a09ffb7c5d0a8d48d032dc05711e228a1160a2b15a",
+      "run_model.py_upstream_sha256": "743082bad91a480c6df2584b57acd47084de5a437c10075b78763871fc66fbba",
+      "run_model.py_local_change": "numpy>=2 compatibility only: explicit scalar extraction in Trainer.train/Tester.test log10(2^x) conversions; no numerical or structural change",
       "model.py": "9fbb1a948aadd8177f5ff8ab2ef80d698d9753140107b20093a0f3ae3eb439e4",
       "preprocess_all.py": "6af5ba6500e91bc5e07fccb556d2b283cb0e12bbec1db5fb8b27a2f4c3f6b178"
     },
