@@ -25,8 +25,8 @@ Facts: UniKP is **Yu, H. et al. (2023)** "UniKP: a unified framework for the pre
 enzyme kinetic parameters", *Nat. Commun.*, **14**, 8505 (doi:10.1038/s41467-023-44113-1).
 Kroll's real 2023 Nat. Commun. paper is **TurNuP**: Kroll,A., Ranjan,S., Engqvist,M.K.M.
 and Lercher,M.J. (2023) "Turnover number predictions for kinetically uncharacterized
-enzymes using machine and deep learning", *Nat. Commun.*, **14**, 8442
-(doi:10.1038/s41467-023-41847-8). The dataset citation in Methods 2.2 should therefore be
+enzymes using machine and deep learning", *Nat. Commun.*, **14**, 4138
+(doi:10.1038/s41467-023-39840-4). The dataset citation in Methods 2.2 should therefore be
 (DLKcat: Li et al. 2022; UniKP: Yu et al. 2023), optionally + TurNuP where the curated
 kcat set is meant.
 

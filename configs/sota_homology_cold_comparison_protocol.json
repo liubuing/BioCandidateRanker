@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "protocol_id": "sota-homology-cold-comparison-v1",
+  "frozen_on": "2026-09-16",
+  "purpose": "Pre-submission evaluation of published kcat predictors (DLKcat, UniKP) on the frozen homology-cold split, retrained on the frozen train partition (Mode B, primary) and, if checkpoints allow, as-published (Mode A, secondary context only).",
+  "claim_boundary": "Internal homology-cold comparison only. No external benchmark claim, no prospective-pool scoring, no tuned BioCandidateRanker result.",
+  "data": {
+    "corpus": {
+      "path": "external UniKP corpus Kcat_combination_0918_wildtype_mutant.json",
+      "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+      "size_bytes": 12132719,
+      "row_count": 17010
+    },
+    "split_manifest": "artifacts/homology-final/homology_split.json",
+    "label_policy": "median of log10(kcat) per (sequence, canonical SMILES) pair, identical to all reported BioCandidateRanker runs",
+    "expected_counts_raw": {"train": 13470, "validation": 1684, "test": 1684},
+    "expected_counts_aggregated": {"train": 13157, "validation": 1640, "test": 1646}
+  },
+  "mode_b": {
+    "definition": "Each predictor retrained from scratch on the frozen train partition with its published default hyperparameters; validation used only for logging or early behavior observation, never for selection; test evaluated exactly once per seed by the shared evaluator.",
+    "unikp": {
+      "features": "frozen pretrained SMILES transformer (trfm_12_23000.pkl, 256-dim) + frozen ProtT5-XL-UniRef50 mean-pooled sequence embeddings (1024-dim), concatenated; embeddings computed once over unique rows and cached",
+      "regressor": "sklearn ExtraTreesRegressor with library defaults, random_state per seed",
+      "seeds": [7, 42, 123]
+    },
+    "dlkcat": {
+      "source": "SysBioChalmers/DLKcat commit 7c15d0d4a7ac029f9d75564d9f2a93874aeaaec7",
+      "hyperparameters": "published setting radius2 ngram3 dim20 layer_gnn3 window11 layer_cnn3 layer_output3 lr1e-3 lr_decay0.5 decay_interval10 weight_decay1e-6 iteration50",
+      "label_encoding": "log2(kcat) internally (upstream convention), converted to log10 for reporting",
+      "split": "upstream 80/10/10 random split replaced by the frozen homology-cold partition; model seed from torch.manual_seed per seed; final epoch-50 model evaluated",
+      "seeds": [7, 42, 123]
+    }
+  },
+  "mode_a": {
+    "definition": "As-published checkpoints evaluated on the frozen test partition. Their training corpora subsume this corpus, so results are a leakage-favorable upper reference and are never compared head-to-head with Mode B in the primary table.",
+    "status": "secondary; run only after Mode B if schedule allows"
+  },
+  "overlap_audit": "Exact sequence and (sequence, SMILES) overlap between each predictor's published training corpus and the frozen test partition is computed and reported alongside Mode A results.",
+  "evaluation": {
+    "metrics": ["rmse", "mae", "pearson"],
+    "evaluator": "src/biocandidate/evaluation.py regression_metrics",
+    "test_evaluations_per_seed": 1,
+    "prohibition": "No test partition row, label, or metric may inform any training, embedding, vocabulary, or hyperparameter decision. Validation rows may not enter ExtraTrees or DLKcat training inputs."
+  },
+  "artifacts_root": "artifacts/external/sota-homology-cold/",
+  "outputs": {
+    "data": "artifacts/external/sota-homology-cold/data/{train,validation,test}.csv",
+    "runs": "artifacts/external/sota-homology-cold/{unikp,dlkcat}-mode-b-seed{seed}/",
+    "summary": "artifacts/external/sota-homology-cold/summary.json"
+  },
+  "provenance": {
+    "dlkcat_upstream_files": {
+      "run_model.py": "743082bad91a480c6df2584b57acd47084de5a437c10075b78763871fc66fbba",
+      "model.py": "9fbb1a948aadd8177f5ff8ab2ef80d698d9753140107b20093a0f3ae3eb439e4",
+      "preprocess_all.py": "6af5ba6500e91bc5e07fccb556d2b283cb0e12bbec1db5fb8b27a2f4c3f6b178"
+    },
+    "unikp_deployment": {
+      "repository": "https://github.com/Luo-SynBioLab/UniKP",
+      "local_root": "external deployment directory recorded in scripts' --development-corpus defaults",
+      "models": ["trfm_12_23000.pkl", "prot_t5_xl_uniref50"]
+    }
+  }
+}
