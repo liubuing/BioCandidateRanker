@@ -1,0 +1,24 @@
+# Enforce LF line endings for text files so Windows checkouts don't double-convert.
+# Binary blobs are handled per-pattern below.
+* text=auto eol=lf
+
+# Shell scripts must stay LF even on Windows to remain executable.
+*.sh text eol=lf
+
+# Python sources must stay LF.
+*.py text eol=lf
+
+# JSON, YAML, TOML, Markdown: keep LF.
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# Gitignore-marked binaries stay untouched.
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

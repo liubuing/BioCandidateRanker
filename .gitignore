@@ -40,3 +40,9 @@ artifacts/
 *.tmp
 *.log
 tmp/
+
+# ZCode session tooling output (plans, caches, scratch)
+.zcode/
+
+# Intermediate binary reports under docs/reports; markdown/JSON elsewhere stays tracked.
+docs/reports/*.docx
