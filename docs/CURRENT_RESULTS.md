@@ -1,6 +1,43 @@
 # Current Results
 
+> September 18 replay audit resolved: all historical ESM2 scores reproduce within 1.2e-7 using the historical encoder forward and historical CLI default batch 64. They remain historical-implementation results, not current-code results (current-code checkpoint replay RMSE 1.39560). Paired family intervals for both versions do not establish superiority over CataPro or UniKP. See `docs/PAIRED_FAMILY_AND_REPLAY_AUDIT_CN.md` before interpreting historical tables below.
+
 Results date: 2026-07-27. Software release state updated: 2026-08-21.
+
+## September 2026 Publication Diagnostics
+
+September 18: **CataPro fixed-split retraining and one-time internal test completed**.
+Seeds 7/42/123 give RMSE **1.3876 ± 0.0195**, MAE **1.0650 ± 0.0105**,
+Pearson **0.4320 ± 0.0004** on the existing 1,646-record test. These are seed SDs,
+not confidence intervals. Compared with BioCandidateRanker ESM-2 (1.3916 RMSE,
+0.3810 Pearson), CataPro has slightly lower mean error and higher correlation;
+BioCandidateRanker superiority is not established. CataPro uses the official head
+and defaults with validation early stopping on our fixed split instead of upstream
+ten-fold training. Model capacity, inputs and selection differ across comparators.
+No temporal/prospective pool was scored. Frozen checkpoints, exact input hashes,
+three prediction files and recomputed metrics are verified. See
+`docs/CATAPRO_INTERNAL_COMPARISON_CN.md`, `docs/CATAPRO_MODE_B_RUNBOOK_CN.md`,
+`configs/catapro_internal_test_freeze.json`, and `artifacts/catapro-mode-b/internal-test/`.
+
+September 17 PCB readiness audit: fixed upstream CatPred/CataPro source versions,
+verified existing split-file hashes, and audited CataPro's published kcat data.
+The local test has 1,127/1,646 exact sequence/canonical-SMILES pair matches in the
+union of CataPro's ten-fold dataset; released ensemble inference is therefore not
+an independent comparison on this test. Same-split retraining is required.
+The current UniKP context inputs are organism, EC, enzyme type, and an empty
+reaction field, not pH/temperature. CataPro's head passed a synthetic-only GPU
+forward/backward smoke; no new real-data predictions were produced. Details:
+`docs/PCB_BASELINE_AND_ENDPOINT_AUDIT_CN.md` and `artifacts/pcb-readiness/`.
+
+The September 17 post-hoc ESM-2 modality diagnostic completed all six new runs on the
+already observed 1,646-record homology-cold internal test. Three-seed RMSE mean ± SD:
+protein only 1.5025 ± 0.0064; protein + substrate 1.4454 ± 0.0156; full reference
+1.3916 ± 0.0183. All paired seed differences favored adding substrate and then
+reaction context. The frozen protocol is
+`configs/esm2_modality_diagnostic_protocol.json`; verified machine-readable results
+are at `artifacts/esm2-modality-diagnostic/summary.json`. These are post-hoc internal
+diagnostics, not independent same-endpoint validation. The prospective external pool
+remains below its frozen record and family gates and has not been scored.
 
 ## Software Release State
 
@@ -424,3 +461,6 @@ mutation landscape. DLKcat also fails the latter, so the result is not evidence 
 new model is publication-ready. The next scientific requirement remains a genuinely
 independent absolute-kinetics benchmark with auditable training-source overlap, not
 further tuning against either frozen external result.
+# 2026-09-18 initial replay audit notice (superseded by resolved audit above)
+
+Frozen ESM2 checkpoints did not reproduce historical metrics within 1e-5 under the current implementation. Historical scores remain preserved; do not treat them as verified current-code results. A separately declared current-code audit gives mean RMSE 1.39560, MAE 1.07438, Pearson 0.37493. Exploratory paired bootstrap over 219 test families (5,000 draws) has RMSE contrast intervals crossing zero against both CataPro and UniKP. Details: `docs/PAIRED_FAMILY_AND_REPLAY_AUDIT_CN.md`. This is internal post-hoc evidence, not external validation.

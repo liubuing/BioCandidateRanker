@@ -2,6 +2,14 @@
 
 Host-aware multimodal enzyme candidate scoring research system.
 
+## Primary Publication Target
+
+As of 2026-09-17, the user-selected primary target is **PLOS Computational Biology**.
+The [target-specific research plan](docs/PLOS_COMPUTATIONAL_BIOLOGY_PLAN_CN.md)
+defines the biological question, modern comparators, independent validation, and
+submission readiness gates. Current status: evidence development, not submission-ready.
+Existing frozen evaluation protocols and historical results remain authoritative.
+
 The project is deliberately isolated from the source projects. External datasets and
 tools are opened read-only through explicit paths; generated manifests, splits,
 checkpoints, and reports stay under this repository.
