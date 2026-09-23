@@ -1,6 +1,6 @@
 # Supplementary Material
 
-**Pretrained Protein Representations Unlock Multimodal Fusion Gains for Enzyme Kinetic Prediction**
+**Pretrained Protein Representations Improve Enzyme Kinetic Prediction under Homology-Cold Evaluation**
 
 [Authors anonymized for review]
 
@@ -24,7 +24,7 @@
 - Sequence truncation: 512 residues maximum
 - Training: AdamW, lr=3e-4, cosine schedule, 2-epoch warmup, patience 4
 - Effective batch size: 32 (micro-batch 4, accumulation 8)
-- Model parameters (trainable): 12,946,716
+- Model parameters (total, including frozen backbone): 12,946,716
 
 ---
 
@@ -55,6 +55,31 @@
 
 ---
 
+## S4a: Post-Hoc ESM-2 Modality Diagnostics
+
+The internal test was observed before this comparison. The protocol was frozen before the six new runs. All variants use the same ESM-2 backbone, model width, split, target, training schedule, and seeds. Disabled modalities are masked in the task-query fusion model. Results are diagnostic, not independent confirmation. Source and split identities were checked against the full-model reference before summary.
+
+**Supplementary Table S3.** Per-seed test results and three-seed summaries (1,646 records).
+
+| Variant | Seed | RMSE | MAE | Pearson |
+|---|---:|---:|---:|---:|
+| Protein only | 7 | 1.5013 | 1.1597 | 0.2171 |
+| Protein only | 42 | 1.5094 | 1.1682 | 0.2586 |
+| Protein only | 123 | 1.4969 | 1.1690 | 0.1766 |
+| Protein only | Mean ± SD | 1.5025 ± 0.0064 | 1.1656 ± 0.0051 | 0.2174 ± 0.0410 |
+| Protein + substrate | 7 | 1.4571 | 1.1287 | 0.2734 |
+| Protein + substrate | 42 | 1.4278 | 1.1028 | 0.3109 |
+| Protein + substrate | 123 | 1.4513 | 1.1286 | 0.2529 |
+| Protein + substrate | Mean ± SD | 1.4454 ± 0.0156 | 1.1200 ± 0.0149 | 0.2791 ± 0.0294 |
+| Full model | 7 | 1.3880 | 1.0683 | 0.3906 |
+| Full model | 42 | 1.3754 | 1.0606 | 0.3968 |
+| Full model | 123 | 1.4114 | 1.0835 | 0.3556 |
+| Full model | Mean ± SD | 1.3916 ± 0.0183 | 1.0708 ± 0.0117 | 0.3810 ± 0.0222 |
+
+Paired mean RMSE changes are −0.0571 ± 0.0213 for protein + substrate versus protein only, and −0.0538 ± 0.0147 for full versus protein + substrate (sample SD across three seeds). Both directions are consistent across seeds. Machine-readable values and input identities are in `artifacts/esm2-modality-diagnostic/summary.json`.
+
+---
+
 ## S5: EnzEngDB Selection Protocol
 
 - Archive: 30,050,527 bytes, SHA256 `8013ad81586db2187162aada0709c1cabc7e7d69f03dd5c199776aaf000dd6ea`
@@ -68,4 +93,4 @@
 
 ## S6: Claim Boundary
 
-This work establishes an internal homology-cold predictive gain. It does not establish: calibrated uncertainty, external kcat validation, activity or flux prediction, candidate ranking utility, or publication-grade efficacy for enzyme engineering decisions. The prospective independent benchmark remains incomplete (192/300 records, 25/30 families). No model predictions have been generated for the prospective pool.
+This work establishes an internal homology-cold predictive gain and post-hoc modality diagnostic. It does not establish: calibrated uncertainty, external kcat validation, activity or flux prediction, candidate ranking utility, or publication-grade efficacy for enzyme engineering decisions. The prospective independent benchmark remains incomplete (192/300 records, 25/30 families). No model predictions have been generated for the prospective pool.
