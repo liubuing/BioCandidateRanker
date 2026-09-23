@@ -1,0 +1,80 @@
+{
+  "protocol_id": "catapro-internal-test-once-v1",
+  "frozen_at": "2026-09-18T01:55:08.454591+00:00",
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "test_rows": 1646,
+  "data_manifest": "artifacts/external/sota-homology-cold/data-manifest.json",
+  "metrics": [
+    "rmse",
+    "mae",
+    "pearson"
+  ],
+  "selection": "Already completed validation-selected checkpoints; no further selection or tuning",
+  "claim_boundary": "Internal previously observed homology-cold test; not independent external or prospective validation. Seed SD is not statistical significance.",
+  "files": [
+    {
+      "path": "configs/catapro_mode_b_protocol.json",
+      "sha256": "3e422d84fe78131661f5b0aea4f08f83ff268f885cc8087b9947fa7a10170508"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/data-manifest.json",
+      "sha256": "ac69cf0c02c7aefb3f4337770d9ebdf26d2c7f55b17ab98cb429d046d10813c9"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/data/test.csv",
+      "sha256": "0abe4d7f91e0355736060ccc736c08ba97893eba0374d502003e9b05af13c55f"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/feature-manifest.json",
+      "sha256": "a9fd6aab7b2ad365094cb1e535db4fa6f890c4d637c50eb0b91530ca9e723786"
+    },
+    {
+      "path": "scripts/evaluate_catapro_once.py",
+      "sha256": "87971bc9de6c91f2e4ce0c17fe95f1a4020440b305ea9308435a734a0fbac709"
+    },
+    {
+      "path": "scripts/run_catapro_mode_b.py",
+      "sha256": "c3630a7c75c8415ce5a00934be8c93c0d098a637cbae5bafdc2715dab3c43035"
+    },
+    {
+      "path": "src/biocandidate/evaluation.py",
+      "sha256": "5f9a2cc37ca1228a128bfa6af8e02cf905b86eb1090694eb266c1093f96724f1"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/molecule-equivalence-check.json",
+      "sha256": "7d296a74a488e91efe02e0a3e23dd2200946fbeb7cd52cfa65f1c60082a9f652"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/prott5-reuse-check.json",
+      "sha256": "6cdc3a30bee3545f8bbc33704ce30d01f30ede24ab8200da8f590844e6bea85b"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed7/receipt.json",
+      "sha256": "d2b0ad06b1c91ed5818f379e53b0d0c8d3f5326d7b547054deacefb843c4b567"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed7/best.pt",
+      "sha256": "c6a885a16b116fed36edb3999c14fa729b2215c75b7eabf56ab929bbaf6b2d24"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed42/receipt.json",
+      "sha256": "d86fa3f0949276e81ce1e93663d8d4ea9591d3bfca3331d9fa941d8a31238c95"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed42/best.pt",
+      "sha256": "892ade6c4106d6dd3fc3bd59d7de9cddec9a2abaf9b3b6f551264313996afa9c"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed123/receipt.json",
+      "sha256": "388c18f4b5cd210077b7bd672faeca1e022279b132d6ed271f6d6c46432110d0"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/full/seed123/best.pt",
+      "sha256": "ed3ce11963d90a3b9de2b421657916a1b42218c5f3aaa4d76d7e3275d32ad038"
+    }
+  ]
+}

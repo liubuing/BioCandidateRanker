@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "created_on": "2026-09-16",
+  "purpose": "Post-hoc ESM-2 modality diagnostic on the already observed internal homology-cold test",
+  "claim_boundary": "The frozen internal test and full-model results were observed before this protocol. These runs diagnose modality contribution under matched training settings; they are not independent confirmation or a new model-selection surface.",
+  "source_identity": {
+    "row_count": 17010,
+    "size_bytes": 12132719,
+    "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
+  },
+  "split_identity": {
+    "row_count": 16838,
+    "size_bytes": 2875660,
+    "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300"
+  },
+  "data_format": "unikp",
+  "target": "log10_kcat",
+  "conflict_policy": "median",
+  "variants": {
+    "esm2_protein_only": ["--disable-molecule", "--disable-context"],
+    "esm2_protein_molecule": ["--disable-context"],
+    "esm2_full_reference": "artifacts/esm2-t6-opt-seed{7,42,123}/best.pt"
+  },
+  "seeds": [7, 42, 123],
+  "training": {
+    "esm2_model": "esm2_t6_8M_UR50D",
+    "esm2_frozen": true,
+    "d_model": 256,
+    "num_heads": 8,
+    "protein_layers": 3,
+    "molecule_layers": 4,
+    "fusion_layers": 2,
+    "protein_chunk_size": 128,
+    "context_buckets": 4096,
+    "fusion_mode": "task_query",
+    "uncertainty_mode": "heteroscedastic",
+    "learning_rate": 0.0003,
+    "batch_size": 4,
+    "gradient_accumulation_steps": 8,
+    "epochs": 10,
+    "warmup_epochs": 2,
+    "cosine_schedule": true,
+    "early_stopping_patience": 4,
+    "checkpoint_selection": "lowest validation loss"
+  },
+  "parameter_recovery": "Model configuration, initial learning rate, source/split identities, and seeds were recovered from existing best/latest checkpoints. Batch size, accumulation, warmup, cosine schedule, and patience are documented in the manuscript; ten epochs is the predeclared cap, consistent with observed early-stop epochs 5/6/7.",
+  "evaluation": {
+    "partition": "test",
+    "one_evaluation_per_checkpoint": true,
+    "metrics": ["rmse", "mae", "pearson"],
+    "summary": "Mean and sample SD across seeds; paired per-seed differences against the unmodified full-model reference. No hyperparameter changes based on test results."
+  }
+}

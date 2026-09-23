@@ -1,0 +1,404 @@
+{
+  "declared_at": "2026-09-21T05:22:02.332458+00:00",
+  "scope": "Fixed-split retraining after internal baseline aggregates observed; development only until checkpoints frozen. Not prospective external validation.",
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "ensemble_size": 10,
+  "epochs": 30,
+  "batch_size": 16,
+  "metric": "rmse",
+  "checkpoint_selection": "minimum validation RMSE per member",
+  "loss": "mve",
+  "evaluation_policy": "Pass validation as upstream test alias during training; do not interpret these scores as test results. Freeze all members before a separately recorded single internal test evaluation.",
+  "capacity_note": "ESM2 650M versus reference ESM2 8M; disclose encoder and ensemble compute.",
+  "runner_sha256": "074fbe283b74a6831c9b4e7b1ed566bdc668c6dad13d4a285cc2968842593132",
+  "frozen_files": [
+    {
+      "path": "artifacts/catpred-mode-b/development-feature-manifest.json",
+      "sha256": "30f117f8ea94e1d40cb0ecc4b0bedeb6a069afeff828fd8fde312fcf0923a21a"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/environment-freeze.txt",
+      "sha256": "2ec1e0965986e46d5b746ece040a2863480b86b92eea932326dcdfe672c5c65c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/source-receipt.json",
+      "sha256": "b6c11e3f0ae7b59d277352b34b526cdf3e68afd785cc5ade19c7839c80fc6755"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/development-data/train.csv",
+      "sha256": "18447da1e06ca07749153d4edffac881f63428e29eecaa56e651b1c3bc1618ad"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/development-data/validation.csv",
+      "sha256": "6efae8e6b66bb0a30cc63fb480fb9d8f6474887bde470790da288bd93b9aae2e"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/development-data/protein_records.json.gz",
+      "sha256": "457b61d689ac6a4877c7ba2619c6529f3a61123b0e846622621679acf8c75647"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/__init__.py",
+      "sha256": "e345081fec1120245b3422ff90d316b0fc7bf4295d4d017153c85129183f09fc"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/args.py",
+      "sha256": "6b31daaa984274cf516895ac289a3afc87dfbf649467220e5b33c6cb46b0519c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/constants.py",
+      "sha256": "9de6af10e6fdb83cae85c825137bbc9f8336f661efd5f6fb853a17a3ccad4b3f"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/__init__.py",
+      "sha256": "8fd04a8775df47bc4b48a933b0d9b2877dab5b1f997a63dad267262c9ec92d54"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/cache_utils.py",
+      "sha256": "1b245a9b73c4443bd6b9de6e462b36e6f075bda7d98961fcbfcebda5130f5859"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/data.py",
+      "sha256": "aab48495d5df9ddf8c00535ed05e4a48b8a0ba8ed7dafa34fa9424a7a1cfaaaa"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/esm_utils.py",
+      "sha256": "80fa2786ca403bc49c442115c20e9971fa32f9d61c480c0a38028aeb7877f5c4"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/gvp_utils.py",
+      "sha256": "4a9379761929f56e6ff7eca39cb17ea584b90a412a39ebd02cb43cf66e3e3eda"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/scaffold.py",
+      "sha256": "42dfd8f99b19c9dd084d616efa8983eaf8f12c73967ca6230786f0e96db50e42"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/scaler.py",
+      "sha256": "fcf4795326d0d1a23c4dc8b2ca27c1c21b9290e072dfb5cad827429b9c29d5d9"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/data/utils.py",
+      "sha256": "da059c61a9bd455fc065a44248fb29d8c3607bc66a08982891a3b5f801d05d55"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/features/__init__.py",
+      "sha256": "dc61ee9eb41a89afc131fd770e169c5e225ac54a7c66e4154181fc0a58af9793"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/features/features_generators.py",
+      "sha256": "0f4165a847713bad5f40b33b4698dd044649826dc27ce2611a2a8fa5fd55f93a"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/features/featurization.py",
+      "sha256": "4b37628e1fc59e786371a780f979400e0e33faa4440c50004d6551e25a4d3006"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/features/utils.py",
+      "sha256": "d8707c26c7e6f5163df58412e49824ea3d9b0efa330c557f5cc20f1789d0f731"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/inference/__init__.py",
+      "sha256": "da1fec1d84a6439fa9cabdf823ccfef0048ec4a7ef7e503d309a1b4707b050d8"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/inference/backends.py",
+      "sha256": "283565f8e3d572348ac35e6e93464e98e5de3d4e25221395a4fdf01bdc3cc52c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/inference/service.py",
+      "sha256": "e2542c1c9853b78145c2909cc0fa3afbb9bf76c12044b19131989e4a563ada47"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/inference/types.py",
+      "sha256": "c55f55db60237f8c0d6f7758325fa2423e35f573a990ea8f8f76724277a549dc"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/integration/__init__.py",
+      "sha256": "cc1184f489200413e8f6fe0444179aebfdf78acc5d7eaecf790719e24e7c2034"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/integration/webkinpred_adapter.py",
+      "sha256": "a0cac5c3e089a4c1ec2f72154ec36462387c5c1918b59f6cb2300c9a628e02ff"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/__init__.py",
+      "sha256": "783b2b8b01e380fa2812138dbef173b6bb6e98cc7d1e3646ba681ccfeeb98bc5"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/en_transformer/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/en_transformer/en_transformer.py",
+      "sha256": "b25bf80921fb8068cd9618fd8b501010f9f3c80186bdd6a478098a4c3fdf8f61"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/en_transformer/rotary.py",
+      "sha256": "aee21da7b9c82e0effe776169e537cc1b4b0df6cb46d492809e186d53052e49b"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/en_transformer/utils.py",
+      "sha256": "7b9aecf6355ff662ad59a583ae20e18b8982d11fda08bf5c5b78c8e0ff374f28"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/ffn.py",
+      "sha256": "e71335592143527b6f93bbd276b02967219b7b73e28ee368ba41446823da3866"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/gvp_models.py",
+      "sha256": "e054cfdee53cacc39d7b157d59c8fe8e6a6cf3849cf32872944c21e61933a67f"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/model.py",
+      "sha256": "8cbc6ee75ff2c6526031e856612bf4384d81d3673be49902a8ac3cb708f39676"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/mpn.py",
+      "sha256": "d1309fdf0c6daf2409a780ed5d85da399778f7067142e6b9099cbbf2f8143313"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/models/transformer_models.py",
+      "sha256": "2ef5fec6c07cc117d18217f9b8fb19102195ff5877da8ed92a47a1d302bc806f"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/multitask_utils.py",
+      "sha256": "2f3c7822f72d0b40f44f23c7cbbe5397250045a99bb6639e917f15fef78a074e"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/nn_utils.py",
+      "sha256": "844bdfb63cd4ed78b73d5fcc07a9f60b2d1258646554f9a99ee1910788b7d681"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/rdkit.py",
+      "sha256": "a6ab33e646f8d490164ca7f73b38ceff465aeb4c5dfffecc43e3f96d6bd3df13"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/security/__init__.py",
+      "sha256": "69e8f063aadc2407d6708be2850483a786eeb15a2c8f348c9a81ec0870294e0c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/security/deserialization.py",
+      "sha256": "5943ae60059efc54ac58bece6e0876e2e2cd5d06959ddcfabe632a2ae9f0e40a"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/__init__.py",
+      "sha256": "8345a145455fd292bb473f68910d01becaa212aa7ad9d794eef848d3cb3befb7"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/cross_validate.py",
+      "sha256": "31c3ca25a9005294416c1a47a428559b50f267f5a3dede681e5fa8223cb0b83f"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/evaluate.py",
+      "sha256": "4032821b4af483122421665c8aff8592cff3cfdd26ae7aaedd6dd827db43f3f2"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/loss_functions.py",
+      "sha256": "87df0c5ef3f1bd8273c92a0fc375757bfec9652983dcf180b7fb12c742e0ef72"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/make_predictions.py",
+      "sha256": "f4fa0af1d8f8f4e7b3fb28ff90671922fd18f13fba8d745dfa3b841e5cf50165"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/metrics.py",
+      "sha256": "983f5ae7ec2ab4639e08cc2d3465587555c7639d3d79a0f4a0b81c8a8aadeba6"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/molecule_fingerprint.py",
+      "sha256": "56e1a585a279f1153e84aee0fd435257d3d2522d43f44e9f9341a5ecfea2b4a3"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/predict.py",
+      "sha256": "0dad566c983ad95a4fc14d912da6ad713fe3ed19007ba8c719b05a83c86e9c2c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/run_training.py",
+      "sha256": "7e11079f132eb4f9cd74a8b593f40992eb69ab80bdc0b3b3e3cba56cec8438c7"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/train/train.py",
+      "sha256": "5141afe8777684833177cdfcb162ead40a9c763cabfddc98f5fd4aa4aa44be7e"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/uncertainty/__init__.py",
+      "sha256": "5c20159c3e5c5f545b5c8336c8d1e2140b3b1b56ff4f1f15e837aa97d4f57e08"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/uncertainty/uncertainty_calibrator.py",
+      "sha256": "99ebd391a8b76aaca5d1dd42ec0ce78940467876d279d0654ddcc4ac055be49d"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/uncertainty/uncertainty_estimator.py",
+      "sha256": "e71716a49dcc0e4e894e35bfbb47d6cadb71ed611567461c43a61a2ac3037983"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/uncertainty/uncertainty_evaluator.py",
+      "sha256": "d7cbe66f51b7b23ace49ec9cdd0cf70452d4897c624330bccb963a27d6378bb2"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/uncertainty/uncertainty_predictor.py",
+      "sha256": "87692aabf08a30d8bbc52290026abc72afad2c6bd25339671273e2875509616c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/utils.py",
+      "sha256": "6cc522e7449aa5891bbdcf745107e71d15d9ef5c88a70d1d1e18add3c8380984"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/web/__init__.py",
+      "sha256": "f513af0aa9561262b0c1fca762b8188f25e69626f37cfabbb4013e48abbdba3d"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/web/app.py",
+      "sha256": "6ce820ad87b6953ce17b00ca1da11e2885f311895aaffa0b38e856fb497804d8"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/catpred/web/run.py",
+      "sha256": "92d70bc46318f4fddabf414f95a99b52fb77aaebd51431c9d9a121226c8aaf00"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/predict.py",
+      "sha256": "255e45dd314d2e112178550e85ca8995495cecbbe08aa142c8e7631a2c0450a1"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/analyze_ablation.py",
+      "sha256": "30e72eca09569c00c7cee29e0657cda7d72b2584c7827097ddf13d284589ad7c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/analyze_ensemble.py",
+      "sha256": "eadb556292c973883b2bb8866a981878e7d91fa0a408f3b45ce3b3f0935af2c3"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/analyze_reproduce.py",
+      "sha256": "6a529a8b4c7414390a31fb55762d4a296b4fd6d7c7bc7c16cf08bc102a407880"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/baseline_analysis.py",
+      "sha256": "e64330c2515c55ec7a05a2184a8fb80aba8f05263e3edf76174a9cc84977b3ee"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/benchmark_inference.py",
+      "sha256": "9aab5762b05860b31f1707aec399fa87ceaca72e6d1e362811c204a2a59adf8f"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/create_pdbrecords.py",
+      "sha256": "734bfa084bd865cc9fd7086b51aedad2362dd782a1d8d5e4d20c1ca84518af04"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_fig3b_fig4_figS1_figS2.py",
+      "sha256": "d18b9c4cfdbedfa7900cb32fc526c2e00047332534dffc4f99c1f1af12271dbe"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_fig5_figS7.py",
+      "sha256": "dabf54e17c6bd7a3464f647d0db5fb2023848dfa1944af1dff5d6368abb096dd"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_fig6_figS8.py",
+      "sha256": "cba1b9af64aaa5ad60817bdbd8cffed48165a3033cded8b32a1311e8e50ea1cf"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_figS10_figS11.py",
+      "sha256": "4750c3b4228aeeb78bc29a68c42001ab3968933f4723c655edf0b92ebdcb2a9e"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_figS3.py",
+      "sha256": "63fda5d0521f06d290994fb342afe58e81a78f0e1267da17d637e45ca2a06f32"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/scripts/plot_figS9.py",
+      "sha256": "35a49ce99860b64692b265c7b262bfb8d0375cca43dbaf3758b7be602bbe715e"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/setup.py",
+      "sha256": "2cae2cdc1ef213f10e0be9535d8aca17c850914c2d991bf2e00910882bcc067a"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/upstream/train.py",
+      "sha256": "958a0fa586d5198fce338702a208ad374bf241d2aaf138a9cf237e428f5de936"
+    },
+    {
+      "path": "scripts/catpred_noncanonical_entry.py",
+      "sha256": "1e8361bda6340a6a513869f9273fda8bda300b3d867f2f7e405c4c992f2267b2"
+    },
+    {
+      "path": "scripts/run_catpred_full_queue.sh",
+      "sha256": "3f3eda2b29b185d58ccb4d9cbcf6b9b4bf5c7621c19332ac1efe2f3301635fe0"
+    },
+    {
+      "path": "scripts/catpred_memory_entry.py",
+      "sha256": "2d80de1fd27b95b07ff3da009568362492711ec7336b75b6db095ddf426b8306"
+    },
+    {
+      "path": "scripts/run_catpred_full_queue_v3.sh",
+      "sha256": "4509b9a66526b8d3607ba321f5b485f51c24833082e4cd70600b689de1a03589"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/mmap-verification.json",
+      "sha256": "da9e163ed21fc2a059afae724d365772e02aac84f10f0d1d525475fa60cac3ec"
+    },
+    {
+      "path": "scripts/run_catpred_full_queue_v3_attempt2.sh",
+      "sha256": "abc12a9cb6c39259089a0ba9525f8207fecc9838e48df09a44ef4d6c217664e3"
+    },
+    {
+      "path": "scripts/catpred_recovery.py",
+      "sha256": "e5f18d6fac1a004f8cf31e4ab8c24b3a8200199943ae494c68d5f329eb50182e"
+    },
+    {
+      "path": "scripts/catpred_recovery_entry.py",
+      "sha256": "5b8be06637951a48692a9e45d3cb09954d8cc4109659752dbf693fa7e91ec2ac"
+    },
+    {
+      "path": "scripts/test_catpred_recovery_run.py",
+      "sha256": "af016f3aca5052909f34c70530bf6d5a4899e24a46d4bfaced43035fc217cbc3"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/retained-member0.json",
+      "sha256": "2209d973fd0753e48aff3aa9d01db53980b575bc3e9bf8903e0b641efb90912c"
+    },
+    {
+      "path": "artifacts/catpred-mode-b/recovery-test-v3/result.json",
+      "sha256": "aaf782f4ca467633fdc3becdbc8b432bbdce43ba20a7b069296c5f17131631cb"
+    }
+  ],
+  "supersedes_protocol_sha256": "de54d80cad722e78cbb26d49dbd015815e67592a4c080f02a5e3d5187604535b",
+  "adaptation": {
+    "reason": "Original run failed on X in epoch0 before any validation score; preserve all rows and original sequences.",
+    "sequence_token_policy": "All noncanonical residues map to existing padding index20 (zero embedding) in sequence-attention branch only. ESM branch still uses original sequences and existing verified embeddings.",
+    "observed_development_noncanonical_symbols": [
+      "X",
+      "U",
+      "B",
+      "O"
+    ],
+    "affected_train_rows": 40,
+    "affected_validation_rows": 3,
+    "inference_requirement": "Install same adapter before CatPred prediction.",
+    "claim": "Adapted CatPred Mode B; not an unmodified official implementation."
+  },
+  "memory_adaptation": {
+    "reason": "v2 exhausted main memory while loading cached ESM features, before checkpoint creation.",
+    "change": "Memory-map only CPU ESM cache tensors using weights_only=True; unchanged values, architecture, optimizer, data and seeds.",
+    "verification": "All6992 mapped simultaneously; RSS556220416 bytes; short/median/long probes bitwise equal to ordinary loading."
+  },
+  "launch_correction": "Normalize generated shell script to LF; initial shell failed before runner, data loading or training.",
+  "attempt_parent_protocol_sha256": "2893bc312e3b88cc445e2175c0df4f03e5e4180a8f5d21412ab36ec8c7f3a05e",
+  "execution_retry": {
+    "reason": "Interrupted without completed member; restart from initial seed with identical training settings.",
+    "new_output": "full-v3-attempt2",
+    "statistical_changes": null
+  },
+  "parent_protocol_sha256": "dc3f91e42372ed4d9db1c4581bca228a17b2e7e6baadd3c6ce140bc2db2c6c70",
+  "recovery_revision": {
+    "member_initialization": "member0: group seed; member j>0: 1000*group seed+j",
+    "data_sampler_seed": "group seed, initialized independently per member",
+    "retained": "group7/member0 completed before interruption, kept without performance selection",
+    "state": "atomic epoch boundary model/optimizer/scheduler/RNG/sampler/best checkpoint",
+    "change_disclosure": "Remaining members use independent predefined seeds instead of original shared serial RNG stream. No test-based selection.",
+    "integration_test": "recovery-test-v3/result.json"
+  }
+}

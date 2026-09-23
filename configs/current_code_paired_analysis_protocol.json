@@ -1,0 +1,30 @@
+{
+  "scope": "Exploratory current-code paired analysis; aggregate current-code metrics already observed; not validation of historical results; retain original family bootstrap estimand and random seed.",
+  "implementation_sha256": "6800d9ea6fb30869d4f54ac90dd9354e496edf65d6d98937d57a922f0e93b16a",
+  "frozen_files": [
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed123-receipt.json",
+      "sha256": "0af770987086661eb673edda8bf8a7ff07250e277f6d466ff597d43d267222b7"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed123.csv",
+      "sha256": "94f2adb30acbd0d65cd9672bba6169f598ff7424e1ac40fb1d3c6e64f502cd8d"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed42-receipt.json",
+      "sha256": "b4fe5968576ef75aa3121ce7aa3c0e16699b78f9ba85f5ebbe56cf1557662a8a"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed42.csv",
+      "sha256": "6b1dcc7c3258660283bf0c0cd7405f6665ec33fd6e8616b4a0414d7e3a97f317"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed7-receipt.json",
+      "sha256": "17f28a332c69770671369152869ce5516b5d2e7be1233130079d54563f32a50c"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/current-code/reference-seed7.csv",
+      "sha256": "3c991a6fe7b6ac40532da0479c3e26909252c240d38dc71887d7ed3843c11b54"
+    }
+  ]
+}

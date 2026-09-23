@@ -1,0 +1,128 @@
+{
+  "scope": "Current implementation audit of frozen checkpoints; not reproduction of historical metrics. Seed7 discrepancy observed before declaration. No fitting or checkpoint selection. Historical paired inference remains blocked.",
+  "batch_size": 4,
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "script_sha256": "e295b87761641aeb12cdae462f6fc89cb0e37f265ff1e6c6b3dfd9fa0c59728e",
+  "source_files": [
+    {
+      "path": "src/biocandidate/__init__.py",
+      "sha256": "d707a8b7ffef780d27bc00bede3d94f3c9371ece0280c795e09552805377d0a7"
+    },
+    {
+      "path": "src/biocandidate/baselines.py",
+      "sha256": "defcf91be6fcb6a07570a9b3c2d0bec326f1e51929454f350052ca8c411d8893"
+    },
+    {
+      "path": "src/biocandidate/calibration.py",
+      "sha256": "a7f457ab276f15482fda6a94c76c71c3f2b822a34061c8542a8a098ed24561aa"
+    },
+    {
+      "path": "src/biocandidate/cli.py",
+      "sha256": "1db1adc175fbf9133d13b3cbb7732c2ca7f36ec6f5180a014de6b57b7b1039a0"
+    },
+    {
+      "path": "src/biocandidate/config.py",
+      "sha256": "6f98f87cea6dbd430e41e93c0c8c08e002a7a76cfcb661a8f9bda5931117ceb2"
+    },
+    {
+      "path": "src/biocandidate/data/__init__.py",
+      "sha256": "1ad8c373c70d92246972a5802462848011fd25e8bc0a540d7dde5a0a519009d9"
+    },
+    {
+      "path": "src/biocandidate/data/_rdkit.py",
+      "sha256": "ff076b68c05c909596392e69f4c59990f47ae98203ece8481d224dbf0a3a0b8c"
+    },
+    {
+      "path": "src/biocandidate/data/collate.py",
+      "sha256": "1222ab32a97bd6c06a4e7480eff3f6bfc43d721deaf139c98cdb63c89a04b338"
+    },
+    {
+      "path": "src/biocandidate/data/enzengdb.py",
+      "sha256": "98d73f522334dddd76b106b3cd680d8ae23661ec354b2545af98f28ebac85dcb"
+    },
+    {
+      "path": "src/biocandidate/data/homology.py",
+      "sha256": "5f632c0c664abd5e71369997c6e45f2411f549dd870824070ddb719be63a062d"
+    },
+    {
+      "path": "src/biocandidate/data/lunzer.py",
+      "sha256": "a0d72ba9e4aba2d9e60874f9128b2145ea9d8b1ffbe42326a00cd1b77ac1afdc"
+    },
+    {
+      "path": "src/biocandidate/data/manifest.py",
+      "sha256": "ae8f8dce7d219ae7804bcade3914c3fe25c8c79b5254357e1b4e5a33b3553dbc"
+    },
+    {
+      "path": "src/biocandidate/data/normalized_kinetics.py",
+      "sha256": "01005d5cbc2c26a9d25b5bf3e6c07fbbd1767779b3f2a3eabc1b4c39d4d53f0c"
+    },
+    {
+      "path": "src/biocandidate/data/schema.py",
+      "sha256": "78b16034f71ef5d63e43bf0112c10537541149e178086a39df95fdb6c6b0cd39"
+    },
+    {
+      "path": "src/biocandidate/data/split.py",
+      "sha256": "25105ffc5727e4b293ffcbee32fb152692461c64b375501c3792fc662315726b"
+    },
+    {
+      "path": "src/biocandidate/data/unikp.py",
+      "sha256": "e9be9456afc4b1f22bcb11e93edcf833beffa97434a954d86a78cf0ad5737b64"
+    },
+    {
+      "path": "src/biocandidate/data/variants.py",
+      "sha256": "c2ef93f76a83ae7639a23ed3a4c39b7787e760bf1c667f25f5ae0944246a3da9"
+    },
+    {
+      "path": "src/biocandidate/evaluation.py",
+      "sha256": "5f9a2cc37ca1228a128bfa6af8e02cf905b86eb1090694eb266c1093f96724f1"
+    },
+    {
+      "path": "src/biocandidate/experimental_flux_audit.py",
+      "sha256": "ab7e1baab60f2dc5b7a8be8ca4343a632e0d3c3f74a4680e1b7f0d0c45782026"
+    },
+    {
+      "path": "src/biocandidate/feature_mlp.py",
+      "sha256": "171dd244292b5d71e9535ea575089c749db1ec2a83a1e989ec64c200013da970"
+    },
+    {
+      "path": "src/biocandidate/global_temporal_audit.py",
+      "sha256": "808453a4b396238e32b9996bbf46215a0166b059bfefdc301f1b2583d8d176b8"
+    },
+    {
+      "path": "src/biocandidate/model/__init__.py",
+      "sha256": "20be083c99014718ce79445e60f1995caba1d26ced7a0b77abbe158f3ef1a695"
+    },
+    {
+      "path": "src/biocandidate/model/encoders.py",
+      "sha256": "a68d0c043e8a87b5223c15bf6bc7a471d45dd7d914d7259fe96e58f52c82012a"
+    },
+    {
+      "path": "src/biocandidate/model/losses.py",
+      "sha256": "b08df671b4cf3ee65b9dbbd6cab1f50f6bc3a69c98dea6ae6f84791fb0c8f9fe"
+    },
+    {
+      "path": "src/biocandidate/model/ranker.py",
+      "sha256": "ca3581086074abd41ceec2dbd303b6c55c83f1ffda3b6a00c10483e1e29cac27"
+    },
+    {
+      "path": "src/biocandidate/prospective_benchmark.py",
+      "sha256": "157a3acd055dd1d45b8dcd48ec17f7a49ef8d938f44c8ea72053fa51d67baed2"
+    },
+    {
+      "path": "src/biocandidate/simulated_flux.py",
+      "sha256": "d96955852b1712999eee5ed4b03d97296c182542163ad20ca1d60974fe5e8494"
+    },
+    {
+      "path": "src/biocandidate/temporal_registry.py",
+      "sha256": "86ba087cb212eacfbee676716dd5d84a128e9ab93d84ecf8af3b3b2844380718"
+    },
+    {
+      "path": "src/biocandidate/training.py",
+      "sha256": "176c0f79f0a62522f754642f79d674ab4700200efae994710bc73f4f5ebacd06"
+    }
+  ]
+}

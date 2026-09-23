@@ -1,0 +1,94 @@
+{
+  "analysis_id": "paired-family-posthoc-v1",
+  "declared_at": "2026-09-18T03:51:11.591497+00:00",
+  "status": "post-hoc inference after aggregate test metrics observed; no model selection",
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "bootstrap_replicates": 5000,
+  "bootstrap_seed": 20260918,
+  "resampling": "sample frozen test MMseqs families with replacement; retain all rows within each sampled family; identical weights for each model and seed",
+  "estimand": "mean across fixed seeds of row-weighted RMSE/MAE/Pearson; contrast reference minus comparator; not ensemble predictions",
+  "primary_comparison": "BioCandidateRanker minus CataPro RMSE",
+  "secondary": [
+    "MAE",
+    "Pearson",
+    "BioCandidateRanker minus UniKP"
+  ],
+  "interval": "percentile 95%; no multiplicity-adjusted confirmatory claims",
+  "replay_metric_tolerance": 1e-05,
+  "frozen_files": [
+    {
+      "path": "artifacts/homology-final/homology_split.json",
+      "sha256": "ae1793afea078b4a2d8b834e9b9cd7c836d43508e26185ed87d26b8b82f96300"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/data/test.csv",
+      "sha256": "0abe4d7f91e0355736060ccc736c08ba97893eba0374d502003e9b05af13c55f"
+    },
+    {
+      "path": "scripts/recover_reference_predictions.py",
+      "sha256": "fd08675e39b64b1ec5de43c3b6d9a8d8b4368caf3e50526d5849ec40d95adc66"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed7/best.pt",
+      "sha256": "5a85d9613cceac0d906dcf17a4440006ce38e899f03c7472db467223104ea0d7"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed7/test_metrics.json",
+      "sha256": "87bc9b1d6c3618a17b3463735228225918c5187f3c892969058436ca5f74fd70"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed42/best.pt",
+      "sha256": "27339e1c379b9cf2642cb7f7daa3b20156e8f439cc19929037f9e01b97c2ebd8"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed42/test_metrics.json",
+      "sha256": "7180d98045336bc88d9f340c4b3b0ff64deaa91cbd4c5b287776ab0a6d5f495b"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed123/best.pt",
+      "sha256": "c45c2b8dfe4074de4e051d409b459bab9cc7b4790905eaf19fcbaba6028c74ea"
+    },
+    {
+      "path": "artifacts/esm2-t6-opt-seed123/test_metrics.json",
+      "sha256": "b839368206869f8c6450b416cb04be16e5655d0c82f0fc42c45b4242f5a4b3be"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/internal-test/seed7-predictions.csv",
+      "sha256": "393bfebef984431270ab237ef371e00f0cec5c4a63fa2ca611a896884cf1d3f5"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/internal-test/seed42-predictions.csv",
+      "sha256": "7cbfbd87aecaee1db2ac6a57e21a439b52b755208d95e9031020bcf34d4d3e2d"
+    },
+    {
+      "path": "artifacts/catapro-mode-b/internal-test/seed123-predictions.csv",
+      "sha256": "4cb00445f5ab7270efa85caec1dea829f63588074435f57c1831e8827c1a307e"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/unikp-mode-b/seed7/predictions.csv",
+      "sha256": "56a97409d998b8cc994cb4f2b5c691222a02555377935219ea9e4078e40293df"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/unikp-mode-b/seed42/predictions.csv",
+      "sha256": "a7d33c2af9893e872fcc88379232ffe5ec1526aa0f5dfa530efe0ce145d1bfb7"
+    },
+    {
+      "path": "artifacts/external/sota-homology-cold/unikp-mode-b/seed123/predictions.csv",
+      "sha256": "d86d7dce4dd660d9fb73239341a862acb7094d5d16c121040326dbcff695e4d0"
+    }
+  ],
+  "implementation_correction": {
+    "reason": "Existing split validator requires all source rows; restore original read-all/apply-split/aggregate/filter order. Failed before any inference; statistical plan unchanged.",
+    "prior_protocol_sha256": "49f289b56cda094353a5b4b85b543d649518a9f243aa98f2a64e3c506134ad3f"
+  },
+  "implementation_corrections": [
+    {
+      "reason": "Allowlist built-in TorchVersion for weights_only loading of authenticated local checkpoints; failed before inference; statistical plan unchanged.",
+      "prior_protocol_sha256": "ec9887e0755c308394576df582e5cfe6e8b51f5c5681ea86c1cf7a642e49fa25"
+    }
+  ]
+}

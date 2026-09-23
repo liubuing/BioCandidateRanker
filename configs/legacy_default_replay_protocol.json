@@ -1,0 +1,13 @@
+{
+  "purpose": "Reconstruct historical metrics, not tune predictions. CLI evaluate default is 64, distinct from training micro-batch 4. Legacy forward and batches4/32 previously failed.",
+  "batch_size": 64,
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "legacy_source": "artifacts/paired-family-analysis/legacy_encoders_57f3f36.py",
+  "legacy_sha256": "520892d4925a11d15aae55587616d7ac92a16e4084fb31d15528acc7eb675669",
+  "script_sha256": "3ba3d26a0548dfa7d8e380f073029534b74ae33c3396af554c90e179294d4945",
+  "tolerance": 1e-05
+}

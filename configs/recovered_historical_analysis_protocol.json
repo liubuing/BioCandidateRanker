@@ -1,0 +1,39 @@
+{
+  "scope": "Historical metrics reproduced with historical forward and CLI default batch64; same predeclared statistical estimator, bootstrap seed and fixed checkpoints. No tuning or fitting.",
+  "runner_sha256": "9023e5f75a783d76612488e19e534ae2f83a68c73b1044b59895091c52ba71fa",
+  "estimator_sha256": "6800d9ea6fb30869d4f54ac90dd9354e496edf65d6d98937d57a922f0e93b16a",
+  "frozen_files": [
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed123-receipt.json",
+      "sha256": "454b9756ccb99e361d39d8af26dfac47abcd9b1bcb59953acc4e4dace1306e30"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed123.csv",
+      "sha256": "f8c57147933015f469655a4dd1e62c604d02e96dc78b4baadc015a426e6e92b9"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed42-receipt.json",
+      "sha256": "b53e539f1b7891031e8af145e6e2e3cb55f379e9da1f399853b01a4954d0848f"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed42.csv",
+      "sha256": "9628ba5f31f30f43af89e20182f1c3c3c7e51c1ea4c15b049c8d6bbd0d101c6c"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed7-receipt.json",
+      "sha256": "a83f46870eff02857166e9d0a0b21dce8a03c781d17f315aa3ee8e6c838a6d07"
+    },
+    {
+      "path": "artifacts/paired-family-analysis/legacy-default/reference-seed7.csv",
+      "sha256": "4dc38a7743fe5fe4658e3bf6d9a5af79ea4d407968e2779b241f19aeba8c8f99"
+    },
+    {
+      "path": "configs/legacy_default_replay_protocol.json",
+      "sha256": "7cf220b5e9ac341312d5f90e2db0e4f963738a0a1a2bef2a863512ede12a53fe"
+    },
+    {
+      "path": "configs/paired_family_analysis_protocol.json",
+      "sha256": "0c53384359d4d5b65e90f92795d8e51f01d5cc9fd1fd88c14b0af76b3d615c85"
+    }
+  ]
+}

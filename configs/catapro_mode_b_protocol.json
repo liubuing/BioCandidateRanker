@@ -1,0 +1,33 @@
+{
+  "protocol_id": "catapro-fixed-split-development-v1",
+  "declared_on": "2026-09-17",
+  "status": "fixed before new training; development and validation only",
+  "upstream_commit": "cc89b2c81768665cf6fd76dfda607ce88691f601",
+  "data_manifest": "artifacts/external/sota-homology-cold/data-manifest.json",
+  "data_manifest_sha256": "ac69cf0c02c7aefb3f4337770d9ebdf26d2c7f55b17ab98cb429d046d10813c9",
+  "prott5_weight_sha256": "c06141d42e93c12b5f6d95c701952156bd4079661f5f2d981d0d2036ba96dae9",
+  "molt5_revision": "7b7d4b0ab8b66b351e669b1f66272418ba15c3d9",
+  "training": {
+    "seeds": [
+      7,
+      42,
+      123
+    ],
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "dropout": 0.0,
+    "max_epochs": 150,
+    "patience": 20,
+    "min_delta": 0.001
+  },
+  "selection": "mean validation batch RMSE loss; official criterion retained; validation never trains",
+  "adaptations": [
+    "official ten-fold replaced by frozen train/validation partitions",
+    "vectorized mean pooling; verified cached ProtT5 probe tolerance 1e-4",
+    "frozen MolT5 eval on GPU with no gradients; separate feature cache",
+    "three fixed random seeds; save model state on validation improvement",
+    "merge singleton last training batch into prior batch for BatchNorm"
+  ],
+  "claim_boundary": "internal development comparator; no test scoring implemented; no temporal pool access; smoke is partial-data plumbing only"
+}
