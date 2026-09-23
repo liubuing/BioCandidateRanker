@@ -1,4 +1,4 @@
-# 预训练蛋白质表征解锁多模态融合增益用于酶动力学预测
+# 预训练蛋白质表征改善同源冷评估下的酶动力学预测
 
 [作者匿名审稿]
 
@@ -6,9 +6,9 @@
 
 **动机：** 联合编码蛋白质序列、底物分子图和反应上下文的多模态深度学习架构已被提出用于酶动力学预测，但其在同源冷评估条件下相对于单模态基线的优势尚未得到充分表征。
 
-**结果：** 本文提出BioCandidateRanker，一种结合分块蛋白质注意力、稀疏分子消息传递和哈希反应上下文的任务查询融合架构，用于log10(kcat)预测。在冻结的MMseqs2同源冷划分（30%一致性，16,838对）下，多模态优势依赖于表征质量：从头训练编码器时，Morgan指纹MLP几乎匹配多模态模型（RMSE 1.4756 vs. 1.4699）。将编码器替换为冻结ESM-2后，RMSE降至1.3916±0.0183（降低5.3%），Pearson升至0.3810±0.0222（提升54%）。零样本迁移至EnzEngDB（Spearman 0.071）和IMDH景观（Spearman −0.166）均失败，揭示端点不可迁移性。
+**结果：** 本文在冻结的MMseqs2同源冷划分（30%一致性，16,838对）上评估BioCandidateRanker的log10(kcat)预测。从头训练蛋白质编码器时，Morgan指纹MLP几乎匹配多模态模型（RMSE 1.4756 vs. 1.4699）。使用冻结ESM-2后，三个种子的平均RMSE依次为：仅蛋白质1.5025、蛋白质＋底物1.4454、完整模型1.3916。同一划分上重新训练的UniKP达到RMSE 1.4093。这些模态比较是在已观察过的内部测试集上进行的事后诊断。模型向EnzEngDB适应度排序（Spearman 0.071）和IMDH景观（Spearman −0.166）的零样本迁移较差。
 
-**数据与代码：** 源代码、冻结划分清单和评估方案可在[仓库URL]获取。所有外部数据源均记录SHA256身份和许可来源。
+**数据与代码：** 项目仓库已备有代码和评估清单；投稿前仍须建立公开归档版本和数据可用性声明，并解决开发语料库的再分发许可。
 
 **通讯作者：** [通讯作者]
 
@@ -20,17 +20,17 @@
 
 酶动力学参数，特别是催化转换数kcat，是代谢工程、酶发现和系统生物学的基础（Bar-Even et al., 2011; Kroll et al., 2023）。kcat的实验测定劳动密集，推动了计算预测方法的发展以优先筛选湿实验验证候选（Schomburg et al., 2004）。
 
-近期方法将kcat预测构建为多模态学习问题，联合编码蛋白质序列、底物分子结构和反应上下文（Yu et al., 2024; Kroll et al., 2023; Li et al., 2024）。其隐含假设是多模态融合提供超越任何单一模态的互补信号——这一原则在其他领域已得到充分验证（Baltrušaitis et al., 2019），但在酶动力学中尚未在防止序列同源信息泄漏的评估条件下得到严格检验。
+近期方法将kcat预测构建为多模态学习问题，联合编码蛋白质序列、底物分子结构和反应上下文（Li et al., 2022; Kroll et al., 2023; Boorla and Maranas, 2025）。其隐含假设是多模态融合提供超越任何单一模态的互补信号——这一原则在其他领域已得到充分验证（Baltrušaitis et al., 2019），但在酶动力学中尚未在防止序列同源信息泄漏的评估条件下得到严格检验。
 
-在进化尺度序列数据库上预训练的蛋白质语言模型已经变革了蛋白质表征学习（Rives et al., 2021; Lin et al., 2023; Elnaggar et al., 2022）。ESM-2（Lin et al., 2023）和ProtTrans（Elnaggar et al., 2022）产生捕获结构和功能信息的逐残基嵌入，无需显式结构测定（Jumper et al., 2021）。这些表征是否为动力学参数预测提供了超越简单序列特征的可操作信号，仍是一个开放问题（Hie et al., 2024）。
+在进化尺度序列数据库上预训练的蛋白质语言模型已经变革了蛋白质表征学习（Rives et al., 2021; Lin et al., 2023; Elnaggar et al., 2022）。ESM-2（Lin et al., 2023）和ProtTrans（Elnaggar et al., 2022）产生捕获结构和功能信息的逐残基嵌入，无需显式结构测定（Jumper et al., 2021）。这些表征是否为动力学参数预测提供了超越简单序列特征的可操作信号，仍是一个开放问题（Hie et al., 2022）。
 
 我们识别出一个关键混淆因素：当蛋白质编码器在有限数据（约13K训练对）上从头训练时，蛋白质模态贡献的信号可忽略不计，仅使用底物的Morgan指纹基线（Rogers and Hahn, 2010）即可达到可比性能。多模态架构看似有效，仅因为它没有显著低于基线——而非因为它提供了真正的融合收益。这与分子性质预测文献中的关切相呼应，其中简单基线经常匹配或超越复杂架构（Wu et al., 2018; Yang et al., 2019）。
 
-我们表明，预训练蛋白质语言模型表征解决了这一局限。将从头蛋白质编码器替换为冻结ESM-2嵌入（Lin et al., 2023）将多模态信号从可忽略转变为实质性，在冻结同源冷测试集上三个随机种子均产生一致改进。
+我们观察到，预训练蛋白质语言模型表征改善了内部测试结果。将从头蛋白质编码器替换为冻结ESM-2嵌入（Lin et al., 2023）将多模态信号从可忽略转变为实质性，在冻结同源冷测试集上三个随机种子均产生一致改进。
 
-我们进一步证明，这种内部预测增益无法迁移到实际候选排序任务。在EnzEngDB工程适应度数据（Steinkellner et al., 2024）和Lunzer古老适应性IMDH景观（Lunzer et al., 2005）上的零样本评估均产生与随机排序不可区分或更差的结果。这种端点不可迁移性——绝对kcat预测与相对工程适应度之间——本身是一个具有领域启示的科学性负面结果（Hie et al., 2024; Yang et al., 2023）。
+现有外部评估显示，这种内部预测增益未能迁移到所测试的候选排序任务。在EnzEngDB工程适应度数据（Long et al., 2026）和Lunzer古老适应性IMDH景观（Lunzer et al., 2005）上的零样本评估均产生与随机排序不可区分或更差的结果。这种端点不可迁移性——绝对kcat预测与相对工程适应度之间——本身是一个具有领域启示的科学性负面结果（Hie et al., 2022; Starr and Thornton, 2016）。
 
-本文贡献为：(1) 严格证明酶动力学中多模态融合收益依赖于表征质量；(2) 具有完整数据来源的冻结可重复同源冷评估方案；(3) 对动力学预测与候选排序之间差距的诚实表征，约束领域中的过度声明。
+本文贡献为：(1) 在冻结同源冷划分上评估预训练蛋白质表征和模态事后对照；(2) 在同一划分上比较重新训练的UniKP与DLKcat；(3) 表征kcat预测向工程适应度排序迁移不佳的现象。
 
 ---
 
@@ -50,25 +50,25 @@ BioCandidateRanker将三种模态编码到共享d维空间后进行任务查询�
 
 ### 2.2 数据
 
-开发语料库来源于UniKP/DLKcat数据集（Yu et al., 2024; Kroll et al., 2023）：17,010原始行，过滤非正值和多组分SMILES后接受16,838行。重复酶-底物对（395）在log10尺度上以中位数聚合。数据源仅有语料库级来源；记录级引用不可用。底层动力学数据主要来源于BRENDA（Schomburg et al., 2004），由UniKP项目汇编。
+开发语料库来源于UniKP/DLKcat数据集（Li et al., 2022; Kroll et al., 2023）：17,010原始行，过滤非正值和多组分SMILES后接受16,838行。重复酶-底物对（395）在log10尺度上以中位数聚合。数据源仅有语料库级来源；记录级引用不可用。底层动力学数据主要来源于BRENDA（Schomburg et al., 2004），由UniKP项目汇编。
 
 ### 2.3 同源冷划分
 
-蛋白质序列使用MMseqs2（Steinegger and Söding, 2017；版本5d152c612b6ad2a56f657b7a02c127eceaea2a75）以30%最小一致性、80%覆盖率、覆盖模式0进行聚类。该阈值遵循同源感知蛋白质基准的既定实践（Rost, 1999; Hou et al., 2023）。冻结划分将2,204个簇分配到训练/验证/测试分区：中位数聚合后13,157 / 1,640 / 1,646行。无测试簇与任何训练簇共享超过阈值的同源性。划分清单通过SHA256绑定到源文件身份，确保可重复性（Pineau et al., 2021）。
+蛋白质序列使用MMseqs2（Steinegger and Söding, 2017；版本5d152c612b6ad2a56f657b7a02c127eceaea2a75）以30%最小一致性、80%覆盖率、覆盖模式0进行聚类。该阈值遵循同源感知蛋白质基准的既定实践（Rost, 1999）。冻结划分将2,204个簇分配到训练/验证/测试分区：中位数聚合后13,157 / 1,640 / 1,646行。无测试簇与任何训练簇共享超过阈值的同源性。划分清单通过SHA256绑定到源文件身份，确保可重复性（Pineau et al., 2021）。
 
 ### 2.4 训练方案
 
-所有模型使用AdamW（Loshchilov and Hutter, 2019），权重衰减0.01，梯度裁剪范数1.0，异方差高斯NLL损失（Nix and Weigend, 1994）支持掩码多任务。ESM-2实验使用批大小4，梯度累积8个微批（有效批32），余弦退火学习率调度（Loshchilov and Hutter, 2017）带2轮线性预热，验证损失早停耐心4。从头基线使用批大小32训练3轮遵循原始方案。三个种子（7, 42, 123）在执行前冻结的方案下运行，遵循多种子评估最佳实践（Pineau et al., 2021; Musgrave et al., 2021）。
+所有模型使用AdamW（Loshchilov and Hutter, 2019），权重衰减0.01，梯度裁剪范数1.0，异方差高斯NLL损失（Nix and Weigend, 1994）支持掩码多任务。ESM-2实验使用批大小4，梯度累积8个微批（有效批32），余弦退火学习率调度（Loshchilov and Hutter, 2017）带2轮线性预热，验证损失早停耐心4。从头基线使用批大小32训练3轮遵循原始方案。三个种子（7, 42, 123）在执行前冻结的方案下运行，遵循多种子评估最佳实践（Pineau et al., 2021; Bouthillier et al., 2021）。
 
 ### 2.5 基线
 
-(1) 训练集均值预测器。(2) 氨基酸组成MLP（20维，128→64，40轮）。(3) Morgan半径-2 2048位指纹MLP（Rogers and Hahn, 2010；相同架构）。(4) 两种特征集的岭回归变体（alpha从{0.1, 1, 10, 100}在验证集上选择）。(5) 具有相同编码器和训练预算的晚拼接多模态模型，代表常见的早融合vs晚融合比较（Baltrušaitis et al., 2019）。(6) DLKcat（Yu et al., 2024）在GPL-3.0-only下于IMDH景观上评估。
+(1) 训练集均值预测器。(2) 氨基酸组成MLP（20维，128→64，40轮）。(3) Morgan半径-2 2048位指纹MLP（Rogers and Hahn, 2010；相同架构）。(4) 两种特征集的岭回归变体（alpha从{0.1, 1, 10, 100}在验证集上选择）。(5) 具有相同编码器和训练预算的晚拼接多模态模型，代表常见的早融合vs晚融合比较（Baltrušaitis et al., 2019）。(6) DLKcat（Li et al., 2022）在GPL-3.0-only下于IMDH景观上评估。
 
 ### 2.6 外部评估
 
-**EnzEngDB v1**（Steinkellner et al., 2024；Zenodo DOI 10.5281/zenodo.17310823，CC BY 4.0）：462,092实验CSV行，245,945严格接受跨160个活动。冻结同源冷选择移除所有与UniKP有MMseqs2命中的序列，保留6,423行跨51个活动。指标在每个活动内计算并宏平均，遵循酶工程数据的活动感知评估方案（Hie et al., 2024）。
+**EnzEngDB v1**（Long et al., 2026；Zenodo DOI 10.5281/zenodo.17310823，CC BY 4.0）：462,092实验CSV行，245,945严格接受跨160个活动。冻结同源冷选择移除所有与UniKP有MMseqs2命中的序列，保留6,423行跨51个活动。指标在每个活动内计算并宏平均，遵循酶工程数据的活动感知评估方案（Hie et al., 2022）。
 
-**Lunzer IMDH景观**（Lunzer et al., 2005；Dryad DOI 10.5061/dryad.7nd70，CC0）：512个完整六突变基因型的*E. coli* 3-异丙基苹果酸脱氢酶，具有拟合的ln(Km)和ln(kcat/Km)用于NAD和NADP。所有512个变体具有UniKP同源物（67–69%一致性），使其成为突变敏感性测试而非同源冷验证。该景观已被广泛用作适应度预测方法的基准（Starr and Thornton, 2016; Yang et al., 2023）。
+**Lunzer IMDH景观**（Lunzer et al., 2005；Dryad DOI 10.5061/dryad.7nd70，CC0）：512个完整六突变基因型的*E. coli* 3-异丙基苹果酸脱氢酶，具有拟合的ln(Km)和ln(kcat/Km)用于NAD和NADP。所有512个变体具有UniKP同源物（67–69%一致性），使其成为突变敏感性测试而非同源冷验证。该景观已被广泛用作适应度预测方法的基准（Starr and Thornton, 2016）。
 
 ### 2.7 可重复性
 
@@ -84,7 +84,7 @@ BioCandidateRanker将三种模态编码到共享d维空间后进行任务查询�
 
 该结果表明，从头蛋白质编码器在约13K对、64隐藏维和3轮训练下，未能提取补充底物图的信号。多模态架构无害，但其融合机制相比仅底物预测未提供可测量收益。这一发现与分子性质预测中的观察一致，其中图神经网络在中等规模数据集上经常无法超越Morgan指纹基线（Wu et al., 2018; Yang et al., 2019）。
 
-### 3.2 预训练表征解锁融合增益
+### 3.2 预训练表征改善内部预测
 
 将蛋白质编码器替换为冻结ESM-2（esm2_t6_8M_UR50D）表征并将共享维度增至256，结果发生质变（表1）。三种子ESM-2多模态模型达到RMSE 1.3916 ± 0.0183，MAE 1.0708 ± 0.0117，Pearson 0.3810 ± 0.0222。
 
@@ -97,13 +97,21 @@ BioCandidateRanker将三种模态编码到共享d维空间后进行任务查询�
 | Morgan MLP | 1.4756 ± 0.0024 | 1.1469 ± 0.0022 | 0.2566 ± 0.0188 |
 | 分块Transformer多模态 | 1.4699 ± 0.0064 | 1.1268 ± 0.0063 | 0.2471 ± 0.0282 |
 | 晚拼接多模态 | 1.4801 ± 0.0230 | 1.1396 ± 0.0114 | 0.2821 ± 0.0278 |
+| ESM-2仅蛋白质 | 1.5025 ± 0.0064 | 1.1656 ± 0.0051 | 0.2174 ± 0.0410 |
+| ESM-2蛋白质＋底物 | 1.4454 ± 0.0156 | 1.1200 ± 0.0149 | 0.2791 ± 0.0294 |
 | **ESM-2多模态（本文）** | **1.3916 ± 0.0183** | **1.0708 ± 0.0117** | **0.3810 ± 0.0222** |
+| UniKP Mode B（重新训练） | 1.4093 ± 0.0094 | 1.0785 ± 0.0041 | 0.3777 ± 0.0222 |
+| DLKcat Mode B（重新训练） | 1.7138 ± 0.1415 | 1.3351 ± 0.1251 | 0.1463 ± 0.0764 |
 
-相比从头多模态模型的改进为0.078 RMSE（5.3%）和0.134 Pearson（54%）。相比最强单模态基线（Morgan MLP）的改进为0.084 RMSE（5.7%）和0.124 Pearson（48%）。三个种子均显示一致方向；无种子交叉（逐种子结果见补充表S2）。改进幅度与蛋白质功能预测中用预训练表征替换学习嵌入所报告的增益相当（Rives et al., 2021; Hie et al., 2024）。
+与从头多模态模型相比，RMSE改进为0.078 RMSE（5.3%）和0.134 Pearson（54%）。相比已测试的Morgan指纹单模态基线的改进为0.084 RMSE（5.7%）和0.124 Pearson（48%）。三个种子均显示一致方向；无种子交叉（逐种子结果见补充表S2）。改进幅度与蛋白质功能预测中用预训练表征替换学习嵌入所报告的增益相当（Rives et al., 2021; Hie et al., 2022）。
+
+UniKP与DLKcat在冻结训练集上按已发表超参数各重新训练三个种子；DLKcat的RMSE为1.7138 ± 0.1415、Pearson为0.1463 ± 0.0764。已发表检查点因测试序列与其训练集重叠而未纳入公平比较。ESM-2模态对照是在该内部测试结果已被观察后加入的，因此属于诊断，不能视作融合收益的独立确认。
 
 ### 3.3 架构消融
 
-从头模型上的单种子消融（种子42，基线RMSE 1.4638；补充表S1）确认每个组件有贡献：移除反应上下文增加RMSE +0.041，将任务特定查询替换为共享向量增加+0.027，将分块Transformer替换为全局均值池化增加+0.027。这些效应适度但方向一致，表明架构在充分输入表征条件下提供增量收益。
+固定ESM-2骨干及训练设置后，在仅蛋白质模型中加入底物输入使平均RMSE降低0.0571；继续加入反应上下文再降低0.0538。三个种子的配对差异方向一致（补充表S3）。这是逐步加入输入的消融，不能单独识别生物机制，也不能证明在独立kcat数据上的泛化。
+
+从头模型上的事后单种子消融（种子42，基线RMSE 1.4638；补充表S1）提示部分组件在该训练预算下可能有贡献：移除反应上下文增加RMSE +0.041，将任务特定查询替换为共享向量增加+0.027，将分块Transformer替换为全局均值池化增加+0.027。这些效应适度但方向一致，但不足以确认预训练模型中的融合增益。
 
 异方差高斯NLL目标（Nix and Weigend, 1994; Kendall and Gal, 2017）相比固定方差MSE在三种子上改进点RMSE 0.032 ± 0.005，确认了学习不确定性对点预测的价值，即使校准仍不完美。
 
@@ -115,9 +123,9 @@ BioCandidateRanker将三种模态编码到共享d维空间后进行任务查询�
 
 **EnzEngDB零样本排序。** kcat检查点作为活动内适应度排序代理，在51个同源冷活动上达到宏平均Spearman 0.071和成对准确率0.524——仅略高于随机（0.000和0.500）。使用成对logistic损失（Burges et al., 2005）训练的专用活动感知排序器达到三种子平均Spearman −0.026 ± 0.080，置信区间覆盖零。无训练模型超越随机十分位富集。
 
-**IMDH突变景观。** 在512个六突变变体（与训练数据67–69%一致性）上，BioCandidateRanker达到辅因子内Spearman −0.166，DLKcat（Yu et al., 2024）达到−0.259。两个预测器均差于随机排序。该景观对进一步模型选择关闭。
+**IMDH突变景观。** 在512个六突变变体（与训练数据67–69%一致性）上，BioCandidateRanker达到辅因子内Spearman −0.166，DLKcat（Li et al., 2022）达到−0.259。两个预测器均差于随机排序。该景观对进一步模型选择关闭。
 
-这些失败不能归因于编码器质量：ESM-2模型更优的内部Pearson（0.38 vs. 0.25）未能挽救外部排序。瓶颈在于端点语义——kcat预测不意味着工程适应度排序，绝对动力学预测不意味着相对突变效应排序。这一观察与更广泛的发现一致：蛋白质语言模型表征虽然对某些任务强大，但并非普遍迁移到所有下游应用（Hie et al., 2024; Madani et al., 2023）。
+这些失败不能归因于编码器质量：ESM-2模型更优的内部Pearson（0.38 vs. 0.25）未能挽救外部排序。瓶颈在于端点语义——kcat预测不意味着工程适应度排序，绝对动力学预测不意味着相对突变效应排序。这一观察与更广泛的发现一致：蛋白质语言模型表征虽然对某些任务强大，但并非普遍迁移到所有下游应用（Hie et al., 2022; Madani et al., 2023）。
 
 ---
 
@@ -125,29 +133,29 @@ BioCandidateRanker将三种模态编码到共享d维空间后进行任务查询�
 
 ### 4.1 表征质量作为约束瓶颈
 
-核心发现是架构性的：酶动力学中的多模态融合受表征质量门控，而非融合机制设计。任务查询交叉注意力、稀疏消息传递和上下文哈希均功能正常——其贡献仅在蛋白质模态携带预训练进化信息（Lin et al., 2023; Rives et al., 2021）而非在13K样本上从头训练的22标记嵌入时变得可测量。
+核心观察是：预训练蛋白质表征改善了冻结内部划分上的结果。同条件ESM-2模态对照显示，加入底物、再加入反应上下文均降低了内部测试误差。这些事后结果尚不能证明前瞻性融合收益；从头模型与ESM-2模型的比较还同时改变了共享维度。
 
-这对领域具有实践启示。使用从头编码器在中等数据集上关于多模态架构优越性的声明可能在测量噪声而非信号。Morgan MLP平齐结果应作为强制健全性检查：如果指纹基线（Rogers and Hahn, 2010）匹配你的多模态模型，你的蛋白质编码器没有贡献。我们呼应分子机器学习中严格基线的呼吁（Wu et al., 2018; Musgrave et al., 2021）。
+这对领域具有实践启示。使用从头编码器在中等数据集上关于多模态架构优越性的声明可能在测量噪声而非信号。Morgan MLP平齐结果应作为强制健全性检查：如果指纹基线（Rogers and Hahn, 2010）匹配你的多模态模型，你的蛋白质编码器没有贡献。我们呼应分子机器学习中严格基线的呼吁（Wu et al., 2018; Bouthillier et al., 2021）。
 
 ### 4.2 端点不可迁移性差距
 
-外部评估失败约束了kcat预测模型的实际效用。EnzEngDB适应度值（Steinkellner et al., 2024）反映活动特定工程目标（表达、稳定性、工艺条件下活性），不可还原为kcat。IMDH景观（Lunzer et al., 2005）测量特定辅因子结合上下文中突变的相对适应度效应，其中排序取决于Km和kcat/Km权衡，仅kcat预测器无法捕获。
+外部评估失败约束了kcat预测模型的实际效用。EnzEngDB适应度值（Long et al., 2026）反映活动特定工程目标（表达、稳定性、工艺条件下活性），不可还原为kcat。IMDH景观（Lunzer et al., 2005）测量特定辅因子结合上下文中突变的相对适应度效应，其中排序取决于Km和kcat/Km权衡，仅kcat预测器无法捕获。
 
-这一差距表明候选排序应用需要：(a) 多目标预测（kcat、Km、表达、稳定性）配合任务特定排序头，或(b) 从活动特定训练数据直接预测适应度，如蛋白质适应度景观方法所探索（Starr and Thornton, 2016; Hie et al., 2024; Yang et al., 2023）。以当前公共数据的规模和来源质量，两者均无法实现独立验证。
+这一差距表明候选排序应用需要：(a) 多目标预测（kcat、Km、表达、稳定性）配合任务特定排序头，或(b) 从活动特定训练数据直接预测适应度，如蛋白质适应度景观方法所探索（Starr and Thornton, 2016; Hie et al., 2022; Starr and Thornton, 2016）。以当前公共数据的规模和来源质量，两者均无法实现独立验证。
 
 ### 4.3 局限性
 
-ESM-2实验使用最小变体（t6，8M参数，6层），受GPU内存约束（8 GB）。更大变体（t12、t30、t33；最大15B参数；Lin et al., 2023）可能提供额外增益但未评估。512残基截断影响少数长酶。开发语料库缺乏记录级引用，无法审计与现有预测器训练数据的重叠——聚合动力学数据库的已知局限（Schomburg et al., 2004; Kroll et al., 2023）。前瞻性独立基准（192/300条记录，25/30个家族）仍未完成；未对该池生成模型预测。
+ESM-2实验使用最小变体（t6，8M参数，6层），受GPU内存约束（8 GB）。另有一个t12模型完成训练但未做测试评估；更大变体也未评估。512残基截断影响少数长酶。开发语料库缺乏记录级引用，无法审计与现有预测器训练数据的重叠——聚合动力学数据库的已知局限（Schomburg et al., 2004; Kroll et al., 2023）。前瞻性独立基准（192/300条记录，25/30个家族）仍未完成；未对该池生成模型预测。
 
 ### 4.4 走向诚实基准
 
-我们在观察结果前冻结所有评估方案，记录负面结果而不进行事后挽救尝试，并在评估后关闭外部基准的进一步模型选择。前瞻性时间基准方案要求30个家族300条记录且与训练零重叠，方允许任何预测——当前公共数据无法满足的标准。我们将此差距作为发现而非需要默默绕过的局限报告，遵循计算生物学中负责任基准的建议（Pineau et al., 2021; Hutson, 2018）。
+我们在观察结果前冻结了前瞻性外部评估方案；部分内部稳健性和消融分析属于事后诊断。我们记录负面结果而不进行事后挽救尝试，并在评估后关闭外部基准的进一步模型选择。前瞻性时间基准方案要求30个家族300条记录且与训练零重叠，方允许任何预测——当前公共数据无法满足的标准。我们将此差距作为发现而非需要默默绕过的局限报告，遵循计算生物学中负责任基准的建议（Pineau et al., 2021; Hutson, 2018）。
 
 ---
 
 ## 5 结论
 
-多模态酶动力学预测受益于预训练蛋白质表征，但增益依赖于表征质量而非架构。冻结ESM-2编码器（Lin et al., 2023）在同源冷评估下解锁一致的5–6% RMSE改进和50%+相关改进，超越单模态和从头多模态基线。然而，这一预测增益无法迁移到工程候选排序，揭示了领域必须承认的根本端点不可迁移性。我们提供冻结评估方案、完整数据来源和诚实负面结果，作为未来追求酶动力学预测中发表级声明工作的基础设施。
+冻结同源冷测试表明，预训练蛋白质表征改善本模型的预测。ESM-2事后模态对照显示，加入底物和反应上下文后内部误差依次降低；完整模型与重新训练的UniKP表现接近。内部预测增益尚未证明工程候选排序效用：在已测试的两个排序端点上迁移较差。提出更广泛的泛化主张前，仍需独立的同终点kcat验证。
 
 ---
 
@@ -173,6 +181,8 @@ Baltrušaitis,T., Ahuja,C. and Morency,L.P. (2019) Multimodal machine learning: 
 
 Bar-Even,A., Noor,E., Savir,Y., Liebermeister,W., Davidi,D., Tawfik,D.S. and Milo,R. (2011) The moderately efficient enzyme is evolutionary and physicochemical trend shaping kinetic parameters. *Biochemistry*, **50**, 4402–4410.
 
+Boorla,V.S. and Maranas,C.D. (2025) CatPred: a comprehensive framework for deep learning in vitro enzyme kinetic parameters. *Nat. Commun.* DOI: 10.1038/s41467-025-57215-9.
+
 Beltagy,I., Peters,M.E. and Cohan,A. (2020) Longformer: the long-document transformer. *arXiv*, arXiv:2004.05150.
 
 Burges,C., Shaked,T., Renshaw,E., Lazier,A., Deeds,M., Hamilton,N. and Hullender,G. (2005) Learning to rank using gradient descent. In *Proceedings of the 22nd International Conference on Machine Learning*, pp. 89–96.
@@ -187,9 +197,7 @@ Gilmer,J., Schoenholz,S.S., Riley,P.F., Vinyals,O. and Dahl,G.E. (2017) Neural m
 
 Guo,C., Pleiss,G., Sun,Y. and Weinberger,K.Q. (2017) On calibration of modern neural networks. In *Proceedings of the 34th International Conference on Machine Learning*, pp. 1321–1330.
 
-Hie,B.L., Yang,K.K. and Kim,P.S. (2024) Evolutionary velocity with protein language models predicts evolutionary dynamics of diverse proteins. *Cell Syst.*, **15**, 274–285.
-
-Hou,J., Ji,Z. and Shen,Y. (2023) Deep learning methods for protein structure prediction. *Brief. Bioinform.*, **24**, bbac625.
+Hie,B.L., Yang,K.K. and Kim,P.S. (2022) Evolutionary velocity with protein language models predicts evolutionary dynamics of diverse proteins. *Cell Syst.*, **13**, 274–285.e9. DOI: 10.1016/j.cels.2022.03.001.
 
 Hutson,M. (2018) Artificial intelligence faces a replication crisis. *Science*, **359**, 864–865.
 
@@ -197,11 +205,11 @@ Jumper,J., Evans,R., Pritzel,A., Green,T., Figurnov,M., Ronneberger,O. et al. (2
 
 Kendall,A. and Gal,Y. (2017) What uncertainties do we need in Bayesian deep learning for computer vision? In *Advances in Neural Information Processing Systems*, pp. 5574–5584.
 
-Kroll,A., Engqvist,M.K.M., Heckmann,D. and Lercher,M.J. (2023) UniKP: a unified kinetic parameter prediction model for enzyme catalysis. *Nat. Commun.*, **14**, 8505.
+Kroll,A., Ranjan,S., Engqvist,M.K.M. and Lercher,M.J. (2023) Turnover number predictions for kinetically uncharacterized enzymes using machine and deep learning. *Nat. Commun.*, **14**, 4138. DOI: 10.1038/s41467-023-39840-4.
 
-Kuleshov,V., Jiang,C., Li,R., Genovese,T. and Potts,C. (2018) Accurate uncertainties for deep learning using calibrated regression. In *Proceedings of the 35th International Conference on Machine Learning*, pp. 2796–2804.
+Kuleshov,V., Fenner,N. and Ermon,S. (2018) Accurate uncertainties for deep learning using calibrated regression. In *Proceedings of the 35th International Conference on Machine Learning*, pp. 2796–2804.
 
-Li,Y., Zhang,L., Wang,H. and Chen,X. (2024) CATpred: a deep learning framework for enzyme kinetic parameter prediction. *Bioinformatics*, **40**, btae102.
+Li,F., Yuan,L., Lu,H. et al. (2022) Deep learning-based kcat prediction enables improved enzyme-constrained model reconstruction. *Nat. Catal.*, **5**, 662–672. DOI: 10.1038/s41929-022-00798-z.
 
 Lin,Z., Akin,H., Rao,R., Hie,B., Zhu,Z., Lu,W. et al. (2023) Evolutionary-scale prediction of atomic-level protein structure with a language model. *Science*, **379**, 1123–1130.
 
@@ -213,7 +221,7 @@ Lunzer,M., Miller,G.J., Felsheim,R. and Dean,A.M. (2005) The evolutionary bioche
 
 Madani,A., Krause,B., Greene,E.R., Subramanian,S., Mohr,B.P., Holton,J.M. et al. (2023) Large language models generate functional protein sequences across diverse families. *Nat. Biotechnol.*, **41**, 1099–1106.
 
-Musgrave,K., Belongie,S. and Lim,S.N. (2021) A fair evaluation of unsupervised domain adaptation methods. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pp. 15612–15621.
+Bouthillier,X., Delaunay,P., Bronzi,M. et al. (2021) Accounting for variance in machine learning benchmarks. In *Proceedings of Machine Learning and Systems*, **3**.
 
 Nix,D.A. and Weigend,A.S. (1994) Estimating the mean and variance of the target probability distribution. In *Proceedings of the IEEE International Conference on Neural Networks*, pp. 55–60.
 
@@ -235,7 +243,7 @@ Starr,T.N. and Thornton,J.W. (2016) Epistasis in protein evolution. *Protein Sci
 
 Steinegger,M. and Söding,J. (2017) MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. *Nat. Biotechnol.*, **35**, 1026–1028.
 
-Steinkellner,G., Borkowski,O. and Nidetzky,B. (2024) EnzEngDB: a database of enzyme engineering campaigns. *Zenodo*. DOI: 10.5281/zenodo.17310823.
+Long,Y., Abbasinejad,F., Li,F.-Z. et al. (2026) Enzyme Engineering Database (EnzEngDB): a platform for sharing and interpreting sequence–function relationships across protein engineering campaigns. *Nucleic Acids Res.*, **54**, D564–D571. DOI: 10.1093/nar/gkaf1142. Dataset: DOI 10.5281/zenodo.17310823.
 
 Vaswani,A., Shazeer,N., Parmar,N., Uszkoreit,J., Jones,L., Gomez,A.N. et al. (2017) Attention is all you need. In *Advances in Neural Information Processing Systems*, pp. 5998–6008.
 
@@ -247,6 +255,4 @@ Wu,Z., Ramsundar,B., Feinberg,E.N., Gomes,J., Geniesse,C., Pappu,A.S. et al. (20
 
 Yang,K.K., Wu,Z. and Arnold,F.H. (2019) Machine-learning-guided directed evolution for protein engineering. *Nat. Methods*, **16**, 687–694.
 
-Yang,K.K., Dallago,C., Frazer,J. and Hie,B.L. (2023) Protein fitness landscape prediction: challenges and opportunities. *Curr. Opin. Struct. Biol.*, **83**, 102696.
-
-Yu,B., Zhang,Y., Li,J., Wang,Y., Chen,L. and Liu,Z. (2024) DLKcat: a deep learning model for enzyme kcat prediction. *Nat. Catal.*, **7**, 1054–1065.
+Yu,H. et al. (2023) UniKP: a unified framework for the prediction of enzyme kinetic parameters. *Nat. Commun.*, **14**, 8505. DOI: 10.1038/s41467-023-44113-1.
