@@ -228,16 +228,46 @@ def run_prediction(
     model_path: str,
     candidates: list[dict[str, Any]],
     calibration_artifact: str | None,
+    fba_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Mirror cli.predict_command's in-memory flow and result shape.
 
     cli.py is part of the frozen release manifest, so the shared logic is
     re-expressed here rather than refactored; a test pins the two together.
+    An optional fba_payload attaches governed FBA context features produced by
+    biocandidate.fba_context.
     """
     import torch
-    from biocandidate.data import EnzymeSubstrateRecord
+    from biocandidate.data import FBAFeatureMetadata, EnzymeSubstrateRecord
 
     model, checkpoint = cache.get(model_path)
+
+    fba_metadata = None
+    fba_context: tuple[float, ...] = ()
+    if fba_payload:
+        body = fba_payload.get("metadata", {})
+        features = fba_payload.get("features")
+        if not isinstance(features, list) or not features:
+            raise ValueError("fba payload must carry a non-empty features list")
+        fba_metadata = FBAFeatureMetadata(
+            schema_version=int(body.get("schema_version", 1)),
+            feature_ids=tuple(body.get("feature_ids", ())),
+            model_id=str(body.get("model_id", "")),
+            solver_id=str(body.get("solver_id", "")),
+            objective_id=str(body.get("objective_id", "")),
+            condition_id=str(body.get("condition_id", "")),
+        )
+        if len(fba_metadata.feature_ids) != model.config.fba_context_dim:
+            raise ValueError(
+                f"FBA feature width {len(fba_metadata.feature_ids)} does not match "
+                f"checkpoint configured width {model.config.fba_context_dim}"
+            )
+        if len(features) != len(fba_metadata.feature_ids):
+            raise ValueError(
+                f"fba features length {len(features)} != feature_ids length "
+                f"{len(fba_metadata.feature_ids)}"
+            )
+        fba_context = tuple(float(value) for value in features)
 
     records = [
         EnzymeSubstrateRecord(
@@ -249,8 +279,8 @@ def run_prediction(
             ec=row["ec"],
             enzyme_type=row["enzyme_type"],
             reaction=row["reaction"],
-            fba_context=(),
-            fba_feature_metadata=None,
+            fba_context=fba_context,
+            fba_feature_metadata=fba_metadata,
             source_dataset="workbench",
             source_row=index,
         )
@@ -346,7 +376,7 @@ def run_prediction(
             }
         predictions.append({"candidate_id": record.candidate_id, "tasks": tasks})
 
-    return {
+    result = {
         "checkpoint": model_path,
         "input_identity": {
             "row_count": len(candidates),
@@ -357,6 +387,22 @@ def run_prediction(
         "predictions": predictions,
         "warning": WARNING_TEXT,
     }
+    if fba_metadata is not None:
+        result["fba"] = {
+            "attached": True,
+            "metadata": {
+                "model_id": fba_metadata.model_id,
+                "objective_id": fba_metadata.objective_id,
+                "condition_id": fba_metadata.condition_id,
+                "feature_ids": list(fba_metadata.feature_ids),
+            },
+            "note": (
+                "FBA context was attached, but no shipped checkpoint was trained "
+                "with flux labels: the flux pathway is untrained, so this "
+                "demonstrates the plumbing rather than a validated input."
+            ),
+        }
+    return result
 
 
 def run_governance(root: Path, action: str) -> dict[str, Any]:
@@ -385,6 +431,72 @@ def run_governance(root: Path, action: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         parsed = {"raw": completed.stdout[-4000:]}
     return {"action": action, "ok": True, "result": parsed}
+
+
+_FBA_MODEL_CACHE: dict[str, Any] = {}
+_FBA_LOCK = threading.Lock()
+
+
+def _fba_model(model_id: str, root: Path):
+    """Load each registered GEM once; cobra models are reused via context managers."""
+    from biocandidate import fba_context
+
+    with _FBA_LOCK:
+        if model_id not in _FBA_MODEL_CACHE:
+            config = fba_context.load_model_config(model_id, root=root)
+            resolved = root / config["path"]
+            _FBA_MODEL_CACHE[model_id] = {
+                "model": fba_context.load_model(model_id, resolved),
+                "sha256": config["sha256"],
+            }
+        return _FBA_MODEL_CACHE[model_id]
+
+
+def fba_status(root: Path) -> dict[str, Any]:
+    from biocandidate import fba_context
+
+    models = {}
+    for model_id in fba_context.model_ids():
+        entry = {}
+        try:
+            config = fba_context.load_model_config(model_id, root=root)
+            resolved = root / config["path"]
+            entry.update(
+                {
+                    "available": resolved.is_file(),
+                    "sha256": config["sha256"],
+                    "objective_id": fba_context.MODEL_REGISTRY[model_id]["objective_id"],
+                    "citation": fba_context.MODEL_REGISTRY[model_id]["citation"],
+                    "presets": fba_context.presets_for(model_id),
+                }
+            )
+        except Exception as error:  # noqa: BLE001 - status must survive a bad config
+            entry.update({"available": False, "error": str(error)})
+        models[model_id] = entry
+    return {
+        "models": models,
+        "claim_boundary": fba_context.CLAIM_BOUNDARY,
+        "feature_width_note": (
+            "Both models emit 8-wide vectors matching ModelConfig.fba_context_dim."
+        ),
+    }
+
+
+def fba_run(root: Path, body: dict[str, Any]) -> dict[str, Any]:
+    from biocandidate import fba_context
+
+    model_id = str(body.get("model_id", "iML1515"))
+    entry = _fba_model(model_id, root)
+    return fba_context.run_fba_context(
+        model_id=model_id,
+        preset=str(body.get("preset", "baseline")),
+        glucose=float(body.get("glucose", fba_context.DEFAULT_GLUCOSE)),
+        oxygen=float(body.get("oxygen", fba_context.DEFAULT_OXYGEN)),
+        growth_min=float(body.get("growth_min", 0.0)),
+        with_fva=bool(body.get("with_fva", False)),
+        model=entry["model"],
+        model_sha256=entry["sha256"],
+    )
 
 
 class WorkbenchHandler(BaseHTTPRequestHandler):
@@ -427,6 +539,11 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"models": list_models(self.root)})
             except Exception as error:  # noqa: BLE001
                 self._send_json(500, {"error": str(error)})
+        elif path == "/api/fba/status":
+            try:
+                self._send_json(200, fba_status(self.root))
+            except Exception as error:  # noqa: BLE001
+                self._send_json(500, {"error": str(error)})
         elif path == "/dashboard":
             target = self.root / "artifacts/dashboard/readiness-dashboard.html"
             if target.is_file():
@@ -465,9 +582,15 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                     str(model_path),
                     candidates,
                     body.get("calibration_artifact"),
+                    fba_payload=body.get("fba"),
                 )
                 self._send_json(200, result)
             except Exception as error:  # noqa: BLE001 - surfaced to the page
+                self._send_json(400, {"error": f"{type(error).__name__}: {error}"})
+        elif path == "/api/fba/run":
+            try:
+                self._send_json(200, fba_run(self.root, body))
+            except Exception as error:  # noqa: BLE001
                 self._send_json(400, {"error": f"{type(error).__name__}: {error}"})
         elif path == "/api/governance":
             try:

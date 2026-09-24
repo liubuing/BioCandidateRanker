@@ -1,0 +1,11 @@
+{
+  "model_id": "iJO1366",
+  "path": "data/iJO1366.json",
+  "sha256": "9376a93f62ad430719f23e612154dd94c67e0d7c9545ed9d17a4d0c347672313",
+  "size_bytes": 2948407,
+  "format": "BiGG JSON (cobrapy)",
+  "source": "BiGG http://bigg.ucsd.edu/models/iJO1366 ; base model of the user arginine/carbon-fixation project (DaChang 05_FBA fusion script)",
+  "citation": "Orth et al. 2011, A comprehensive genome-scale reconstruction of Escherichia coli metabolism, Mol Syst Biol 7:530",
+  "license": "Distributed via BiGG; file stays under the gitignored data/ tree.",
+  "claim_boundary": "Simulated FBA context only; no experimental flux measurement is claimed."
+}

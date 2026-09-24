@@ -93,6 +93,7 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
   <button role="tab" data-id="predict" aria-selected="true" data-i18n="tab_predict"></button>
   <button role="tab" data-id="batch" data-i18n="tab_batch"></button>
   <button role="tab" data-id="models" data-i18n="tab_models"></button>
+  <button role="tab" data-id="fba" data-i18n="tab_fba"></button>
   <button role="tab" data-id="governance" data-i18n="tab_governance"></button>
 </nav>
 <main>
@@ -125,6 +126,7 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
         <select id="f-model"></select>
         <label for="f-cal" data-i18n="labelCalibration"></label>
         <input id="f-cal" class="mono" placeholder="artifacts/uncertainty-calibration-v2/grouped-cv.json">
+        <div id="fba-badge" style="margin-top:10px"></div>
         <button class="primary" id="btn-predict" data-i18n="btnPredict"></button>
         <button class="ghost" id="btn-example" data-i18n="btnExample"></button>
         <p class="note" data-i18n="fbaNote"></p>
@@ -157,6 +159,33 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
     <div id="models-body"></div>
   </section>
 
+  <!-- ============ FBA ============ -->
+  <section id="sec-fba" hidden>
+    <h2 data-i18n="fbaTitle"></h2>
+    <p class="sub" data-i18n="fbaIntro"></p>
+    <div class="grid">
+      <div class="panel">
+        <label for="g-model" data-i18n="fbaModelLabel"></label>
+        <select id="g-model"></select>
+        <label for="g-preset" data-i18n="fbaPresetLabel"></label>
+        <select id="g-preset"></select>
+        <label for="g-glc"><span data-i18n="fbaGlucoseLabel"></span> (mmol gDW⁻¹ h⁻¹)</label>
+        <input id="g-glc" type="number" step="0.5" min="0" value="15">
+        <label for="g-o2"><span data-i18n="fbaOxygenLabel"></span> (mmol gDW⁻¹ h⁻¹)</label>
+        <input id="g-o2" type="number" step="0.5" min="0" value="20">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px">
+          <input type="checkbox" id="g-fva" style="width:auto"> <span data-i18n="fvaLabel"></span>
+        </label>
+        <button class="primary" id="btn-fba" data-i18n="btnFbaRun"></button>
+        <button class="ghost" id="btn-fba-attach" data-i18n="btnFbaAttach"></button>
+        <p class="note" data-i18n="fbaTabNote"></p>
+      </div>
+      <div>
+        <div id="fba-results"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ GOVERNANCE ============ -->
   <section id="sec-governance" hidden>
     <h2 data-i18n="govTitle"></h2>
@@ -170,14 +199,30 @@ const I18N = {
   zh: {
     title: 'BioCandidateRanker 工作台',
     dashboardLink: '就绪度面板 ↗',
-    tab_predict: '预测', tab_batch: '批量', tab_models: '模型', tab_governance: '治理',
+    tab_predict: '预测', tab_batch: '批量', tab_models: '模型',
+    tab_fba: '代谢通量', tab_governance: '治理',
+    fbaTitle: '基因组尺度代谢通量（FBA）',
+    fbaIntro: '在 iML1515（泛酸论文栈）或 iJO1366（精氨酸融合项目栈）上运行通量平衡分析：基因敲除、过表达、融合途径场景与通量可变性分析。产出 8 维 FBA 上下文向量，可附加到预测请求。',
+    fbaModelLabel: '代谢模型', fbaPresetLabel: '场景预设',
+    fbaGlucoseLabel: '葡萄糖摄取', fbaOxygenLabel: '氧气摄取',
+    fvaLabel: '运行通量可变性分析（FVA，较慢）',
+    btnFbaRun: '运行 FBA', btnFbaAttach: '附加到预测',
+    fbaNote: '产出为模拟值，非实验测量；随附检查点均未用通量标签训练，附加属于工程集成。',
+    fbaAttached: (preset, model) => `已附加 FBA 上下文：${preset}（${model}）`,
+    fbaDetach: '移除',
+    thFlux: '通量 (mmol gDW⁻¹ h⁻¹)', thGrowth: '生长速率', thReaction: '反应',
+    thFvaMin: 'FVA 下限', thFvaMax: 'FVA 上限',
+    fbaFeatureVector: '8 维上下文向量（signed log10）',
+    errLoadFba: '无法加载 FBA 状态：',
+    errNeedFbaRun: '请先运行一次 FBA 再附加上下文',
     predictTitle: '候选物',
     labelSeq: '氨基酸序列', labelSmiles: '底物 SMILES', labelSubstrateName: '底物名称',
     labelOrganism: '物种', labelEc: 'EC 编号', labelEnzymeType: '酶类型',
     labelReaction: '反应', labelCheckpoint: '检查点', labelCalibration: '校准工件（可选）',
     typeWildtype: '野生型', typeMutant: '突变体', typeUnknown: '未知',
     btnPredict: '预测 kcat', btnExample: '加载示例',
-    fbaNote: '此页面不提供 FBA 上下文；预测在无通量特征下运行。',
+    fbaNote: '默认预测不携带 FBA 上下文；如需附加，请先在“代谢通量”页签运行并点击“附加到预测”。',
+    fbaTabNote: '产出为模拟值，非实验测量；随附检查点均未用通量标签训练，附加后预测结果不具科学效力。',
     batchTitle: '批量预测',
     batchIntro: '粘贴与 CLI predict 命令相同格式的 JSON——候选列表或带 "candidates" 键的对象。结果以表格和原始 JSON 呈现。',
     batchJsonLabel: '候选 JSON',
@@ -216,14 +261,30 @@ const I18N = {
   en: {
     title: 'BioCandidateRanker Workbench',
     dashboardLink: 'Readiness dashboard ↗',
-    tab_predict: 'Predict', tab_batch: 'Batch', tab_models: 'Models', tab_governance: 'Governance',
+    tab_predict: 'Predict', tab_batch: 'Batch', tab_models: 'Models',
+    tab_fba: 'Metabolic flux', tab_governance: 'Governance',
+    fbaTitle: 'Genome-scale metabolic flux (FBA)',
+    fbaIntro: 'Run flux balance analysis on iML1515 (the pantothenate paper stack) or iJO1366 (the arginine fusion project stack): gene knockouts, overexpression, fusion-pathway scenarios, and flux variability analysis. Produces an 8-wide FBA context vector that can be attached to a prediction.',
+    fbaModelLabel: 'Metabolic model', fbaPresetLabel: 'Scenario preset',
+    fbaGlucoseLabel: 'Glucose uptake', fbaOxygenLabel: 'Oxygen uptake',
+    fvaLabel: 'Run flux variability analysis (FVA, slower)',
+    btnFbaRun: 'Run FBA', btnFbaAttach: 'Attach to prediction',
+    fbaNote: 'Outputs are simulations, not measurements; no shipped checkpoint was trained with flux labels, so attaching is an engineering integration.',
+    fbaAttached: (preset, model) => `FBA context attached: ${preset} (${model})`,
+    fbaDetach: 'Detach',
+    thFlux: 'Flux (mmol gDW⁻¹ h⁻¹)', thGrowth: 'Growth rate', thReaction: 'Reaction',
+    thFvaMin: 'FVA min', thFvaMax: 'FVA max',
+    fbaFeatureVector: '8-wide context vector (signed log10)',
+    errLoadFba: 'Could not load FBA status: ',
+    errNeedFbaRun: 'Run FBA once before attaching a context',
     predictTitle: 'Candidate',
     labelSeq: 'Amino-acid sequence', labelSmiles: 'Substrate SMILES', labelSubstrateName: 'Substrate name',
     labelOrganism: 'Organism', labelEc: 'EC number', labelEnzymeType: 'Enzyme type',
     labelReaction: 'Reaction', labelCheckpoint: 'Checkpoint', labelCalibration: 'Calibration artifact (optional)',
     typeWildtype: 'wildtype', typeMutant: 'mutant', typeUnknown: 'unknown',
     btnPredict: 'Predict kcat', btnExample: 'Load example',
-    fbaNote: 'FBA context is not exposed here; predictions run without flux features.',
+    fbaNote: 'Predictions carry no FBA context by default; run one in the Metabolic flux tab and use Attach to prediction first.',
+    fbaTabNote: 'Outputs are simulations, not measurements; no shipped checkpoint was trained with flux labels, so attached-context predictions carry no scientific claim.',
     batchTitle: 'Batch prediction',
     batchIntro: 'Paste the same JSON the CLI predict command reads — a list of candidates or an object with a "candidates" key. Results appear as a table plus raw JSON.',
     batchJsonLabel: 'Candidates JSON',
@@ -299,7 +360,7 @@ async function api(path, body) {
 }
 
 /* ---------- tabs ---------- */
-const SECTIONS = ['predict', 'batch', 'models', 'governance'];
+const SECTIONS = ['predict', 'batch', 'models', 'fba', 'governance'];
 function selectTab(id) {
   for (const s of SECTIONS) $('sec-' + s).hidden = s !== id;
   document.querySelectorAll('#tabs button').forEach(b =>
@@ -323,6 +384,9 @@ function applyLang() {
   renderModelsTable();
   if (lastPredict) renderPredictResult(lastPredict);
   if (lastBatch) renderBatchResult(lastBatch);
+  renderFbaModelSelect();
+  renderFbaBadge();
+  if (lastFba) renderFbaResult(lastFba);
   loadHealth();
 }
 $('lang-btn').addEventListener('click', () => {
@@ -428,6 +492,7 @@ $('btn-predict').addEventListener('click', () => {
   const body = { model: $('f-model').value, candidates: [candidate] };
   const cal = $('f-cal').value.trim();
   if (cal) body.calibration_artifact = cal;
+  if (attachedFba) body.fba = { features: attachedFba.features, metadata: attachedFba.metadata };
   doPredict(body, (result) => {
     lastPredict = { candidate, prediction: result.predictions[0], checkpoint: result.checkpoint };
     renderPredictResult(lastPredict);
@@ -536,9 +601,93 @@ function renderGovernance() {
     }));
 }
 
+/* ---------- FBA ---------- */
+let FBA_STATUS = null;      // /api/fba/status payload
+let attachedFba = null;     // {preset, model_id, features, metadata}
+function renderFbaBadge() {
+  const badge = $('fba-badge');
+  if (!attachedFba) { badge.innerHTML = ''; return; }
+  badge.innerHTML = `<span class="pill warn">${esc(t('fbaAttached')(attachedFba.preset, attachedFba.model_id))}</span>
+    <button class="ghost" id="btn-fba-detach" style="margin:0 0 0 8px;padding:2px 8px">${esc(t('fbaDetach'))}</button>`;
+  document.getElementById('btn-fba-detach').addEventListener('click', () => {
+    attachedFba = null; renderFbaBadge();
+  });
+}
+async function loadFbaStatus() {
+  try {
+    FBA_STATUS = await api('/api/fba/status');
+    renderFbaModelSelect();
+  } catch (e) { showError(t('errLoadFba') + e.message); }
+}
+function renderFbaModelSelect() {
+  if (!FBA_STATUS) return;
+  const ids = Object.keys(FBA_STATUS.models).sort();
+  $('g-model').innerHTML = ids.map(id => {
+    const m = FBA_STATUS.models[id];
+    return `<option value="${esc(id)}" ${m.available ? '' : 'disabled'}>${esc(id)}${m.available ? '' : ' — unavailable'}</option>`;
+  }).join('');
+  renderFbaPresetSelect();
+}
+function renderFbaPresetSelect() {
+  if (!FBA_STATUS) return;
+  const id = $('g-model').value;
+  const presets = (FBA_STATUS.models[id] && FBA_STATUS.models[id].presets) || [];
+  $('g-preset').innerHTML = presets.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+}
+$('g-model').addEventListener('change', renderFbaPresetSelect);
+function renderFbaResult(payload) {
+  const fluxRows = Object.entries(payload.fluxes).map(([rid, v]) => {
+    const range = payload.fva && payload.fva[rid]
+      ? `<td class="num">${payload.fva[rid].minimum.toFixed(3)}</td><td class="num">${payload.fva[rid].maximum.toFixed(3)}</td>`
+      : '';
+    return `<tr><td class="mono">${esc(rid)}</td><td class="num">${v.toFixed(4)}</td>${range}</tr>`;
+  }).join('');
+  const fvaHead = payload.fva ? `<th>${t('thFvaMin')}</th><th>${t('thFvaMax')}</th>` : '';
+  $('fba-results').innerHTML = `
+    <div class="panel result-card">
+      <div class="cid">${esc(payload.model_id)} · ${esc(payload.preset)}
+        ${payload.fusion_pathways_applied ? '<span class="pill warn">fusion</span>' : ''}</div>
+      <p class="sub">${t('thGrowth')}: <strong>${payload.growth.toFixed(4)}</strong>
+        · condition <span class="mono">${esc(payload.condition_id.slice(0, 19))}</span></p>
+      <table><thead><tr><th>${t('thReaction')}</th><th>${t('thFlux')}</th>${fvaHead}</tr></thead>
+      <tbody>${fluxRows}</tbody></table>
+      <p class="note">${t('fbaFeatureVector')}: [${payload.features.map(f => f.toFixed(3)).join(', ')}]</p>
+      <p class="note">${esc(payload.claim_boundary)}</p>
+    </div>`;
+}
+$('btn-fba').addEventListener('click', () => {
+  const body = {
+    model_id: $('g-model').value,
+    preset: $('g-preset').value,
+    glucose: parseFloat($('g-glc').value) || 15,
+    oxygen: parseFloat($('g-o2').value) || 20,
+    with_fva: $('g-fva').checked,
+  };
+  const button = $('btn-fba');
+  button.disabled = true;
+  try {
+    showError(null);
+    api('/api/fba/run', body).then(payload => {
+      lastFba = { ...payload };
+      renderFbaResult(payload);
+    }).catch(e => showError(e.message));
+  } finally { button.disabled = false; }
+});
+let lastFba = null;
+$('btn-fba-attach').addEventListener('click', () => {
+  if (!lastFba) { showError(t('errNeedFbaRun')); return; }
+  attachedFba = {
+    preset: lastFba.preset, model_id: lastFba.model_id,
+    features: lastFba.features, metadata: lastFba.metadata,
+  };
+  renderFbaBadge();
+  showError(null);
+});
+
 /* ---------- boot ---------- */
 applyLang();
 loadModels();
+loadFbaStatus();
 </script>
 </body>
 </html>

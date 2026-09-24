@@ -1,0 +1,11 @@
+{
+  "model_id": "iML1515",
+  "path": "data/iML1515.xml",
+  "sha256": "9c772d44ca43350e40dc7ee86c7aa148796856be1eea45e5406c6df8f7dcde28",
+  "size_bytes": 11412293,
+  "format": "SBML L3V1 (fbc2)",
+  "source": "BiGG http://bigg.ucsd.edu/models/iML1515 ; copied from the user metabolic-modeling workspace with identity recorded",
+  "citation": "Monk et al. 2017, iML1515, a knowledgebase that derives Escherichia coli metabolism from 1515 genes, Nature Microbiology 2:17094",
+  "license": "The model is distributed via BiGG; redistribution terms follow the BiGG models policy, so the file stays under the gitignored data/ tree.",
+  "claim_boundary": "Simulated FBA context only; no experimental flux measurement is claimed."
+}
