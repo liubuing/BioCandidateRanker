@@ -231,6 +231,7 @@ def main() -> int:
     parser.add_argument("--audit", type=Path, default=DEFAULT_AUDIT)
     parser.add_argument("--release-manifest", type=Path, default=DEFAULT_RELEASE_MANIFEST)
     parser.add_argument("--markdown", type=Path, default=None)
+    parser.add_argument("--json-out", type=Path, default=None)
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -278,6 +279,11 @@ def main() -> int:
         markdown_path.parent.mkdir(parents=True, exist_ok=True)
         markdown_path.write_text(render_markdown(report), encoding="utf-8")
         report["markdown"] = args.markdown.as_posix()
+
+    if args.json_out:
+        json_path = args.json_out if args.json_out.is_absolute() else root / args.json_out
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        json_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     print(json.dumps(report, indent=2))
     return 0

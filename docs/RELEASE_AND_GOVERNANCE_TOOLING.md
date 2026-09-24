@@ -102,6 +102,45 @@ corpus, so labels cannot collide: position encodes sequence novelty, colour enco
 endpoint, area encodes record count, and a dashed outline marks a corpus that has never
 been scored.
 
+### Interactive readiness dashboard
+
+```bash
+# Refresh the four JSON inputs, then build the page.
+python scripts/audit_development_corpus_license.py \
+  --json-out artifacts/license-audit/development-corpus-license-audit.json
+python scripts/prospective_pool_dashboard.py \
+  --json-out artifacts/prospective-pool/dashboard.json
+python scripts/external_request_status.py \
+  --json-out artifacts/external-requests/status.json
+python scripts/build_release_archive.py
+python scripts/build_readiness_dashboard.py
+```
+
+Writes `artifacts/dashboard/readiness-dashboard.html`: one self-contained page with five
+tabs (Overview, Prospective pool, Corpus licenses, External requests, Archive). No network
+access and no build step, so it opens from disk or from a local static server.
+
+What is interactive:
+
+- tab navigation, with the current tab reflected in the URL hash so back and forward work;
+- the corpus table sorts by any column, filters by ship status, and searches across
+  corpus, role, licence, and redistribution state;
+- clicking a corpus row opens its blocking reason and evidence count;
+- each overview blocker expands to list the affected files and the exact command that
+  clears it.
+
+The page embeds absolute local paths when they exist, so it is generated under the
+gitignored `artifacts/` tree. Pass `--redact-paths` to build a version safe to share:
+
+```bash
+python scripts/build_readiness_dashboard.py --redact-paths \
+  --output artifacts/dashboard/readiness-dashboard-shareable.html
+```
+
+The headline verdict is derived, not authored: the page reports "Not submission ready"
+with the count of blocking items, and each blocker is computed from a specific record
+rather than a hand-maintained list.
+
 ## Known open items surfaced by these tools
 
 - **No external request has been sent.** Four drafts have no queue entry at all, and two
@@ -125,3 +164,14 @@ been scored.
 5. `build_release_archive.py --fail-on-local-paths` — redact first, then build.
 6. `verify_release_archive.py` — verify the exact file you will deposit.
 7. `generate_data_availability_statement.py` — draft the statement from the final audit.
+8. `build_readiness_dashboard.py` — render the state for a human reader.
+
+Steps 1 to 3 write the JSON the dashboard reads, so run them first or the page will
+report missing sources.
+
+## Current dashboard verdict
+
+At the last build the page reports **Not submission ready — 6 blocking items**:
+unsatisfied local-path redaction, the unmet prospective-pool gate, zero external
+requests sent, and three unwritten submission components (Author Summary, cover letter,
+placeholder fields).
