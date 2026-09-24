@@ -198,3 +198,21 @@ def test_frontend_is_self_contained():
 
 def test_index_asset_exists_next_to_the_server():
     assert workbench.INDEX_PATH.is_file()
+
+
+def test_frontend_defaults_to_chinese_with_english_toggle():
+    """The UI is bilingual; Chinese is the default, switchable without reload."""
+    html = (ROOT / "scripts/workbench_static/index.html").read_text(encoding="utf-8")
+    assert "const LANG_DEFAULT = 'zh'" in html
+    assert "zh:" in html and "en:" in html
+    assert "lang-btn" in html
+    # The Chinese strings are real UI text, not just a language-code marker.
+    assert "预测 kcat" in html
+    assert "Predict kcat" in html
+
+
+def test_frontend_i18n_covers_the_same_action_ids_in_both_languages():
+    html = (ROOT / "scripts/workbench_static/index.html").read_text(encoding="utf-8")
+    for action in workbench.GOVERNANCE_ACTIONS:
+        occurrences = html.count(f"{action}:")
+        assert occurrences >= 2, f"{action} missing from one language block"

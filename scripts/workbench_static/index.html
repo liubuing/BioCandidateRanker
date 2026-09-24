@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BioCandidateRanker Workbench</title>
+<title>BioCandidateRanker 工作台</title>
 <style>
 :root {
   --bg: #f6f7f9; --panel: #fff; --ink: #14181f; --muted: #5c6675;
@@ -12,7 +12,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink);
-  font: 14px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  font: 14px/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif; }
 header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 16px 24px;
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 h1 { margin: 0; font-size: 18px; }
@@ -20,6 +20,9 @@ header .meta { color: var(--muted); font-size: 12.5px; }
 header .spacer { flex: 1; }
 header a { color: var(--accent); font-size: 13px; text-decoration: none; }
 header a:hover { text-decoration: underline; }
+#lang-btn { border: 1px solid var(--line); background: none; border-radius: 999px;
+  padding: 4px 12px; font: inherit; font-size: 12px; cursor: pointer; color: var(--muted); }
+#lang-btn:hover { color: var(--ink); border-color: var(--accent); }
 nav { display: flex; gap: 2px; padding: 0 24px; background: var(--panel);
   border-bottom: 1px solid var(--line); overflow-x: auto; }
 nav button { border: 0; background: none; padding: 11px 15px; cursor: pointer;
@@ -63,8 +66,6 @@ th { background: #fafbfc; color: var(--muted); font-weight: 600; font-size: 11.5
   text-transform: uppercase; letter-spacing: .04em; }
 tbody tr:last-child td { border-bottom: 0; }
 .num { font-variant-numeric: tabular-nums; }
-.big { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
-.sub { color: var(--muted); font-size: 12px; }
 pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px;
   font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; overflow: auto; max-height: 480px; }
 .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
@@ -77,20 +78,22 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
 .gobtn:disabled { opacity: .55; cursor: wait; }
 .note { color: var(--muted); font-size: 12px; margin-top: 10px; }
 .metrics { color: var(--muted); font-size: 11.5px; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>BioCandidateRanker Workbench</h1>
+  <h1 data-i18n="title"></h1>
   <span class="meta" id="health"></span>
   <span class="spacer"></span>
-  <a href="/dashboard" target="_blank">Readiness dashboard ↗</a>
+  <a href="/dashboard" target="_blank" data-i18n="dashboardLink"></a>
+  <button id="lang-btn" title="切换语言"></button>
 </header>
 <nav id="tabs" role="tablist">
-  <button role="tab" data-id="predict" aria-selected="true">Predict</button>
-  <button role="tab" data-id="batch">Batch</button>
-  <button role="tab" data-id="models">Models</button>
-  <button role="tab" data-id="governance">Governance</button>
+  <button role="tab" data-id="predict" aria-selected="true" data-i18n="tab_predict"></button>
+  <button role="tab" data-id="batch" data-i18n="tab_batch"></button>
+  <button role="tab" data-id="models" data-i18n="tab_models"></button>
+  <button role="tab" data-id="governance" data-i18n="tab_governance"></button>
 </nav>
 <main>
   <div id="error" class="error" hidden></div>
@@ -99,77 +102,169 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
   <section id="sec-predict">
     <div class="grid">
       <div class="panel">
-        <h2>Candidate</h2>
-        <label for="f-seq">Amino-acid sequence</label>
+        <h2 data-i18n="predictTitle"></h2>
+        <label for="f-seq" data-i18n="labelSeq"></label>
         <textarea id="f-seq" placeholder="MSTAGKVIKCKAAVLWELKKP"></textarea>
-        <label for="f-smi">Substrate SMILES</label>
+        <label for="f-smi" data-i18n="labelSmiles"></label>
         <input id="f-smi" placeholder="CCO">
-        <label for="f-name">Substrate name</label>
-        <input id="f-name" placeholder="ethanol">
-        <label for="f-org">Organism</label>
-        <input id="f-org" placeholder="Escherichia coli">
-        <label for="f-ec">EC number</label>
+        <label for="f-name" data-i18n="labelSubstrateName"></label>
+        <input id="f-name">
+        <label for="f-org" data-i18n="labelOrganism"></label>
+        <input id="f-org">
+        <label for="f-ec" data-i18n="labelEc"></label>
         <input id="f-ec" placeholder="1.1.1.1">
-        <label for="f-type">Enzyme type</label>
+        <label for="f-type" data-i18n="labelEnzymeType"></label>
         <select id="f-type">
-          <option value="wildtype">wildtype</option>
-          <option value="mutant">mutant</option>
-          <option value="unknown">unknown</option>
+          <option value="wildtype" data-i18n="typeWildtype"></option>
+          <option value="mutant" data-i18n="typeMutant"></option>
+          <option value="unknown" data-i18n="typeUnknown"></option>
         </select>
-        <label for="f-rxn">Reaction</label>
-        <input id="f-rxn" placeholder="ethanol + NAD -> acetaldehyde + NADH">
-        <label for="f-model">Checkpoint</label>
+        <label for="f-rxn" data-i18n="labelReaction"></label>
+        <input id="f-rxn">
+        <label for="f-model" data-i18n="labelCheckpoint"></label>
         <select id="f-model"></select>
-        <label for="f-cal">Calibration artifact (optional)</label>
+        <label for="f-cal" data-i18n="labelCalibration"></label>
         <input id="f-cal" class="mono" placeholder="artifacts/uncertainty-calibration-v2/grouped-cv.json">
-        <button class="primary" id="btn-predict">Predict kcat</button>
-        <button class="ghost" id="btn-example">Load example</button>
-        <p class="note">FBA context is not exposed here; predictions run without flux features.</p>
+        <button class="primary" id="btn-predict" data-i18n="btnPredict"></button>
+        <button class="ghost" id="btn-example" data-i18n="btnExample"></button>
+        <p class="note" data-i18n="fbaNote"></p>
       </div>
-      <div>
-        <div id="predict-results"></div>
-      </div>
+      <div id="predict-results"></div>
     </div>
   </section>
 
   <!-- ============ BATCH ============ -->
   <section id="sec-batch" hidden>
-    <h2>Batch prediction</h2>
-    <p class="sub">Paste the same JSON the CLI predict command reads — a list of candidates
-      or an object with a "candidates" key. Results appear as a table plus raw JSON.</p>
+    <h2 data-i18n="batchTitle"></h2>
+    <p class="sub" data-i18n="batchIntro"></p>
     <div class="grid">
       <div class="panel">
-        <label for="b-json">Candidates JSON</label>
+        <label for="b-json" data-i18n="batchJsonLabel"></label>
         <textarea id="b-json" style="min-height:320px"></textarea>
-        <label for="b-model">Checkpoint</label>
+        <label for="b-model" data-i18n="labelCheckpoint"></label>
         <select id="b-model"></select>
-        <button class="primary" id="btn-batch">Run batch</button>
-        <button class="ghost" id="btn-batch-example">Fill example batch</button>
+        <button class="primary" id="btn-batch" data-i18n="btnBatchRun"></button>
+        <button class="ghost" id="btn-batch-example" data-i18n="btnBatchExample"></button>
       </div>
-      <div>
-        <div id="batch-results"></div>
-      </div>
+      <div id="batch-results"></div>
     </div>
   </section>
 
   <!-- ============ MODELS ============ -->
   <section id="sec-models" hidden>
-    <h2>Checkpoints under artifacts/</h2>
-    <p class="sub">Validation metrics are read from the checkpoint itself. Click a row to
-      select it in the Predict tab.</p>
+    <h2 data-i18n="modelsTitle"></h2>
+    <p class="sub" data-i18n="modelsIntro"></p>
     <div id="models-body"></div>
   </section>
 
   <!-- ============ GOVERNANCE ============ -->
   <section id="sec-governance" hidden>
-    <h2>Governance scripts</h2>
-    <p class="sub">Run the repository's audit and report generators and inspect their JSON
-      output. Only read-only/report actions are exposed.</p>
+    <h2 data-i18n="govTitle"></h2>
+    <p class="sub" data-i18n="govIntro"></p>
     <div class="actions" id="gov-actions"></div>
     <div id="gov-output" style="margin-top:16px"></div>
   </section>
 </main>
 <script>
+const I18N = {
+  zh: {
+    title: 'BioCandidateRanker 工作台',
+    dashboardLink: '就绪度面板 ↗',
+    tab_predict: '预测', tab_batch: '批量', tab_models: '模型', tab_governance: '治理',
+    predictTitle: '候选物',
+    labelSeq: '氨基酸序列', labelSmiles: '底物 SMILES', labelSubstrateName: '底物名称',
+    labelOrganism: '物种', labelEc: 'EC 编号', labelEnzymeType: '酶类型',
+    labelReaction: '反应', labelCheckpoint: '检查点', labelCalibration: '校准工件（可选）',
+    typeWildtype: '野生型', typeMutant: '突变体', typeUnknown: '未知',
+    btnPredict: '预测 kcat', btnExample: '加载示例',
+    fbaNote: '此页面不提供 FBA 上下文；预测在无通量特征下运行。',
+    batchTitle: '批量预测',
+    batchIntro: '粘贴与 CLI predict 命令相同格式的 JSON——候选列表或带 "candidates" 键的对象。结果以表格和原始 JSON 呈现。',
+    batchJsonLabel: '候选 JSON',
+    btnBatchRun: '运行批量', btnBatchExample: '填充示例批量',
+    modelsTitle: 'artifacts/ 下的检查点',
+    modelsIntro: '验证指标直接读自检查点文件本身。点击行可在“预测”页选用该检查点。',
+    govTitle: '治理脚本',
+    govIntro: '运行仓库的审计与报告生成脚本，并在页面内查看 JSON 输出。仅提供只读/报告类动作。',
+    govRun: '运行', govRunning: '运行中…',
+    healthLine: (d, n) => `设备：${d} · 内存中模型：${n}`,
+    valRmse: (v) => ` — 验证 RMSE ${v}`,
+    thTask: '任务', thLog10: 'log10 均值 ± 标准差', thKcat: 'kcat (s⁻¹)', thCi: '保形区间',
+    thCandidate: '候选', thCheckpoint: '检查点', thEncoder: '编码器', thSize: '大小',
+    thEpoch: '轮次', thValidation: '验证指标（log10_kcat）', thCorpus: '语料', thFiles: '文件数',
+    statusUntrained: '未训练（无标签）',
+    warningNote: (cp) => `仅为计算排序，非实验验证。检查点：${cp}`,
+    rawResponse: '原始响应',
+    modelsLoading: '加载中…',
+    errLoadModels: '无法加载模型列表：',
+    errBatchJson: '批量 JSON 无效：',
+    errNeedCandidates: 'JSON 必须包含 candidates 列表',
+    govFailed: '失败', govOk: '成功',
+    gov: {
+      license_audit: { title: '语料许可审计',
+        desc: '校验每个语料的再分发声明及其证据路径。' },
+      pool_dashboard: { title: '前瞻池门控',
+        desc: '对照冻结的 300 条记录 / 30 家族门槛检查实时池计数。' },
+      request_status: { title: '外部请求状态',
+        desc: '对账请求队列、响应追踪表与草稿文件。' },
+      archive_verify: { title: '验证发布归档',
+        desc: '对照发布冻结清单重算归档内每个文件的哈希。' },
+      figure1_regenerate: { title: '重新生成图 1',
+        desc: '依据已记录的项目状态重建数据-任务地图 SVG。' },
+    },
+  },
+  en: {
+    title: 'BioCandidateRanker Workbench',
+    dashboardLink: 'Readiness dashboard ↗',
+    tab_predict: 'Predict', tab_batch: 'Batch', tab_models: 'Models', tab_governance: 'Governance',
+    predictTitle: 'Candidate',
+    labelSeq: 'Amino-acid sequence', labelSmiles: 'Substrate SMILES', labelSubstrateName: 'Substrate name',
+    labelOrganism: 'Organism', labelEc: 'EC number', labelEnzymeType: 'Enzyme type',
+    labelReaction: 'Reaction', labelCheckpoint: 'Checkpoint', labelCalibration: 'Calibration artifact (optional)',
+    typeWildtype: 'wildtype', typeMutant: 'mutant', typeUnknown: 'unknown',
+    btnPredict: 'Predict kcat', btnExample: 'Load example',
+    fbaNote: 'FBA context is not exposed here; predictions run without flux features.',
+    batchTitle: 'Batch prediction',
+    batchIntro: 'Paste the same JSON the CLI predict command reads — a list of candidates or an object with a "candidates" key. Results appear as a table plus raw JSON.',
+    batchJsonLabel: 'Candidates JSON',
+    btnBatchRun: 'Run batch', btnBatchExample: 'Fill example batch',
+    modelsTitle: 'Checkpoints under artifacts/',
+    modelsIntro: 'Validation metrics are read from the checkpoint itself. Click a row to select it in the Predict tab.',
+    govTitle: 'Governance scripts',
+    govIntro: "Run the repository's audit and report generators and inspect their JSON output. Only read-only/report actions are exposed.",
+    govRun: 'Run', govRunning: 'Running…',
+    healthLine: (d, n) => `device: ${d} · models in memory: ${n}`,
+    valRmse: (v) => ` — val RMSE ${v}`,
+    thTask: 'Task', thLog10: 'log10 mean ± SD', thKcat: 'kcat (s⁻¹)', thCi: 'Conformal intervals',
+    thCandidate: 'Candidate', thCheckpoint: 'Checkpoint', thEncoder: 'Encoder', thSize: 'Size',
+    thEpoch: 'Epoch', thValidation: 'Validation (log10_kcat)', thCorpus: 'Corpus', thFiles: 'Files',
+    statusUntrained: 'untrained (no labels)',
+    warningNote: (cp) => `Computational ranking only; not experimental validation. Checkpoint: ${cp}`,
+    rawResponse: 'Raw response',
+    modelsLoading: 'Loading…',
+    errLoadModels: 'Could not list models: ',
+    errBatchJson: 'Batch JSON is invalid: ',
+    errNeedCandidates: 'JSON must carry a candidates list',
+    govFailed: 'failed', govOk: 'ok',
+    gov: {
+      license_audit: { title: 'Corpus license audit',
+        desc: 'Verify every corpus redistribution declaration and its evidence paths.' },
+      pool_dashboard: { title: 'Prospective pool gate',
+        desc: 'Compare live pool counts against the frozen 300-record / 30-family gate.' },
+      request_status: { title: 'External request status',
+        desc: 'Reconcile the request queue, the response tracker, and the drafts.' },
+      archive_verify: { title: 'Verify release archive',
+        desc: 'Recompute every archive member hash against the release freeze.' },
+      figure1_regenerate: { title: 'Regenerate Figure 1',
+        desc: 'Rebuild the data-task map SVG from recorded project state.' },
+    },
+  },
+};
+const LANG_DEFAULT = 'zh';
+let LANG = LANG_DEFAULT;
+try { LANG = localStorage.getItem('workbench-lang') || LANG_DEFAULT; } catch {}
+
+const t = (key) => I18N[LANG][key];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = (id) => document.getElementById(id);
@@ -185,18 +280,8 @@ const EXAMPLE = {
   reaction: 'ethanol + NAD -> acetaldehyde + NADH',
 };
 
-const GOV_ACTIONS = [
-  { id: 'license_audit', title: 'Corpus license audit',
-    desc: 'Verify every corpus redistribution declaration and its evidence paths.' },
-  { id: 'pool_dashboard', title: 'Prospective pool gate',
-    desc: 'Compare live pool counts against the frozen 300-record / 30-family gate.' },
-  { id: 'request_status', title: 'External request status',
-    desc: 'Reconcile the request queue, the response tracker, and the drafts.' },
-  { id: 'archive_verify', title: 'Verify release archive',
-    desc: 'Recompute every archive member hash against the release freeze.' },
-  { id: 'figure1_regenerate', title: 'Regenerate Figure 1',
-    desc: 'Rebuild the data-task map SVG from recorded project state.' },
-];
+const GOV_ACTION_IDS = ['license_audit', 'pool_dashboard', 'request_status',
+  'archive_verify', 'figure1_regenerate'];
 
 function showError(msg) {
   const el = $('error');
@@ -223,32 +308,63 @@ function selectTab(id) {
 document.querySelectorAll('#tabs button').forEach(b =>
   b.addEventListener('click', () => selectTab(b.dataset.id)));
 
+/* ---------- language ---------- */
+let MODELS = [];            // log10_kcat-capable checkpoints
+let ALL_MODELS = [];        // every listing entry, including feature baselines
+let lastPredict = null;     // {candidate, tasks, checkpoint}
+let lastBatch = null;       // {result}
+function applyLang() {
+  document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  $('lang-btn').textContent = LANG === 'zh' ? 'EN' : '中文';
+  renderModelOptions();
+  renderGovernance();
+  renderModelsTable();
+  if (lastPredict) renderPredictResult(lastPredict);
+  if (lastBatch) renderBatchResult(lastBatch);
+  loadHealth();
+}
+$('lang-btn').addEventListener('click', () => {
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  try { localStorage.setItem('workbench-lang', LANG); } catch {}
+  applyLang();
+});
+
 /* ---------- model selects ---------- */
-let MODELS = [];
 async function loadModels() {
   try {
     const payload = await api('/api/models');
-    MODELS = payload.models.filter(m => !m.error && (m.tasks || []).includes('log10_kcat'));
-    const options = MODELS.map(m => {
-      const v = m.validation && m.validation.log10_kcat;
-      const label = `${m.path}` +
-        (v && v.rmse != null ? ` — val RMSE ${v.rmse.toFixed(4)}` : '') +
-        (m.protein_encoder ? ` [${m.protein_encoder}]` : '');
-      return `<option value="${esc(m.path)}">${esc(label)}</option>`;
-    }).join('');
-    $('f-model').innerHTML = options;
-    $('b-model').innerHTML = options;
-    const preferred = MODELS.find(m => m.path.includes('esm2-t6-opt-seed7')) || MODELS[0];
-    if (preferred) { $('f-model').value = preferred.path; $('b-model').value = preferred.path; }
-  } catch (e) { showError('Could not list models: ' + e.message); }
+    ALL_MODELS = payload.models;
+    MODELS = ALL_MODELS.filter(m => !m.error && (m.tasks || []).includes('log10_kcat'));
+    renderModelOptions();
+    renderModelsTable();
+  } catch (e) { showError(t('errLoadModels') + e.message); }
+}
+function renderModelOptions() {
+  const options = MODELS.map(m => {
+    const v = m.validation && m.validation.log10_kcat;
+    const label = `${m.path}` +
+      (v && v.rmse != null ? t('valRmse')(v.rmse.toFixed(4)) : '') +
+      (m.protein_encoder ? ` [${m.protein_encoder}]` : '');
+    return `<option value="${esc(m.path)}">${esc(label)}</option>`;
+  }).join('');
+  const current = $('f-model').value;
+  const currentBatch = $('b-model').value;
+  $('f-model').innerHTML = options;
+  $('b-model').innerHTML = options;
+  const preferred = MODELS.find(m => m.path.includes('esm2-t6-opt-seed7')) || MODELS[0];
+  const fallback = preferred ? preferred.path : '';
+  $('f-model').value = MODELS.some(m => m.path === current) ? current : fallback;
+  $('b-model').value = MODELS.some(m => m.path === currentBatch) ? currentBatch : fallback;
 }
 
 /* ---------- health ---------- */
 async function loadHealth() {
   try {
     const h = await api('/api/health');
-    $('health').textContent = `device: ${h.device} · models in memory: ${h.loaded_models}`;
-  } catch { $('health').textContent = 'server unreachable'; }
+    $('health').textContent = t('healthLine')(h.device, h.loaded_models);
+  } catch { $('health').textContent = '—'; }
 }
 
 /* ---------- predict ---------- */
@@ -264,10 +380,10 @@ function readForm() {
     reaction: $('f-rxn').value,
   };
 }
-function resultCard(candidate, tasks) {
+function resultCard(candidateId, tasks) {
   const rows = Object.entries(tasks).map(([task, info]) => {
     if (info.status !== 'trained') {
-      return `<tr><td>${esc(task)}</td><td colspan="4"><span class="pill dim">${esc(info.status)}</span></td></tr>`;
+      return `<tr><td>${esc(task)}</td><td colspan="4"><span class="pill dim">${esc(t('statusUntrained'))}</span></td></tr>`;
     }
     const kcat = info.mean != null ? (10 ** info.mean) : null;
     const kcatStr = kcat != null
@@ -278,7 +394,7 @@ function resultCard(candidate, tasks) {
       : '—';
     const sd = info.calibrated_standard_deviation != null
       ? `${info.standard_deviation.toFixed(3)} → ${info.calibrated_standard_deviation.toFixed(3)}`
-      : (info.standard_deviation ?? '—').toFixed ? info.standard_deviation.toFixed(3) : esc(info.standard_deviation);
+      : info.standard_deviation.toFixed(3);
     return `<tr>
       <td><strong>${esc(task)}</strong></td>
       <td class="num">${info.mean.toFixed(4)} ± ${sd}</td>
@@ -287,18 +403,23 @@ function resultCard(candidate, tasks) {
     </tr>`;
   }).join('');
   return `<div class="panel result-card">
-    <div class="cid">${esc(candidate)}</div>
-    <table><thead><tr><th>Task</th><th>log10 mean ± SD</th><th>kcat (s⁻¹)</th><th>Conformal intervals</th></tr></thead>
-    <tbody>${rows}</tbody></table>
+    <div class="cid">${esc(candidateId)}</div>
+    <table><thead><tr>
+      <th>${t('thTask')}</th><th>${t('thLog10')}</th><th>${t('thKcat')}</th><th>${t('thCi')}</th>
+    </tr></thead><tbody>${rows}</tbody></table>
   </div>`;
 }
-async function doPredict(body, render) {
+function renderPredictResult(data) {
+  $('predict-results').innerHTML =
+    resultCard(data.candidate.candidate_id, data.prediction.tasks) +
+    `<p class="note">${esc(t('warningNote')(data.checkpoint))}</p>`;
+}
+async function doPredict(body, onDone) {
   const button = document.activeElement;
   if (button) button.disabled = true;
   try {
     showError(null);
-    const result = await api('/api/predict', body);
-    render(result);
+    onDone(await api('/api/predict', body));
   } catch (e) { showError(e.message); }
   finally { if (button) button.disabled = false; }
 }
@@ -308,9 +429,8 @@ $('btn-predict').addEventListener('click', () => {
   const cal = $('f-cal').value.trim();
   if (cal) body.calibration_artifact = cal;
   doPredict(body, (result) => {
-    const p = result.predictions[0];
-    $('predict-results').innerHTML = resultCard(candidate.candidate_id, p.tasks) +
-      `<p class="note">${esc(result.warning)} Checkpoint: ${esc(result.checkpoint)}</p>`;
+    lastPredict = { candidate, prediction: result.predictions[0], checkpoint: result.checkpoint };
+    renderPredictResult(lastPredict);
   });
 });
 $('btn-example').addEventListener('click', () => {
@@ -330,90 +450,96 @@ $('btn-batch-example').addEventListener('click', () => {
     { ...EXAMPLE, candidate_id: 'example-2', sequence: 'MKVLWAALLVTFLAGCAQAKV', substrate_smiles: 'CC(=O)OC1=CC=CC=C1' },
   ]}, null, 2);
 });
+function renderBatchResult(result) {
+  const rows = result.predictions.map((p) => {
+    const task = Object.entries(p.tasks).find(([, v]) => v.status === 'trained') || Object.entries(p.tasks)[0];
+    const [, info] = task;
+    const value = info.status === 'trained'
+      ? `${info.mean.toFixed(4)} ± ${info.standard_deviation.toFixed(3)}` : t('statusUntrained');
+    return `<tr><td>${esc(p.candidate_id)}</td><td>${esc(task[0])}</td><td class="num">${esc(value)}</td></tr>`;
+  }).join('');
+  $('batch-results').innerHTML = `
+    <table><thead><tr>
+      <th>${t('thCandidate')}</th><th>${t('thTask')}</th><th>${t('thLog10')}</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <h3>${t('rawResponse')}</h3><pre class="out">${esc(JSON.stringify(result, null, 2))}</pre>`;
+}
 $('btn-batch').addEventListener('click', () => {
   let parsed;
   try { parsed = JSON.parse($('b-json').value); }
-  catch (e) { showError('Batch JSON is invalid: ' + e.message); return; }
+  catch (e) { showError(t('errBatchJson') + e.message); return; }
   const body = { model: $('b-model').value, ...(Array.isArray(parsed) ? { candidates: parsed } : parsed) };
-  if (!body.candidates) { showError('JSON must carry a candidates list'); return; }
-  doPredict(body, (result) => {
-    const rows = result.predictions.map((p, i) => {
-      const task = Object.entries(p.tasks).find(([, v]) => v.status === 'trained') || Object.entries(p.tasks)[0];
-      const [, info] = task;
-      const value = info.status === 'trained'
-        ? `${info.mean.toFixed(4)} ± ${info.standard_deviation.toFixed(3)}` : info.status;
-      return `<tr><td>${esc(p.candidate_id)}</td><td>${esc(task[0])}</td><td class="num">${esc(value)}</td></tr>`;
-    }).join('');
-    $('batch-results').innerHTML = `
-      <table><thead><tr><th>Candidate</th><th>Task</th><th>log10 mean ± SD</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      <h3>Raw response</h3><pre class="out">${esc(JSON.stringify(result, null, 2))}</pre>`;
-  });
+  if (!body.candidates) { showError(t('errNeedCandidates')); return; }
+  doPredict(body, (result) => { lastBatch = result; renderBatchResult(result); });
 });
 
 /* ---------- models ---------- */
-async function loadModelsTable() {
+function renderModelsTable() {
   const body = $('models-body');
-  body.innerHTML = '<p class="sub">Loading…</p>';
-  try {
-    const payload = await api('/api/models');
-    const rows = payload.models.map(m => {
-      if (m.error) {
-        return `<tr><td class="mono">${esc(m.path)}</td><td colspan="5"><span class="pill bad">${esc(m.error)}</span></td></tr>`;
-      }
-      const v = m.validation && m.validation.log10_kcat;
-      const metrics = v && v.rmse != null
-        ? `RMSE ${v.rmse.toFixed(4)} · MAE ${v.mae.toFixed(4)} · r ${v.pearson.toFixed(4)}` : '—';
-      const encoder = m.protein_encoder === 'esm2' ? `ESM-2 (${esc(m.esm2_model_name)})` : esc(m.protein_encoder || '—');
-      return `<tr class="model-row" data-path="${esc(m.path)}" style="cursor:pointer">
-        <td class="mono">${esc(m.path)}</td>
-        <td>${encoder}</td>
-        <td class="num">${(m.size_bytes / 1048576).toFixed(1)} MB</td>
-        <td class="num">${m.epoch ?? '—'}</td>
-        <td class="metrics">${metrics}</td>
-      </tr>`;
-    }).join('');
-    body.innerHTML = `<table>
-      <thead><tr><th>Checkpoint</th><th>Encoder</th><th>Size</th><th>Epoch</th><th>Validation (log10_kcat)</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      <p class="note">Click a row to use that checkpoint in the Predict tab.</p>`;
-    body.querySelectorAll('.model-row').forEach(tr =>
-      tr.addEventListener('click', () => {
-        $('f-model').value = tr.dataset.path;
-        selectTab('predict');
-      }));
-  } catch (e) { body.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+  if (!ALL_MODELS.length) { body.innerHTML = `<p class="sub">${t('modelsLoading')}</p>`; return; }
+  const rows = ALL_MODELS.map(m => {
+    if (m.error) {
+      return `<tr><td class="mono">${esc(m.path)}</td><td colspan="4"><span class="pill bad">${esc(m.error)}</span></td></tr>`;
+    }
+    const v = m.validation && m.validation.log10_kcat;
+    const metrics = v && v.rmse != null
+      ? `RMSE ${v.rmse.toFixed(4)} · MAE ${v.mae.toFixed(4)} · r ${v.pearson.toFixed(4)}` : '—';
+    const encoder = m.protein_encoder === 'esm2' ? `ESM-2 (${esc(m.esm2_model_name)})` : esc(m.protein_encoder || '—');
+    const size = m.feature_baseline != null
+      ? `<td class="num">${(m.size_bytes / 1048576).toFixed(1)} MB</td>`
+      : `<td class="num">${(m.size_bytes / 1048576).toFixed(1)} MB</td>`;
+    return `<tr class="model-row" data-path="${esc(m.path)}" style="cursor:pointer">
+      <td class="mono">${esc(m.path)}</td>
+      <td>${encoder}</td>
+      ${size}
+      <td class="num">${m.epoch ?? '—'}</td>
+      <td class="metrics">${metrics}</td>
+    </tr>`;
+  }).join('');
+  body.innerHTML = `<table>
+    <thead><tr>
+      <th>${t('thCheckpoint')}</th><th>${t('thEncoder')}</th><th>${t('thSize')}</th>
+      <th>${t('thEpoch')}</th><th>${t('thValidation')}</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <p class="note">${t('modelsIntro')}</p>`;
+  body.querySelectorAll('.model-row').forEach(tr =>
+    tr.addEventListener('click', () => {
+      $('f-model').value = tr.dataset.path;
+      selectTab('predict');
+    }));
 }
 
 /* ---------- governance ---------- */
 function renderGovernance() {
-  $('gov-actions').innerHTML = GOV_ACTIONS.map(a => `
+  $('gov-actions').innerHTML = GOV_ACTION_IDS.map(id => {
+    const a = t('gov')[id];
+    return `
     <div class="action">
       <h4>${esc(a.title)}</h4>
       <p>${esc(a.desc)}</p>
-      <button class="gobtn" data-action="${esc(a.id)}">Run</button>
-    </div>`).join('');
+      <button class="gobtn" data-action="${esc(id)}">${t('govRun')}</button>
+    </div>`;
+  }).join('');
   document.querySelectorAll('#gov-actions .gobtn').forEach(btn =>
     btn.addEventListener('click', async () => {
-      btn.disabled = true; btn.textContent = 'Running…';
+      btn.disabled = true; btn.textContent = t('govRunning');
       try {
         showError(null);
         const payload = await api('/api/governance', { action: btn.dataset.action });
         const ok = payload.ok;
         const content = ok ? payload.result : payload;
         $('gov-output').innerHTML = `
-          <h3>${esc(btn.dataset.action)} <span class="pill ${ok ? 'ok' : 'bad'}">${ok ? 'ok' : 'failed'}</span></h3>
+          <h3>${esc(btn.dataset.action)} <span class="pill ${ok ? 'ok' : 'bad'}">${ok ? t('govOk') : t('govFailed')}</span></h3>
           <pre class="out">${esc(JSON.stringify(content, null, 2))}</pre>`;
       } catch (e) { showError(e.message); }
-      finally { btn.disabled = false; btn.textContent = 'Run'; }
+      finally { btn.disabled = false; btn.textContent = t('govRun'); }
     }));
 }
 
 /* ---------- boot ---------- */
-loadHealth();
+applyLang();
 loadModels();
-loadModelsTable();
-renderGovernance();
 </script>
 </body>
 </html>
+

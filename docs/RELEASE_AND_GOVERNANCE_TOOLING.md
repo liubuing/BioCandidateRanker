@@ -31,6 +31,11 @@ the governance actions are an allowlist, not a shell. `tests/test_workbench.py`
 pins the served prediction numerically against `cli.predict_command` output when
 a local checkpoint is available.
 
+The page is bilingual: Chinese by default with an EN toggle in the header;
+the choice persists in localStorage and both languages cover the same strings
+(test-enforced). Server-side error messages remain in English to keep the API
+surface stable.
+
 Two environment notes:
 
 - checkpoints saved before torch 2.6 embed `TorchVersion` (and the feature-MLP
