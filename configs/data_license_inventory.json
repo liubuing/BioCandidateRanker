@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-09-24",
+  "purpose": "Declare every corpus the project reads, its license basis, whether this project may redistribute it, and where that claim is evidenced. scripts/audit_development_corpus_license.py verifies this file and scripts/build_release_archive.py consults release_paths before shipping.",
+  "policy": {
+    "license_is_not_redistribution_right": "A permissive license on code does not grant redistribution rights over data compiled from third-party databases.",
+    "blocked_until_evidenced": "A corpus marked not_verified must not ship measurement data inside a public release archive.",
+    "evidence_required": "Every entry must name at least one repository path that a reader can open to check the claim.",
+    "release_paths_are_authoritative": "release_paths maps frozen artifact paths to the corpus they belong to; an unowned path is an audit failure.",
+    "allowed_redistribution_states": [
+      "permitted_with_attribution",
+      "permitted_unconditionally",
+      "not_verified",
+      "blocked_pending_permission",
+      "not_applicable_reference_only"
+    ]
+  },
+  "corpora": [
+    {
+      "id": "unikp-kcat-development-corpus",
+      "role": "development_training",
+      "description": "UniKP/DLKcat kcat development corpus used for all trained models and the frozen homology-cold split.",
+      "identity": {
+        "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
+        "size_bytes": 12132719,
+        "rows": 17010,
+        "record_level_citations_available": false
+      },
+      "license_name": "unknown",
+      "license_basis": "Corpus-level provenance only. Underlying measurements derive primarily from BRENDA as compiled by the UniKP project; no record-level citation or redistribution grant is recorded.",
+      "redistribution": "not_verified",
+      "redistribute_in_release": false,
+      "blocking_reason": "Upstream compilation terms are unresolved, so no measurement row from this corpus may ship in a public archive.",
+      "release_paths": [],
+      "measurement_data_shipped": false,
+      "derived_artifacts_in_release": [
+        {
+          "path": "artifacts/unikp_audit.json",
+          "kind": "ingestion audit metadata",
+          "contains_measurements": false,
+          "note": "Row counts, duplicate counts, and the source file hash only. Carries a local absolute source path that must be redacted before a double-blind deposit.",
+          "redaction_required": ["source"]
+        },
+        {
+          "path": "artifacts/unikp-km-training-blocker-audit.json",
+          "kind": "blocker audit metadata",
+          "contains_measurements": false,
+          "note": "Records why governed Km training is blocked; no Km values or sequences."
+        },
+        {
+          "path": "artifacts/homology-final/homology_split.json",
+          "kind": "record identifier mapping",
+          "contains_measurements": false,
+          "note": "Holds cluster id, sequence id, source row, and split assignment only; no sequences and no kcat values."
+        },
+        {
+          "path": "artifacts/full-homology-baseline/best.pt",
+          "kind": "trained model weights",
+          "contains_measurements": false,
+          "note": "Derived from the corpus. Weights are not a redistribution of the measurements, but the derivation is declared so reviewers can judge fit."
+        }
+      ],
+      "evidence": [
+        "configs/unikp_source_manifest.json",
+        "configs/temporal_absolute_kinetics_protocol.json",
+        "docs/PCB_BASELINE_AND_ENDPOINT_AUDIT_CN.md"
+      ],
+      "blocks": [
+        "public release of the training corpus",
+        "manuscript data availability statement asserting open training data"
+      ]
+    },
+    {
+      "id": "enzengdb-v1",
+      "role": "external_evaluation",
+      "description": "EnzEngDB v1 engineering-fitness campaigns used for zero-shot ranking evaluation.",
+      "identity": {
+        "doi": "10.5281/zenodo.17310823",
+        "archive_bytes": 30050527,
+        "archive_sha256": "8013ad81586db2187162aada0709c1cabc7e7d69f03dd5c199776aaf000dd6ea"
+      },
+      "license_name": "CC-BY-4.0",
+      "license_basis": "Deposit record declares CC BY 4.0.",
+      "redistribution": "permitted_with_attribution",
+      "redistribute_in_release": false,
+      "release_paths": [],
+      "note": "Selection and audit artifacts ship; the 30 MB source archive does not, to keep the deposit lean.",
+      "evidence": [
+        "artifacts/external/enzengdb-v1/audit.json",
+        "artifacts/external/enzengdb-v1/selection-homology-cold.json"
+      ]
+    },
+    {
+      "id": "lunzer-imdh-landscape",
+      "role": "external_evaluation",
+      "description": "Lunzer ancient adaptive IMDH six-site landscape used for mutation-sensitivity testing.",
+      "identity": {
+        "doi": "10.5061/dryad.7nd70",
+        "genotypes": 512
+      },
+      "license_name": "CC0-1.0",
+      "license_basis": "Dryad deposit declares CC0.",
+      "redistribution": "permitted_unconditionally",
+      "redistribute_in_release": false,
+      "release_paths": [],
+      "note": "Source landscape is not bundled; only project-generated evaluation outputs would ship.",
+      "evidence": [
+        "docs/RESEARCH_PROTOCOL.md",
+        "docs/CURRENT_RESULTS.md"
+      ]
+    },
+    {
+      "id": "temporal-absolute-kinetics-pool",
+      "role": "prospective_independent_benchmark",
+      "description": "Frozen temporal and homology-cold absolute-kinetics pool. Below its record and family gates, never scored.",
+      "identity": {
+        "accepted_sources": 18,
+        "records_after_family_cap": 192,
+        "global_families": 25,
+        "unique_substrates": 54
+      },
+      "license_name": "CC0-1.0 or CC-BY-4.0 per source",
+      "license_basis": "The frozen protocol admits only CC0 or CC BY 4.0 measurement tables with explicit deposit coverage. Per-source coverage is asserted by the acquisition registry.",
+      "redistribution": "permitted_with_attribution",
+      "redistribute_in_release": true,
+      "release_paths": [
+        "artifacts/external/temporal-absolute-kinetics/",
+        "artifacts/external/temporal-global-family-audit/"
+      ],
+      "scientific_caveat": "Pool is below its record and family gates and has never been scored. Its presence in the archive is frozen input evidence, not a released benchmark, and must not be cited as validation.",
+      "evidence": [
+        "configs/temporal_absolute_kinetics_protocol.json",
+        "artifacts/external/temporal-global-family-audit/readiness-audit.json",
+        "artifacts/external/temporal-absolute-kinetics/candidate_registry.json"
+      ]
+    },
+    {
+      "id": "project-generated-outputs",
+      "role": "project_generated",
+      "description": "Artifacts this project generated itself: smoke splits, calibration cross-validation, and blocker audits.",
+      "license_name": "project-generated, released with the code",
+      "license_basis": "Produced by this repository; no third-party measurement content.",
+      "redistribution": "permitted_unconditionally",
+      "redistribute_in_release": true,
+      "release_paths": [
+        "artifacts/simulated-flux-smoke/",
+        "artifacts/uncertainty-calibration-v2/",
+        "artifacts/absolute-activity-training-blocker-audit.json"
+      ],
+      "evidence": [
+        "configs/software_implementation_release_v6.json"
+      ]
+    },
+    {
+      "id": "catapro-upstream",
+      "role": "modern_comparator",
+      "description": "CataPro source, pinned weights, and published kcat table used for the fixed-split internal comparison.",
+      "identity": {
+        "overlap_with_project_test": "1127/1646 exact sequence and canonical-SMILES pairs"
+      },
+      "license_name": "MIT (code)",
+      "license_basis": "MIT covers the code repository. It does not by itself settle redistribution of the published kcat table or of independently licensed base-model weights.",
+      "redistribution": "blocked_pending_permission",
+      "redistribute_in_release": false,
+      "blocking_reason": "Data and base-model weight terms are separate from the code license and remain unresolved.",
+      "release_paths": [
+        "artifacts/catapro-mode-b/"
+      ],
+      "evidence": [
+        "docs/PCB_BASELINE_AND_ENDPOINT_AUDIT_CN.md",
+        "docs/CATAPRO_INTERNAL_COMPARISON_CN.md",
+        "configs/catapro_internal_test_freeze.json"
+      ]
+    },
+    {
+      "id": "catpred-upstream",
+      "role": "modern_comparator",
+      "description": "CatPred source and weights used for the Mode B reproducibility attempt.",
+      "license_name": "MIT (code)",
+      "license_basis": "MIT covers the code repository; training-data and weight terms are separate.",
+      "redistribution": "blocked_pending_permission",
+      "redistribute_in_release": false,
+      "blocking_reason": "Data and weight terms unresolved; the protocol iteration is also incomplete.",
+      "release_paths": [
+        "artifacts/catpred-mode-b/"
+      ],
+      "evidence": [
+        "docs/CATPRED_MODE_B_RUNBOOK_CN.md",
+        "docs/CATPRED_RECOVERY_CN.md",
+        "configs/catpred_mode_b_protocol_v3.json"
+      ]
+    },
+    {
+      "id": "dlkcat-upstream",
+      "role": "legacy_comparator",
+      "description": "DLKcat source used as the GPL-3.0-only comparison on the IMDH landscape and as a retrained Mode B baseline.",
+      "license_name": "GPL-3.0-only (code)",
+      "license_basis": "Code is legally runnable under GPL-3.0-only. Record-level training-source overlap with the project test remains unresolved.",
+      "redistribution": "not_applicable_reference_only",
+      "redistribute_in_release": false,
+      "blocking_reason": "Reference-only comparator: the project ships no DLKcat code, weights, or derived data.",
+      "release_paths": [],
+      "evidence": [
+        "docs/SOTA_BASELINE_COMPARISON_PLAN.md",
+        "docs/CURRENT_RESULTS.md"
+      ]
+    },
+    {
+      "id": "sabio-rk-km",
+      "role": "governed_km_candidate",
+      "description": "SABIO-RK Km rows considered for governed Km training. Permission request drafted but not sent.",
+      "license_name": "not established",
+      "license_basis": "Row-level metadata exists, but assay chains and permission for training and artifact use are unresolved.",
+      "redistribution": "blocked_pending_permission",
+      "redistribute_in_release": false,
+      "blocking_reason": "No permission grant on file; the request has not been sent.",
+      "release_paths": [
+        "artifacts/external/governed-km-sabio-rk/"
+      ],
+      "evidence": [
+        "docs/external-requests/SABIO_RK_PERMISSION_REQUEST.md",
+        "artifacts/external/governed-km-sabio-rk/blocker.json",
+        "configs/external_data_blockers.json"
+      ]
+    }
+  ]
+}
