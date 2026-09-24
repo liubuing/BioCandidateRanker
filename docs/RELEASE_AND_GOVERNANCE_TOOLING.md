@@ -3,6 +3,46 @@
 These scripts implement the submission-facing checks that the manuscripts assume.
 Each one exits non-zero when a claim would not survive review.
 
+## Interactive workbench
+
+```bash
+python scripts/serve_workbench.py            # http://127.0.0.1:8808/
+```
+
+A local web page that runs the project's own capabilities instead of only
+reporting on them:
+
+- **Predict** — kcat prediction for a candidate (sequence, substrate SMILES,
+  organism, EC, reaction) through any frozen checkpoint, showing log10 mean ± SD,
+  the implied kcat, and conformal intervals when a matching calibration artifact
+  is supplied. An example loader fills the classic ethanol / alcohol
+  dehydrogenase case.
+- **Batch** — paste the same JSON the CLI `predict` command reads and run it as a
+  table plus raw response.
+- **Models** — every checkpoint under `artifacts/` with its encoder, size, and
+  the validation metrics recorded inside the checkpoint itself; clicking a row
+  selects it for prediction.
+- **Governance** — run the read-only audit scripts (license audit, pool gate,
+  request status, archive verification, Figure 1 regeneration) and inspect their
+  JSON output in place.
+
+The server binds to 127.0.0.1, model paths are confined to the repository, and
+the governance actions are an allowlist, not a shell. `tests/test_workbench.py`
+pins the served prediction numerically against `cli.predict_command` output when
+a local checkpoint is available.
+
+Two environment notes:
+
+- checkpoints saved before torch 2.6 embed `TorchVersion` (and the feature-MLP
+  baselines embed numpy objects) that `weights_only` loading rejects; the server
+  allowlists those trusted globals around `training.load_checkpoint`, which is
+  part of the frozen v6 manifest and therefore cannot be edited in place;
+- no calibration artifact on disk currently matches the esm2-t6 reference
+  checkpoints, so interval columns appear only if you fit one with
+  `fit-calibration`; a mismatched artifact is rejected by the same identity
+  check the CLI applies.
+
+
 ## Why these exist
 
 The manuscripts state that a public archived release is "required before submission"
