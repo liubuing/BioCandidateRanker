@@ -182,6 +182,14 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
       </div>
       <div>
         <div id="fba-results"></div>
+        <div class="panel" style="margin-top:16px">
+          <h2 data-i18n="surrTitle"></h2>
+          <p class="sub" data-i18n="surrIntro"></p>
+          <label for="surr-model" data-i18n="surrSelect"></label>
+          <select id="surr-model"></select>
+          <button class="primary" id="btn-surr" data-i18n="surrBtn"></button>
+          <div id="surr-results" style="margin-top:12px"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -223,6 +231,15 @@ const I18N = {
     btnPredict: '预测 kcat', btnExample: '加载示例',
     fbaNote: '默认预测不携带 FBA 上下文；如需附加，请先在“代谢通量”页签运行并点击“附加到预测”。',
     fbaTabNote: '产出为模拟值，非实验测量；随附检查点均未用通量标签训练，附加后预测结果不具科学效力。',
+    surrTitle: '代理模型（原模型已蒸馏 GEM 能力）',
+    surrIntro: '以下检查点由 ranker 架构在场景网格上蒸馏训练：输入场景 8 维向量，直接输出生长速率，无需调用 cobra。用于与 FBA 真值对比验证蒸馏质量。',
+    surrSelect: '代理检查点',
+    surrBtn: '代理预测',
+    surrGrowth: '代理预测生长',
+    surrTruth: 'FBA 真值',
+    surrAbsErr: '绝对误差 (log10)',
+    surrNeedTruth: '请先运行 FBA 获得真值，再进行代理对比',
+    surrNoTruth: '尚未运行 FBA 真值',
     batchTitle: '批量预测',
     batchIntro: '粘贴与 CLI predict 命令相同格式的 JSON——候选列表或带 "candidates" 键的对象。结果以表格和原始 JSON 呈现。',
     batchJsonLabel: '候选 JSON',
@@ -285,6 +302,15 @@ const I18N = {
     btnPredict: 'Predict kcat', btnExample: 'Load example',
     fbaNote: 'Predictions carry no FBA context by default; run one in the Metabolic flux tab and use Attach to prediction first.',
     fbaTabNote: 'Outputs are simulations, not measurements; no shipped checkpoint was trained with flux labels, so attached-context predictions carry no scientific claim.',
+    surrTitle: 'Surrogates (the ranker has distilled the GEMs)',
+    surrIntro: 'These checkpoints were trained on scenario grids with the ranker architecture: an 8-wide scenario vector goes in, the growth rate comes out, no cobra call at inference. Compare against the FBA truth to audit distillation quality.',
+    surrSelect: 'Surrogate checkpoint',
+    surrBtn: 'Surrogate predict',
+    surrGrowth: 'Surrogate growth',
+    surrTruth: 'FBA truth',
+    surrAbsErr: 'Absolute error (log10)',
+    surrNeedTruth: 'Run the FBA truth first, then compare against the surrogate',
+    surrNoTruth: 'No FBA truth yet',
     batchTitle: 'Batch prediction',
     batchIntro: 'Paste the same JSON the CLI predict command reads — a list of candidates or an object with a "candidates" key. Results appear as a table plus raw JSON.',
     batchJsonLabel: 'Candidates JSON',
@@ -385,6 +411,7 @@ function applyLang() {
   if (lastPredict) renderPredictResult(lastPredict);
   if (lastBatch) renderBatchResult(lastBatch);
   renderFbaModelSelect();
+  renderSurrogateSelect();
   renderFbaBadge();
   if (lastFba) renderFbaResult(lastFba);
   loadHealth();
@@ -617,6 +644,7 @@ async function loadFbaStatus() {
   try {
     FBA_STATUS = await api('/api/fba/status');
     renderFbaModelSelect();
+    renderSurrogateSelect();
   } catch (e) { showError(t('errLoadFba') + e.message); }
 }
 function renderFbaModelSelect() {
@@ -682,6 +710,36 @@ $('btn-fba-attach').addEventListener('click', () => {
   };
   renderFbaBadge();
   showError(null);
+});
+
+/* ---------- surrogate compare ---------- */
+function renderSurrogateSelect() {
+  const list = (FBA_STATUS && FBA_STATUS.surrogates) || [];
+  $('surr-model').innerHTML = list.map(s0 => {
+    const rmse = s0.test_rmse_log10 != null ? ` — RMSE(log10) ${s0.test_rmse_log10.toFixed(4)}` : '';
+    return `<option value="${esc(s0.path)}">${esc(s0.gem_model_id)}${esc(rmse)}</option>`;
+  }).join('') || '<option value="">—</option>';
+}
+$('btn-surr').addEventListener('click', async () => {
+  try {
+    showError(null);
+    const payload = await api('/api/fba/surrogate_predict', {
+      model_id: $('g-model').value,
+      preset: $('g-preset').value,
+      glucose: parseFloat($('g-glc').value) || 15,
+      oxygen: parseFloat($('g-o2').value) || 20,
+    });
+    const truth = (lastFba && lastFba.growth != null) ? lastFba.growth : null;
+    const err = truth != null ? Math.abs(Math.log10(payload.growth) - Math.log10(truth)) : null;
+    $('surr-results').innerHTML = `
+      <table><thead><tr><th>${t('surrGrowth')}</th><th>${t('surrTruth')}</th><th>${t('surrAbsErr')}</th></tr></thead>
+      <tbody><tr>
+        <td class="num"><strong>${payload.growth.toFixed(4)}</strong></td>
+        <td class="num">${truth != null ? truth.toFixed(4) : t('surrNoTruth')}</td>
+        <td class="num">${err != null ? err.toFixed(4) : '—'}</td>
+      </tr></tbody></table>
+      <p class="note">${esc(payload.claim_boundary)}</p>`;
+  } catch (e) { showError(e.message); }
 });
 
 /* ---------- boot ---------- */

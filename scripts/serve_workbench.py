@@ -405,6 +405,53 @@ def run_prediction(
     return result
 
 
+def fba_scenario_vector(root: Path, body: dict[str, Any]) -> dict[str, Any]:
+    """Encode one scenario as a surrogate's fba_context input."""
+    from biocandidate import fba_surrogate
+
+    return fba_surrogate.scenario_input_vector(
+        str(body.get("model_id", "iML1515")),
+        str(body.get("preset", "baseline")),
+        float(body.get("glucose", fba_surrogate.DEFAULT_GLUCOSE)),
+        float(body.get("oxygen", fba_surrogate.DEFAULT_OXYGEN)),
+    )
+
+
+def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
+    """Predict growth for one scenario through a distilled surrogate checkpoint."""
+    from biocandidate import fba_surrogate
+
+    model_id = str(body.get("model_id", "iML1515"))
+    surrogate_path = body.get("surrogate_path") or f"artifacts/fba-surrogate-{model_id}/best.pt"
+    vector = fba_scenario_vector(root, body)
+    candidate = {
+        "candidate_id": f"surrogate-{model_id}-{body.get('preset', 'baseline')}",
+        "sequence": "X",
+        "substrate_smiles": "O",
+        "reaction": fba_surrogate.MODEL_REGISTRY[model_id]["objective_id"],
+        **fba_surrogate.CARRIER_CONTEXT,
+    }
+    result = run_prediction(
+        WorkbenchHandler.cache,
+        surrogate_path,
+        parse_candidates([candidate]),
+        None,
+        fba_payload={"features": vector["features"], "metadata": vector["metadata"]},
+    )
+    task = result["predictions"][0]["tasks"].get("log10_flux", {})
+    if task.get("status") != "trained":
+        raise ValueError("surrogate checkpoint has no trained log10_flux task")
+    return {
+        "surrogate": surrogate_path,
+        "gem_model_id": model_id,
+        "growth": 10 ** float(task["mean"]),
+        "mean_log10": float(task["mean"]),
+        "standard_deviation_log10": task.get("standard_deviation"),
+        "condition_id": vector["metadata"]["condition_id"],
+        "claim_boundary": fba_surrogate.SURROGATE_CLAIM_BOUNDARY,
+    }
+
+
 def run_governance(root: Path, action: str) -> dict[str, Any]:
     """Execute one allowlisted governance script and return its JSON output."""
     if action not in GOVERNANCE_ACTIONS:
@@ -473,9 +520,27 @@ def fba_status(root: Path) -> dict[str, Any]:
         except Exception as error:  # noqa: BLE001 - status must survive a bad config
             entry.update({"available": False, "error": str(error)})
         models[model_id] = entry
+
+    surrogates = []
+    for path in sorted(root.glob("artifacts/fba-surrogate-*/best.pt")):
+        gem_model_id = path.parent.name.replace("fba-surrogate-", "")
+        metrics_file = path.parent / "metrics.json"
+        metrics = (
+            json.loads(metrics_file.read_text(encoding="utf-8"))
+            if metrics_file.is_file()
+            else {}
+        )
+        surrogates.append(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "gem_model_id": gem_model_id,
+                "test_rmse_log10": metrics.get("test_rmse_log10"),
+                "mean_baseline_rmse_log10": metrics.get("test_mean_baseline_rmse_log10"),
+            }
+        )
     return {
         "models": models,
-        "claim_boundary": fba_context.CLAIM_BOUNDARY,
+        "surrogates": surrogates,
         "feature_width_note": (
             "Both models emit 8-wide vectors matching ModelConfig.fba_context_dim."
         ),
@@ -511,6 +576,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -586,6 +652,16 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json(200, result)
             except Exception as error:  # noqa: BLE001 - surfaced to the page
+                self._send_json(400, {"error": f"{type(error).__name__}: {error}"})
+        elif path == "/api/fba/scenario_vector":
+            try:
+                self._send_json(200, fba_scenario_vector(self.root, body))
+            except Exception as error:  # noqa: BLE001
+                self._send_json(400, {"error": f"{type(error).__name__}: {error}"})
+        elif path == "/api/fba/surrogate_predict":
+            try:
+                self._send_json(200, fba_surrogate_predict(self.root, body))
+            except Exception as error:  # noqa: BLE001
                 self._send_json(400, {"error": f"{type(error).__name__}: {error}"})
         elif path == "/api/fba/run":
             try:
