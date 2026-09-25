@@ -14,6 +14,20 @@ The project is deliberately isolated from the source projects. External datasets
 tools are opened read-only through explicit paths; generated manifests, splits,
 checkpoints, and reports stay under this repository.
 
+## Known Issues
+
+- **torch >= 2.6 CLI predict**: checkpoints saved before torch 2.6 embed
+  `torch.torch_version.TorchVersion`, which `weights_only=True` loading in
+  `training.load_checkpoint` rejects, so `predict` and `evaluate` fail on this
+  machine's torch 2.12. `training.py` is part of the frozen v6 manifest and
+  cannot be edited in place; the workbench server
+  (`scripts/serve_workbench.py`) wraps checkpoint loading in a
+  `safe_globals` allowlist and is the working inference path. For CLI-only
+  reproduction, install `torch<2.6`.
+- **No calibration artifact matches the shipped checkpoints**, so conformal
+  interval columns stay empty until a matching artifact is produced with
+  `fit-calibration`.
+
 ## Software Implementation Release
 
 The current software implementation is formally closed as `software-implementation-v6`.
