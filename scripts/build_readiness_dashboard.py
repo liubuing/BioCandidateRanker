@@ -118,7 +118,7 @@ def collect_blockers(data: dict[str, Any]) -> list[dict[str, Any]]:
 
     archive = data.get("archive") or {}
     local_paths = archive.get("local_path_findings", [])
-    if local_paths:
+    if local_paths and not archive.get("redacted_deposit"):
         affected = sorted({item["path"] for item in local_paths})
         blockers.append(
             {
@@ -222,6 +222,28 @@ def build_payload(root: Path, redact_paths: bool) -> dict[str, Any]:
 
     data["deliverables"] = check_declared_deliverables(root)
     data["placeholders"] = find_placeholders(root)
+
+    # A clean redacted deposit build resolves the local-path blocker even
+    # though the canonical integrity archive still carries original bytes.
+    redacted_manifest = root / "artifacts/release-archive/"
+    for candidate_name in (
+        f"{(data.get('archive') or {}).get('release_id', 'unknown')}-redacted-manifest.json",
+    ):
+        candidate = redacted_manifest / candidate_name
+        if candidate.is_file():
+            payload = load_json(candidate) or {}
+            if (
+                payload.get("redacted")
+                and not payload.get("local_path_findings")
+                and payload.get("redactions")
+            ):
+                data["archive"]["redacted_deposit"] = {
+                    "manifest": candidate.relative_to(root).as_posix(),
+                    "archive": candidate.name.replace("-manifest.json", ".zip"),
+                    "members_transformed": len(payload["redactions"]),
+                    "replacements": sum(item["replaced"] for item in payload["redactions"]),
+                }
+
     data["blockers"] = collect_blockers(data)
 
     data["generated_on"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

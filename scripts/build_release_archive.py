@@ -151,6 +151,50 @@ def scan_local_paths(
     return findings
 
 
+REDACTION = "<redacted-local-path>"
+
+
+def redact_payload(payload: bytes) -> tuple[bytes, int]:
+    """Replace absolute local paths in a text member with a neutral marker.
+
+    Returns the transformed payload and the number of replacements. Binary
+    members are returned untouched.
+    """
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return payload, 0
+    replaced = 0
+    for pattern in LOCAL_PATH_PATTERNS:
+        text, count = pattern.subn(REDACTION, text)
+        replaced += count
+    return text.encode("utf-8"), replaced
+
+
+def build_redact_map(
+    entries: list[dict[str, Any]],
+    root: Path,
+) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
+    """Redacted payload for every member that embeds a local path."""
+    redact_map: dict[str, bytes] = {}
+    redactions: list[dict[str, Any]] = []
+    for entry in entries:
+        if entry["path"].endswith((".pt", ".pth", ".ckpt", ".lmdb", ".zip")):
+            continue
+        payload = (root / entry["path"]).read_bytes()
+        transformed, replaced = redact_payload(payload)
+        if replaced:
+            redact_map[entry["path"]] = transformed
+            redactions.append({"path": entry["path"], "replaced": replaced})
+    return redact_map, redactions
+
+
+def member_bytes(entry: dict[str, Any], root: Path, redact_map: dict[str, bytes] | None) -> bytes:
+    if redact_map and entry["path"] in redact_map:
+        return redact_map[entry["path"]]
+    return (root / entry["path"]).read_bytes()
+
+
 def check_license_ownership(
     entries: list[dict[str, Any]],
     license_inventory: dict[str, Any] | None,
@@ -216,6 +260,7 @@ def build_manifest(
     release_manifest: dict[str, Any],
     entries: list[dict[str, Any]],
     missing: list[str],
+    redact_map: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
     # Resolve against root, not the process working directory, so --root works
     # from anywhere.
@@ -226,7 +271,7 @@ def build_manifest(
     files: list[dict[str, Any]] = []
     total = 0
     for entry in entries:
-        payload = (root / entry["path"]).read_bytes()
+        payload = member_bytes(entry, root, redact_map)
         total += len(payload)
         files.append(
             {
@@ -274,11 +319,17 @@ def build_manifest(
     }
 
 
-def write_archive(archive_path: Path, root: Path, entries: list[dict[str, Any]], manifest: dict[str, Any]) -> None:
+def write_archive(
+    archive_path: Path,
+    root: Path,
+    entries: list[dict[str, Any]],
+    manifest: dict[str, Any],
+    redact_map: dict[str, bytes] | None = None,
+) -> None:
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for entry in entries:
-            archive.writestr(_zip_info(entry["path"]), (root / entry["path"]).read_bytes())
+            archive.writestr(_zip_info(entry["path"]), member_bytes(entry, root, redact_map))
         payload = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
         archive.writestr(_zip_info(MANIFEST_MEMBER_NAME), payload)
 
@@ -298,6 +349,12 @@ def main() -> int:
         "--fail-on-local-paths",
         action="store_true",
         help="refuse to deposit while any member embeds an absolute local path",
+    )
+    parser.add_argument(
+        "--redact-paths",
+        action="store_true",
+        help="replace absolute local paths in the archived bytes; writes a "
+             "-redacted suffix archive, leaving the integrity archive untouched",
     )
     parser.add_argument(
         "--require-frozen-evidence",
@@ -368,7 +425,14 @@ def main() -> int:
         )
         return 1
 
-    manifest = build_manifest(root, args.manifest, release_manifest, entries, missing)
+    redact_map: dict[str, bytes] | None = None
+    redactions: list[dict[str, Any]] = []
+    if args.redact_paths:
+        redact_map, redactions = build_redact_map(entries, root)
+
+    manifest = build_manifest(
+        root, args.manifest, release_manifest, entries, missing, redact_map=redact_map
+    )
     unowned = sorted(item["path"] for item in ownership if item["corpus_id"] is None)
     local_paths = scan_local_paths(entries, root)
     manifest["license_ownership"] = {
@@ -382,6 +446,36 @@ def main() -> int:
                 item["path"]
             )
     manifest["local_path_findings"] = local_paths
+    if args.redact_paths:
+        # Post-redaction guard: the deposit bytes must be clean. Frozen-evidence
+        # hash mismatches are expected for redacted members and the verifier
+        # tolerates exactly those paths.
+        residual = []
+        for entry in entries:
+            payload = member_bytes(entry, root, redact_map)
+            try:
+                text = payload.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            if any(pattern.search(text) for pattern in LOCAL_PATH_PATTERNS):
+                residual.append(entry["path"])
+        manifest["redacted"] = True
+        manifest["redactions"] = redactions
+        manifest["pre_redaction_findings_count"] = len(local_paths)
+        manifest["local_path_findings"] = []
+        manifest["residual_local_paths"] = residual
+        local_paths = []
+        if residual:
+            print(
+                json.dumps(
+                    {
+                        "valid": False,
+                        "issues": [f"redaction left local paths in: {path}" for path in residual],
+                    },
+                    indent=2,
+                )
+            )
+            return 1
 
     if local_paths and args.fail_on_local_paths:
         print(
@@ -415,10 +509,11 @@ def main() -> int:
         return 0
 
     output_dir = args.output_dir if args.output_dir.is_absolute() else root / args.output_dir
-    archive_path = output_dir / f"{release_id}.zip"
-    sidecar_path = output_dir / f"{release_id}-manifest.json"
+    suffix = "-redacted" if args.redact_paths else ""
+    archive_path = output_dir / f"{release_id}{suffix}.zip"
+    sidecar_path = output_dir / f"{release_id}{suffix}-manifest.json"
 
-    write_archive(archive_path, root, entries, manifest)
+    write_archive(archive_path, root, entries, manifest, redact_map)
     sidecar_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     print(

@@ -16,11 +16,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
 
 DEFAULT_RELEASE_MANIFEST = Path("configs/software_implementation_release_v6.json")
 MANIFEST_MEMBER_NAME = "RELEASE_MANIFEST.json"
+
+# Mirrors scripts/build_release_archive.py; a deposit archive must be free of
+# these regardless of what its manifest claims.
+LOCAL_PATH_PATTERNS = (
+    re.compile(r"[A-Za-z]:\\\\?[^\"'\s,;)]{3,}"),
+    re.compile(r"/(?:home|Users)/[A-Za-z0-9._-]+[^\"'\s,;)]*"),
+)
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -71,10 +79,30 @@ def verify_archive(
             )
 
         for record in embedded.get("frozen_evidence_verified", []):
+            redacted_members = {
+                item["path"] for item in embedded.get("redactions", [])
+            } if embedded.get("redacted") else set()
+            # A redacted deposit transform deliberately changes member bytes,
+            # so only non-redacted members must still match the release freeze.
+            if record["path"] in redacted_members:
+                continue
             if not record.get("sha256_matches_manifest"):
                 issues.append(f"frozen evidence SHA256 differs from release manifest: {record['path']}")
             if not record.get("size_matches_manifest"):
                 issues.append(f"frozen evidence size differs from release manifest: {record['path']}")
+
+        # Deposit hygiene: no local path may survive into a redacted deposit.
+        # The unredacted integrity archive deliberately preserves original bytes.
+        for name in actual_members if embedded.get("redacted") else []:
+            payload = archive.read(name)
+            try:
+                text = payload.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            for pattern in LOCAL_PATH_PATTERNS:
+                if pattern.search(text):
+                    issues.append(f"local path survives in deposit member: {name}")
+                    break
 
     if release_manifest_path is not None:
         if not release_manifest_path.is_file():

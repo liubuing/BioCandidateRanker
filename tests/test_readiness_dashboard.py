@@ -136,6 +136,20 @@ def test_a_sent_request_is_not_a_blocker():
     assert not any(b["id"] == "no-outreach" for b in dashboard.collect_blockers(_base_data()))
 
 
+def test_clean_redacted_deposit_clears_the_local_path_blocker():
+    data = _base_data()
+    data["archive"]["local_path_findings"] = [
+        {"path": "README.md", "matches": ["D:\\biological\\x"]},
+    ]
+    data["archive"]["redacted_deposit"] = {
+        "manifest": "artifacts/release-archive/x-redacted-manifest.json",
+        "members_transformed": 22,
+        "replacements": 47,
+    }
+    blockers = dashboard.collect_blockers(data)
+    assert not any(b["id"] == "local-paths" for b in blockers)
+
+
 def test_inconsistent_license_audit_becomes_a_blocker():
     data = _base_data()
     data["licenses"]["valid"] = False
