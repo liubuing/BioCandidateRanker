@@ -1,7 +1,7 @@
 """Genome-scale FBA context features for the multimodal ranker.
 
-This module imports the technology stack of two E. coli metabolic-engineering
-efforts and exposes it as governed model inputs:
+This module imports metabolic-model technology stacks and exposes them as
+governed model inputs:
 
 * the cofactor-engineering paper by Wang et al. (D-pantothenic acid production):
   the iML1515 model, FBA with a biomass objective, knockouts and overexpression
@@ -9,10 +9,13 @@ efforts and exposes it as governed model inputs:
   and optional flux variability analysis;
 * the user's arginine / carbon-fixation project (05_FBA 融合FBA计算.py): the
   iJO1366 model plus eight synthetic reactions (CCR_EMA, NOG_F6P, PTXD, ...) and
-  the NOG / phosphite / CO2 scenario caps.
+  the NOG / phosphite / CO2 scenario caps;
+* the user's yeast pathway-prediction project (Yeast-MetaTwin): the yeast
+  genome-scale model of the 10H2DA reference case, registered read-only with a
+  yeast-native 8-wide feature set (see MODEL_REGISTRY).
 
-Both produce the same contract: an 8-wide fba_context vector whose reaction
-identifiers are declared in FEATURE_IDS, with hash-identified model files and a
+All produce the same contract: an 8-wide fba_context vector whose reaction
+identifiers are declared per model, with hash-identified model files and a
 condition id that binds the vector to the exact scenario that produced it.
 
 Claim boundary: every value produced here is a simulation under the declared
@@ -37,33 +40,81 @@ from .data import FBA_FEATURE_SCHEMA_VERSION
 MODEL_CONFIGS = {
     "iML1515": Path("configs/fba_context_model.json"),
     "iJO1366": Path("configs/fba_context_model_ijo1366.json"),
+    "yeast_metatwin": Path("configs/fba_context_model_yeast_metatwin.json"),
 }
 
 GLUCOSE_EXCHANGE = "EX_glc__D_e"
 OXYGEN_EXCHANGE = "EX_o2_e"
 
 # The paper monitors EMP, PPP, ED, and TCA fluxes plus redox and energy state;
-# these eight reactions cover the same gates and match ModelConfig
-# .fba_context_dim of every shipped checkpoint. Both registered models carry
-# every reaction below except the biomass objective, which is per-model.
+# these six reactions cover the same gates. Together with the per-model biomass
+# objective and glucose exchange they form the 8-wide vector that matches
+# ModelConfig.fba_context_dim of every shipped checkpoint. Both E. coli models
+# carry every reaction below except the biomass objective, which is per-model.
 SHARED_FLUX_REACTIONS = ("PFK", "G6PDH2r", "EDD", "CS", "THD2pp", "ATPM")
+
+DEFAULT_GLUCOSE = 15.0
+DEFAULT_OXYGEN = 20.0
+
+# Yeast-MetaTwin registration: feature reactions are yeast-native r_ identifiers.
+# Yeast has no ED pathway and no membrane transhydrogenase, so the two slots that
+# E. coli fills with EDD/THD2pp carry the oxygen exchange and the peroxisomal
+# POX1 acyl-CoA oxidase step (r_0120) that gates the 10H2DA precursor chain.
+# Glucose 10 mmol/gDW/h is the standard aerobic glucose batch rate; oxygen 1000
+# is the model file's own exchange cap.
+YEAST_METATWIN_MODEL_ID = "yeast_metatwin"
+YEAST_FEATURE_REACTIONS = (
+    "r_2111",  # growth (biomass objective)
+    "r_1714",  # D-glucose exchange
+    "r_1992",  # oxygen exchange
+    "r_0886",  # phosphofructokinase (glycolysis)
+    "r_0466",  # glucose 6-phosphate dehydrogenase (PPP)
+    "r_0300",  # citrate synthase (TCA)
+    "r_4046",  # non-growth-associated maintenance
+    "r_0120",  # acyl-CoA oxidase (decanoyl-CoA), POX1 precursor gate
+)
 
 MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     "iML1515": {
         "objective_id": "BIOMASS_Ec_iML1515_core_75p37M",
         "citation": "Monk et al. 2017, Nature Microbiology 2:17094",
+        "exchanges": {"glucose": GLUCOSE_EXCHANGE, "oxygen": OXYGEN_EXCHANGE},
+        "feature_reactions": ("BIOMASS_Ec_iML1515_core_75p37M", GLUCOSE_EXCHANGE)
+        + SHARED_FLUX_REACTIONS,
+        "presets": None,  # None means every BASE_PRESETS entry applies
+        "default_glucose": DEFAULT_GLUCOSE,
+        "default_oxygen": DEFAULT_OXYGEN,
+        "provenance_key": "iML1515_presets",
     },
     "iJO1366": {
         "objective_id": "BIOMASS_Ec_iJO1366_WT_53p95M",
         "citation": "Orth et al. 2011, Mol Syst Biol 7:530",
+        "exchanges": {"glucose": GLUCOSE_EXCHANGE, "oxygen": OXYGEN_EXCHANGE},
+        "feature_reactions": ("BIOMASS_Ec_iJO1366_WT_53p95M", GLUCOSE_EXCHANGE)
+        + SHARED_FLUX_REACTIONS,
+        "presets": None,
+        "default_glucose": DEFAULT_GLUCOSE,
+        "default_oxygen": DEFAULT_OXYGEN,
+        "provenance_key": "iJO1366_fusion",
+    },
+    YEAST_METATWIN_MODEL_ID: {
+        "objective_id": "r_2111",
+        "citation": (
+            "Yeast-MetaTwin yeast genome-scale model (user metabolic-modeling "
+            "project asset, Yeast-GEM style r_ identifiers); opened read-only, "
+            "re-hashed copy under data/"
+        ),
+        "exchanges": {"glucose": "r_1714", "oxygen": "r_1992"},
+        "feature_reactions": YEAST_FEATURE_REACTIONS,
+        "presets": ("baseline",),
+        "default_glucose": 10.0,
+        "default_oxygen": 1000.0,
+        "provenance_key": "yeast_metatwin",
     },
 }
 for _spec in MODEL_REGISTRY.values():
-    _spec["feature_reactions"] = (_spec["objective_id"], GLUCOSE_EXCHANGE) + SHARED_FLUX_REACTIONS
+    _spec["feature_reactions"] = tuple(_spec["feature_reactions"])
     _spec["feature_ids"] = tuple(f"flux:{r}" for r in _spec["feature_reactions"])
-
-DEFAULT_GLUCOSE = 15.0
-DEFAULT_OXYGEN = 20.0
 
 # Scenario caps reproduced from the arginine fusion script (05_FBA).
 FUSION_SCENARIO_CAPS = {
@@ -127,6 +178,11 @@ FUSION_PRESETS: dict[str, dict[str, Any]] = {
 PROVENANCE = {
     "iML1515_presets": "Wang et al., Integrated cofactor-centric engineering and energy flux optimization enable high-efficient D-pantothenic acid production in Escherichia coli",
     "iJO1366_fusion": "user project 05_FBA 融合FBA计算.py: add_fusion_pathways, configure_model scenario caps",
+    "yeast_metatwin": (
+        "user project Yeast-MetaTwin yeast model (10H2DA reference case); "
+        "registered 2026-10-04 from the read-only source, SHA256 pinned in "
+        "configs/fba_context_model_yeast_metatwin.json"
+    ),
 }
 
 
@@ -136,10 +192,11 @@ def model_ids() -> list[str]:
 
 def presets_for(model_id: str) -> list[str]:
     _require_model(model_id)
-    base = sorted(BASE_PRESETS)
+    spec = MODEL_REGISTRY[model_id]
+    names = sorted(BASE_PRESETS) if spec["presets"] is None else list(spec["presets"])
     if model_id == "iJO1366":
-        return base + sorted(FUSION_PRESETS)
-    return base
+        names += sorted(FUSION_PRESETS)
+    return names
 
 
 def preset_requires_fusion(preset: str) -> bool:
@@ -179,6 +236,8 @@ def load_model(model_id: str, model_path: str | Path | None = None, *, verify: b
         verify_model_file(resolved, config)
     if resolved.suffix == ".json":
         model = cobra.io.load_json_model(str(resolved))
+    elif resolved.suffix in {".yml", ".yaml"}:
+        model = cobra.io.load_yaml_model(str(resolved))
     else:
         model = cobra.io.read_sbml_model(str(resolved))
     return model
@@ -251,16 +310,18 @@ def _resolve_gene(model, name_or_id: str):
     return gene
 
 
-def _set_medium(model, spec: dict[str, Any], glucose: float, oxygen: float) -> None:
-    for exchange, bound in ((GLUCOSE_EXCHANGE, glucose), (OXYGEN_EXCHANGE, oxygen)):
+def _set_medium(model, spec: dict[str, Any], fusion_spec: dict[str, Any] | None,
+                glucose: float, oxygen: float) -> None:
+    exchanges = spec["exchanges"]
+    for exchange, bound in ((exchanges["glucose"], glucose), (exchanges["oxygen"], oxygen)):
         if bound < 0:
             raise ValueError(f"uptake must be non-negative, got {bound}")
         model.reactions.get_by_id(exchange).lower_bound = -float(bound)
-    if spec.get("fusion_pathways"):
+    if fusion_spec:
         model.reactions.EX_co2_e.lower_bound = -float(FUSION_CO2_UPTAKE_CAP)
-        model.reactions.NOG_F6P.upper_bound = float(spec["nog"])
-        model.reactions.EX_phite_e.lower_bound = -float(spec["phosphite"])
-        if spec["phosphite"] == 0:
+        model.reactions.NOG_F6P.upper_bound = float(fusion_spec["nog"])
+        model.reactions.EX_phite_e.lower_bound = -float(fusion_spec["phosphite"])
+        if fusion_spec["phosphite"] == 0:
             model.reactions.PTXD.upper_bound = 0.0
 
 
@@ -287,8 +348,8 @@ def run_fba_context(
     *,
     model_id: str = "iML1515",
     preset: str = "baseline",
-    glucose: float = DEFAULT_GLUCOSE,
-    oxygen: float = DEFAULT_OXYGEN,
+    glucose: float | None = None,
+    oxygen: float | None = None,
     growth_min: float = 0.0,
     with_fva: bool = False,
     model=None,
@@ -300,11 +361,14 @@ def run_fba_context(
     (the fusion layer) and bound changes can never leak between calls through
     a shared object; the caller may pass a cached base model safely.
     Fusion presets add the synthetic pathway layer and its scenario caps
-    before solving.
+    before solving. Glucose/oxygen default to the registered per-model values
+    when omitted.
     """
     if model_id not in MODEL_REGISTRY:
         raise ValueError(f"unknown model {model_id!r}; known: {model_ids()}")
     spec = MODEL_REGISTRY[model_id]
+    glucose = spec.get("default_glucose", DEFAULT_GLUCOSE) if glucose is None else float(glucose)
+    oxygen = spec.get("default_oxygen", DEFAULT_OXYGEN) if oxygen is None else float(oxygen)
     known = presets_for(model_id)
     if preset not in known:
         raise ValueError(f"unknown preset {preset!r} for {model_id}; known: {known}")
@@ -322,12 +386,15 @@ def run_fba_context(
         "objective_id": spec["objective_id"],
         "preset": preset,
         "fusion_pathways_applied": fusion_spec is not None,
-        "medium": {GLUCOSE_EXCHANGE: glucose, OXYGEN_EXCHANGE: oxygen},
+        "medium": {
+            spec["exchanges"]["glucose"]: glucose,
+            spec["exchanges"]["oxygen"]: oxygen,
+        },
         "solver_id": solver_id,
         "feature_ids": list(spec["feature_ids"]),
         "claim_boundary": CLAIM_BOUNDARY,
         "provenance": (
-            PROVENANCE["iJO1366_fusion"] if fusion_spec else PROVENANCE["iML1515_presets"]
+            PROVENANCE["iJO1366_fusion"] if fusion_spec else PROVENANCE[spec["provenance_key"]]
         ),
     }
     if model_sha256:
@@ -339,7 +406,7 @@ def run_fba_context(
     # file's default, which for iJO1366 is the "core" biomass while this
     # contract follows the arginine project's "WT" biomass.
     scoped.objective = spec["objective_id"]
-    _set_medium(scoped, fusion_spec or {}, glucose, oxygen)
+    _set_medium(scoped, spec, fusion_spec, glucose, oxygen)
     if growth_min > 0:
         scoped.reactions.get_by_id(spec["objective_id"]).lower_bound = growth_min
 
@@ -418,18 +485,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-id", default="iML1515", choices=model_ids())
     parser.add_argument("--preset", default="baseline")
-    parser.add_argument("--glucose", type=float, default=DEFAULT_GLUCOSE)
-    parser.add_argument("--oxygen", type=float, default=DEFAULT_OXYGEN)
+    parser.add_argument("--glucose", type=float, default=None,
+                        help="glucose uptake cap; default is per-model")
+    parser.add_argument("--oxygen", type=float, default=None,
+                        help="oxygen uptake cap; default is per-model")
     parser.add_argument("--fva", action="store_true")
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
     config = load_model_config(args.model_id)
+    spec = MODEL_REGISTRY[args.model_id]
     payload = run_fba_context(
         model_id=args.model_id,
         preset=args.preset,
-        glucose=args.glucose,
-        oxygen=args.oxygen,
+        glucose=args.glucose if args.glucose is not None else spec.get("default_glucose", DEFAULT_GLUCOSE),
+        oxygen=args.oxygen if args.oxygen is not None else spec.get("default_oxygen", DEFAULT_OXYGEN),
         with_fva=args.fva,
         model_sha256=config["sha256"],
     )

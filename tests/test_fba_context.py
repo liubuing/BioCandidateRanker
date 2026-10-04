@@ -1,9 +1,11 @@
 """Tests for the genome-scale FBA context fusion.
 
-Two external stacks are fused here — the pantothenate paper's iML1515 workflow
-and the arginine project's iJO1366 fusion model — so the tests cover the seams:
-the registry contract, the paper's modification semantics, the synthetic fusion
-layer, and (when a checkpoint is present) the shape the ranker consumes.
+External stacks are fused here — the pantothenate paper's iML1515 workflow,
+the arginine project's iJO1366 fusion model, and the yeast pathway-prediction
+project's Yeast-MetaTwin model — so the tests cover the seams: the registry
+contract, the paper's modification semantics, the synthetic fusion layer, the
+yeast registration, and (when a checkpoint is present) the shape the ranker
+consumes.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from biocandidate import fba_context  # noqa: E402
 
 IML1515 = ROOT / "data/iML1515.xml"
 IJO1366 = ROOT / "data/iJO1366.json"
+YEAST = ROOT / "data/Yeast-MetaTwin.yml"
 pytestmark = pytest.mark.skipif(
     not (IML1515.is_file() and IJO1366.is_file()),
     reason="model files under the gitignored data/ tree are required",
@@ -37,6 +40,13 @@ def iml1515():
 @pytest.fixture(scope="module")
 def ijo1366():
     return fba_context.load_model("iJO1366", IJO1366)
+
+
+@pytest.fixture(scope="module")
+def yeast():
+    if not YEAST.is_file():
+        pytest.skip("yeast model file required")
+    return fba_context.load_model("yeast_metatwin", YEAST)
 
 
 # --- pure logic ------------------------------------------------------------------
@@ -57,8 +67,8 @@ def test_signed_log10_rejects_non_finite():
 
 
 def test_registry_contract():
-    """Both registered models emit exactly 8 feature ids with a per-model objective."""
-    assert set(fba_context.model_ids()) == {"iML1515", "iJO1366"}
+    """All registered models emit exactly 8 feature ids with a per-model objective."""
+    assert set(fba_context.model_ids()) == {"iML1515", "iJO1366", "yeast_metatwin"}
     for model_id, spec in fba_context.MODEL_REGISTRY.items():
         assert len(spec["feature_ids"]) == 8
         assert spec["feature_ids"][0] == f"flux:{spec['objective_id']}"
@@ -69,6 +79,7 @@ def test_registry_contract():
 def test_fusion_presets_are_iJO1366_only():
     assert all("fusion" not in p for p in fba_context.presets_for("iML1515"))
     assert "fusion_M5_NOG_PtxD" in fba_context.presets_for("iJO1366")
+    assert fba_context.presets_for("yeast_metatwin") == ["baseline"]
 
 
 def test_unknown_model_and_preset_are_rejected(iml1515):
@@ -185,6 +196,34 @@ def test_fusion_scenario_bound_scan_is_monotone(ijo1366):
     assert free["growth"] >= floored["growth"] - 1e-6
     # objective identity: the WT biomass is the maximized reaction
     assert floored["metadata"]["objective_id"] == "BIOMASS_Ec_iJO1366_WT_53p95M"
+
+
+# --- the yeast registration ------------------------------------------------------
+
+
+def test_yeast_baseline_is_optimal_with_eight_features(yeast):
+    result = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    assert result["status"] == "optimal"
+    assert len(result["features"]) == 8
+    assert result["metadata"]["model_id"] == "yeast_metatwin"
+    assert result["metadata"]["objective_id"] == "r_2111"
+    # declared registration defaults: glucose 10 aerobic, oxygen at the file's cap
+    assert result["fluxes"]["r_1714"] == pytest.approx(-10.0)
+    # the POX1 precursor gate that feeds the 10H2DA reference chain is in the vector
+    assert "flux:r_0120" in result["metadata"]["feature_ids"]
+
+
+def test_yeast_condition_id_is_deterministic(yeast):
+    first = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    second = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    assert first["condition_id"] == second["condition_id"]
+    assert first["features"] == second["features"]
 
 
 # --- the ranker seam -------------------------------------------------------------

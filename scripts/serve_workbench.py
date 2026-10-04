@@ -555,8 +555,8 @@ def fba_run(root: Path, body: dict[str, Any]) -> dict[str, Any]:
     return fba_context.run_fba_context(
         model_id=model_id,
         preset=str(body.get("preset", "baseline")),
-        glucose=float(body.get("glucose", fba_context.DEFAULT_GLUCOSE)),
-        oxygen=float(body.get("oxygen", fba_context.DEFAULT_OXYGEN)),
+        glucose=None if body.get("glucose") is None else float(body["glucose"]),
+        oxygen=None if body.get("oxygen") is None else float(body["oxygen"]),
         growth_min=float(body.get("growth_min", 0.0)),
         with_fva=bool(body.get("with_fva", False)),
         model=entry["model"],

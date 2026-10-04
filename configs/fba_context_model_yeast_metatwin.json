@@ -1,0 +1,17 @@
+{
+  "model_id": "yeast_metatwin",
+  "path": "data/Yeast-MetaTwin.yml",
+  "sha256": "7b2576232bd093001c2f173e07fb9d29c0ae565b5fc3d4be0d88a4b7d444deec",
+  "size_bytes": 5435712,
+  "format": "YAML (cobra load_yaml_model)",
+  "source": "D:/biological/Metabolic model prediction/Yeast-MetaTwin/Data/model/Yeast-MetaTwin.yml ; copied from the user metabolic-modeling project with identity recorded; the source directory stays read-only",
+  "citation": "Yeast-MetaTwin yeast genome-scale model (Yeast-GEM style r_ identifiers), asset of the user's pathway-prediction project",
+  "license": "Project-internal asset under the gitignored data/ tree; not redistributed.",
+  "objective_id": "r_2111",
+  "exchanges": {"glucose": "r_1714", "oxygen": "r_1992"},
+  "feature_reactions": ["r_2111", "r_1714", "r_1992", "r_0886", "r_0466", "r_0300", "r_4046", "r_0120"],
+  "default_glucose": 10.0,
+  "default_oxygen": 1000.0,
+  "medium_note": "Defaults are declared for this registration: 10 mmol/gDW/h aerobic glucose (standard yeast batch rate) and oxygen 1000 (the model file's own exchange cap). The model file itself caps glucose at 1.0 mmol/gDW/h.",
+  "claim_boundary": "Simulated FBA context only; no experimental flux measurement is claimed."
+}
