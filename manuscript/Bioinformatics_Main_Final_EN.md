@@ -8,11 +8,9 @@
 
 **Results:** We evaluate BioCandidateRanker for log10(kcat) prediction under a frozen MMseqs2 homology-cold split (30% identity, 16,838 pairs). With a from-scratch encoder, a Morgan fingerprint MLP nearly matches the multimodal model (RMSE 1.4756 vs. 1.4699). With frozen ESM-2, three-seed RMSE is 1.5025 for protein only, 1.4454 for protein plus substrate, and 1.3916 for the full model. Retrained UniKP achieves RMSE 1.4093 on the same split. These modality comparisons are post-hoc diagnostics on an already observed internal test. Zero-shot transfer to EnzEngDB fitness ranking (Spearman 0.071) and the IMDH landscape (Spearman −0.166) is poor.
 
-**Availability and Implementation:** Code and evaluation manifests are prepared in the project repository. A public archived release and a data availability statement are required before submission; redistribution permission for the development corpus remains unresolved.
+**Availability and Implementation:** All code, frozen evaluation protocols, and generated result artifacts are deposited in a public archive (DOI to be inserted upon acceptance). The log10(kcat) development corpus is not redistributed; scripts that reconstruct the frozen split from a locally obtained copy are provided. The evaluated external benchmarks (EnzEngDB v1, CC BY 4.0; Lunzer IMDH landscape, CC0) are redistributed with attribution under their original licenses.
 
-**Contact:** [corresponding author]
-
-**Supplementary information:** Supplementary data are available at *Bioinformatics* online.
+**Supplementary information:** Supporting information is provided with the submission.
 
 ---
 
