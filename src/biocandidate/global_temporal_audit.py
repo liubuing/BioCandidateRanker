@@ -41,6 +41,9 @@ SOURCE_COMPONENT_COLUMNS = {
     "europepmc-PMC12362431": ("sequence_id",),
     "europepmc-PMC12444516": ("sequence_id",),
     "europepmc-PMC12838360": ("sequence_id",),
+    "europepmc-PMC12774947": ("sequence_id",),
+    "europepmc-PMC12994016": ("sequence_id",),
+    "europepmc-PMC13498779": ("sequence_id",),
     "zenodo-14055918": ("sequence_id",),
 }
 
@@ -132,7 +135,7 @@ def _mmseqs_command(executable: str, *arguments: str) -> list[str]:
 
 def _verify_mmseqs(executable: str) -> str:
     completed = subprocess.run(
-        _mmseqs_command(executable, "version"), capture_output=True, text=True, check=False
+        _mmseqs_command(executable, "version"), capture_output=True, text=True, errors="replace", check=False
     )
     if completed.returncode:
         raise RuntimeError(f"MMseqs2 version command failed: {completed.stderr.strip()}")

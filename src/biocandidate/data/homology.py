@@ -77,7 +77,7 @@ def run_mmseqs_easy_cluster(
         ],
     ]
     for command in commands:
-        completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        completed = subprocess.run(command, check=False, capture_output=True, text=True, errors="replace")
         if completed.returncode:
             raise RuntimeError(
                 f"MMseqs2 command failed with exit code {completed.returncode}: "
@@ -132,7 +132,7 @@ def run_mmseqs_easy_search(
         "--max-seqs", "1", "--threads", str(threads),
         "--format-output", "query,target,fident,qcov,tcov,evalue,bits",
     ]
-    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    completed = subprocess.run(command, check=False, capture_output=True, text=True, errors="replace")
     if completed.returncode:
         raise RuntimeError(
             f"MMseqs2 command failed with exit code {completed.returncode}: "
