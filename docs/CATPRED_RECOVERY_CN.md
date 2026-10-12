@@ -4,6 +4,12 @@
 
 ## 执行状态
 
+2026-09-28：30/30成员已完成并逐文件核验哈希，完整清单生成于01:07。正式内部测试也已完成（1646行、三组10成员集成），平均RMSE 1.38932 ± 0.01747。以下续训记录为历史执行记录；最新结果见 `docs/CATPRED_INTERNAL_COMPARISON_CN.md`。
+
+2026-09-27 续训已实际确认：日志出现 `RECOVERY restored through epoch 14`，随后第16轮训练批次继续推进（确认时至少16/823批次）。已完成的12个成员没有重跑，剩余队列继续执行。恢复审计见 `artifacts/catpred-mode-b/resume-20260927-audit.json`。尚无完整集成或正式测试结果。
+
+2026-09-27 恢复检查：已有 12/30 成员完成，seed 42 的 member2 保存至 epoch 14（第15轮），应从 epoch15（第16轮）续训。协议入库后 CRLF 变为 LF 导致字节哈希不同；将换行恢复为 CRLF 后，哈希精确匹配断点中的 `e0a69242b4156f3b6bcc9946171cd0b26746b8baaf3b8bd1227e660cf20a6de8`，JSON 内容及训练参数未变。原 LF 文件和恢复审计保留在 artifacts 中。首次启动因身份校验拒绝退出，未进入新训练；原协议恢复后已重新启动，日志为 `resume-20260927-verified-stdout.log` / `resume-20260927-verified-stderr.log`。不得为绕过哈希检查直接修改断点身份。
+
 真实训练对照已通过：连续 3 轮与第 1 轮后退出再恢复至 3 轮，最终模型权重逐值一致，采样器随机状态、Torch 随机状态、最佳验证分数一致。收据为 `artifacts/catpred-mode-b/recovery-test-v3/result.json`。两次早期序列化失败测试完整保留。
 
 已冻结 `configs/catpred_recoverable_protocol.json` 并启动独立后台队列，保留历史首成员，其余 29 个成员按下述新种子规则执行。日志为 `artifacts/catpred-mode-b/recoverable-queue-stdout.log` / `recoverable-queue-stderr.log`，成员状态与训练日志在 `full-recoverable/seed*/member*/`。每成员 `run/fold_0/model_0/recovery.pt` 是轮次恢复状态，`model.pt` 是按验证集选出的最佳模型，两者用途不同。
