@@ -1,0 +1,29 @@
+{
+  "status": "draft_not_frozen_not_authorization_to_score",
+  "date": "2026-10-07",
+  "existing_absolute_protocol_overridden": false,
+  "external_predictions_allowed": false,
+  "primary_candidate_metric": "mean of within-campaign Spearman correlations, equal campaign weight",
+  "source_balanced_sensitivity": "average campaigns within source, then equal-weight sources",
+  "proposed_primary_min_candidates": 5,
+  "minimum_size_finalized": false,
+  "size_sensitivity_grid": [3, 5, 8],
+  "two_candidate_groups": "descriptive pair ordering only; no standalone Spearman reliability claim",
+  "measured_ties": "average ranks; report fraction of tied pairs; do not jitter",
+  "prediction_ties": "average ranks; exact prediction ties earn 0.5 in pairwise accuracy",
+  "pairwise_secondary": "measured-tied pairs excluded from pairwise denominator and their count reported; never treat pairs as independent replicates",
+  "constant_measurement_group": "Spearman undefined; disclose, do not silently assign zero",
+  "constant_prediction_group": "Spearman undefined; disclose method coverage failure; pairwise metric still shows tied predictions, never silently remove a method's hard groups",
+  "unknown_uncertainty_type": "retain undefined; no SD/SEM conversion, uncertainty weighting or invented confidence interval",
+  "technical_repeats": "not independent biological samples or extra enzyme candidates",
+  "dependence": "source and global-family blocks retained; calibrate crossed dependence using development-only simulations before selecting an inferential method",
+  "bootstrap_status": "not approved for confirmatory inference with current small number of source blocks",
+  "model_list_and_multiplicity": "must freeze comparator versions, common coverage, contrast family and multiplicity handling before predictions",
+  "remaining_gates": [
+    "source quality and campaign inclusion resolved",
+    "all existing absolute-protocol readiness gates passed",
+    "precision and power assessment with development data or justified simulation",
+    "source/family dependence and undefined-score aggregation rule finalized",
+    "checkpoint and evaluation manifest hashes frozen"
+  ]
+}
