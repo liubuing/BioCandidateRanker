@@ -249,3 +249,96 @@ def _safe_globals():
     from serve_workbench import _safe_load_globals
 
     return _safe_load_globals()
+
+
+# --- cofactor accounting ---------------------------------------------------------
+
+
+def test_registry_declares_cofactor_targets_for_every_model():
+    """Each registered model must name its own cofactor metabolites."""
+    for model_id, spec in fba_context.MODEL_REGISTRY.items():
+        targets = spec.get("cofactor_metabolites")
+        assert targets, f"{model_id} declares no cofactor targets"
+        assert set(targets) == {"nadph", "nadh", "atp"}
+
+
+@pytest.mark.parametrize("model_id", ["iML1515", "iJO1366", "yeast_metatwin"])
+def test_cofactor_ids_exist_in_their_model(model_id):
+    model = fba_context.load_model(model_id)
+    for label, metabolite_id in fba_context.MODEL_REGISTRY[model_id]["cofactor_metabolites"].items():
+        assert metabolite_id in model.metabolites, f"{model_id} lacks {label} ({metabolite_id})"
+
+
+def test_cofactor_turnover_is_self_consistent_and_steady(iml1515):
+    """Gross turnover must equal the sum of its reported producers, and net must vanish.
+
+    Net internal production is zero by construction at steady state, so it
+    doubles as a solution sanity check; a non-zero value means the solution is
+    not balanced for that cofactor.
+    """
+    result = fba_context.run_fba_context(model_id="iML1515", preset="baseline", model=iml1515)
+    turnover = result["cofactor_turnover"]
+    assert set(turnover) == {"nadph", "nadh", "atp"}
+
+    for label, info in turnover.items():
+        assert info["status"] == "reported"
+        assert info["unit"] == "mmol gDW^-1 h^-1"
+        assert info["gross_turnover"] > 0
+        assert abs(info["net_production"]) < 1e-9, f"{label} is not at steady state"
+        assert info["top_producers"]
+        # the reporting window must not exceed the total it summarises
+        reported = sum(item["flux"] for item in info["top_producers"])
+        assert reported <= info["gross_turnover"] + 1e-9
+        assert all(item["flux"] > 0 for item in info["top_producers"])
+
+
+def test_nadph_and_atp_supply_match_the_paper_levers(iml1515):
+    """The dominant producers must be the pathways the paper engineers."""
+    turnover = fba_context.run_fba_context(
+        model_id="iML1515", preset="baseline", model=iml1515
+    )["cofactor_turnover"]
+
+    nadph_producers = {item["reaction_id"] for item in turnover["nadph"]["top_producers"]}
+    # pentose phosphate shunt: the paper's NADPH regeneration target
+    assert "G6PDH2r" in nadph_producers or "GND" in nadph_producers
+    atp_producers = {item["reaction_id"] for item in turnover["atp"]["top_producers"]}
+    # oxidative phosphorylation: the paper's electron-transport-chain target
+    assert "ATPS4rpp" in atp_producers
+
+
+def test_cofactor_reporting_does_not_widen_the_feature_vector(iml1515):
+    """The 8-wide contract every shipped checkpoint depends on must not change."""
+    result = fba_context.run_fba_context(model_id="iML1515", preset="baseline", model=iml1515)
+    assert len(result["features"]) == 8
+    assert len(result["metadata"]["feature_ids"]) == 8
+    assert "cofactor_turnover" not in result["metadata"]
+    assert result["cofactor_scope"].startswith("gross turnover")
+
+
+def test_paper_stack_does_not_move_the_fba_optimum(iml1515):
+    """Documented model behaviour, not a bug.
+
+    At the paper's 15/20 medium the ptsG knockout is fully compensated by the
+    alternative glucose uptake route, and the two overexpression targets sit at
+    zero or near-zero baseline flux, so the LP optimum - and therefore the
+    cofactor turnover - is unchanged. This is precisely why the paper had to
+    measure intracellular pools rather than rely on FBA: the model-side
+    quantity cannot see the effect the engineered strain exhibits.
+    """
+    baseline = fba_context.run_fba_context(model_id="iML1515", preset="baseline", model=iml1515)
+    stack = fba_context.run_fba_context(model_id="iML1515", preset="paper_stack", model=iml1515)
+
+    assert stack["condition_id"] != baseline["condition_id"]
+    assert stack["applied_modifications"] == [
+        "knockout:b1101",
+        "overexpression:THD2pp@1.5",
+        "overexpression:NADK@1.5",
+    ]
+    # Not bit-identical: the NADK bound (1.5x a 0.0004 baseline flux) does move
+    # the optimum, but by less than 2e-6, i.e. far below any reported precision.
+    assert stack["growth"] == pytest.approx(baseline["growth"], abs=1e-4)
+    assert abs(stack["growth"] - baseline["growth"]) < 1e-5
+    for label in ("nadph", "nadh", "atp"):
+        assert stack["cofactor_turnover"][label]["gross_turnover"] == pytest.approx(
+            baseline["cofactor_turnover"][label]["gross_turnover"], abs=1e-3
+        )

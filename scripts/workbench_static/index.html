@@ -221,6 +221,10 @@ const I18N = {
     thFlux: '通量 (mmol gDW⁻¹ h⁻¹)', thGrowth: '生长速率', thReaction: '反应',
     thFvaMin: 'FVA 下限', thFvaMax: 'FVA 上限',
     fbaFeatureVector: '8 维上下文向量（signed log10）',
+    cofTitle: '辅因子周转（论文口径：NADPH / NADH / ATP 供给）',
+    cofIntro: '总周转 = 产生量（稳态下等于消耗量），即论文所谓“NADPH 再生能力”的模型侧对应量。FBA 给通量不给浓度，因此不报辅因子池水平。',
+    cofCofactor: '辅因子', cofGross: '总周转', cofTopSources: '主要来源',
+    cofNet: '净生成（稳态自检，应≈0）',
     errLoadFba: '无法加载 FBA 状态：',
     errNeedFbaRun: '请先运行一次 FBA 再附加上下文',
     predictTitle: '候选物',
@@ -292,6 +296,10 @@ const I18N = {
     thFlux: 'Flux (mmol gDW⁻¹ h⁻¹)', thGrowth: 'Growth rate', thReaction: 'Reaction',
     thFvaMin: 'FVA min', thFvaMax: 'FVA max',
     fbaFeatureVector: '8-wide context vector (signed log10)',
+    cofTitle: 'Cofactor turnover (the paper’s NADPH / NADH / ATP supply view)',
+    cofIntro: 'Gross turnover equals production, which equals consumption at steady state: the model-side analogue of what the paper calls NADPH regeneration capacity. FBA gives fluxes, not concentrations, so pool levels are not reported.',
+    cofCofactor: 'Cofactor', cofGross: 'Gross turnover', cofTopSources: 'Top sources',
+    cofNet: 'Net production (steady-state self-check, expect ~0)',
     errLoadFba: 'Could not load FBA status: ',
     errNeedFbaRun: 'Run FBA once before attaching a context',
     predictTitle: 'Candidate',
@@ -680,9 +688,36 @@ function renderFbaResult(payload) {
       <table><thead><tr><th>${t('thReaction')}</th><th>${t('thFlux')}</th>${fvaHead}</tr></thead>
       <tbody>${fluxRows}</tbody></table>
       <p class="note">${t('fbaFeatureVector')}: [${payload.features.map(f => f.toFixed(3)).join(', ')}]</p>
+      ${renderCofactorTurnover(payload)}
       <p class="note">${esc(payload.claim_boundary)}</p>
     </div>`;
 }
+function renderCofactorTurnover(payload) {
+  const turnover = payload.cofactor_turnover;
+  if (!turnover) return '';
+  const rows = ['nadph', 'nadh', 'atp'].map(label => {
+    const info = turnover[label];
+    if (!info || info.status !== 'reported') {
+      return `<tr><td>${esc(label.toUpperCase())}</td><td colspan="3"><span class="pill dim">${esc(info ? info.status : 'absent')}</span></td></tr>`;
+    }
+    const sources = info.top_producers
+      .map(item => `${esc(item.reaction_id)} ${item.flux.toFixed(2)}`).join(', ');
+    return `<tr>
+      <td><strong>${esc(label.toUpperCase())}</strong><div class="sub mono">${esc(info.metabolite_id)}</div></td>
+      <td class="num">${info.gross_turnover.toFixed(3)}</td>
+      <td class="metrics">${sources}</td>
+      <td class="num metrics">${info.net_production.toExponential(1)}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <h3>${t('cofTitle')}</h3>
+    <table><thead><tr>
+      <th>${t('cofCofactor')}</th><th>${t('cofGross')}</th>
+      <th>${t('cofTopSources')}</th><th>${t('cofNet')}</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <p class="note">${t('cofIntro')}</p>`;
+}
+
 $('btn-fba').addEventListener('click', () => {
   const body = {
     model_id: $('g-model').value,

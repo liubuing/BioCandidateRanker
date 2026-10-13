@@ -74,6 +74,15 @@ YEAST_FEATURE_REACTIONS = (
     "r_0120",  # acyl-CoA oxidase (decanoyl-CoA), POX1 precursor gate
 )
 
+# Cofactor accounting targets, per model naming. The paper's endpoint is the
+# intracellular NADPH / NADH / ATP pool; FBA cannot report a pool level, so the
+# governed quantity here is gross turnover (production == consumption at steady
+# state) plus the reactions that dominate it.
+E_COLI_COFACTORS = {"nadph": "nadph_c", "nadh": "nadh_c", "atp": "atp_c"}
+# The yeast model uses s_ ids and keeps separate cytosolic / ER / mitochondrial
+# copies; only the cytosolic compartment is accounted here.
+YEAST_COFACTORS = {"nadph": "s_1212", "nadh": "s_1203", "atp": "s_0434"}
+
 MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     "iML1515": {
         "objective_id": "BIOMASS_Ec_iML1515_core_75p37M",
@@ -82,6 +91,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         "feature_reactions": ("BIOMASS_Ec_iML1515_core_75p37M", GLUCOSE_EXCHANGE)
         + SHARED_FLUX_REACTIONS,
         "presets": None,  # None means every BASE_PRESETS entry applies
+        "cofactor_metabolites": E_COLI_COFACTORS,
         "default_glucose": DEFAULT_GLUCOSE,
         "default_oxygen": DEFAULT_OXYGEN,
         "provenance_key": "iML1515_presets",
@@ -93,6 +103,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         "feature_reactions": ("BIOMASS_Ec_iJO1366_WT_53p95M", GLUCOSE_EXCHANGE)
         + SHARED_FLUX_REACTIONS,
         "presets": None,
+        "cofactor_metabolites": E_COLI_COFACTORS,
         "default_glucose": DEFAULT_GLUCOSE,
         "default_oxygen": DEFAULT_OXYGEN,
         "provenance_key": "iJO1366_fusion",
@@ -107,6 +118,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         "exchanges": {"glucose": "r_1714", "oxygen": "r_1992"},
         "feature_reactions": YEAST_FEATURE_REACTIONS,
         "presets": ("baseline",),
+        "cofactor_metabolites": YEAST_COFACTORS,
         "default_glucose": 10.0,
         "default_oxygen": 1000.0,
         "provenance_key": "yeast_metatwin",
@@ -344,6 +356,60 @@ def _apply_overexpression(model, target: str, factor: float, baseline_fluxes) ->
     return f"overexpression:{target}@{factor:g}"
 
 
+def cofactor_turnover(
+    model, solution, cofactor_metabolites: dict[str, str], top_n: int = 5
+) -> dict[str, Any]:
+    """Gross turnover per cofactor, plus the reactions that dominate it.
+
+    Net production of an internal cofactor is exactly zero at FBA steady state,
+    so the governed quantity is gross turnover: the summed positive
+    contributions, which equal the summed consumption. That is the closest
+    model-side analogue of the paper's "NADPH regeneration capacity", and the
+    dominant producers identify which pathway supplies it (for iML1515 at
+    baseline, the pentose phosphate shunt for NADPH and oxidative
+    phosphorylation for ATP - the same levers the paper engineers).
+
+    Cofactor pools themselves are not reported: FBA gives fluxes, not
+    concentrations, and no metabolite-level measurement is bundled here.
+    """
+    report: dict[str, Any] = {}
+    for label, metabolite_id in cofactor_metabolites.items():
+        if metabolite_id not in model.metabolites:
+            report[label] = {
+                "status": "metabolite_absent",
+                "metabolite_id": metabolite_id,
+            }
+            continue
+        metabolite = model.metabolites.get_by_id(metabolite_id)
+        gross = 0.0
+        net = 0.0
+        producers: list[tuple[str, float]] = []
+        for reaction in model.reactions:
+            coefficient = reaction.metabolites.get(metabolite)
+            if coefficient is None:
+                continue
+            contribution = coefficient * float(solution.fluxes[reaction.id])
+            net += contribution
+            if coefficient > 0 and contribution > 0:
+                gross += contribution
+                producers.append((reaction.id, contribution))
+        producers.sort(key=lambda item: -item[1])
+        report[label] = {
+            "status": "reported",
+            "metabolite_id": metabolite_id,
+            "unit": "mmol gDW^-1 h^-1",
+            "gross_turnover": gross,
+            # Kept as a self-check: a non-zero value means the solution does not
+            # satisfy steady state for this metabolite.
+            "net_production": net,
+            "top_producers": [
+                {"reaction_id": reaction_id, "flux": flux}
+                for reaction_id, flux in producers[:top_n]
+            ],
+        }
+    return report
+
+
 def run_fba_context(
     *,
     model_id: str = "iML1515",
@@ -441,6 +507,17 @@ def run_fba_context(
         fluxes[reaction] = float(solution.fluxes[reaction])
     result["fluxes"] = fluxes
     result["features"] = [signed_log10(fluxes[r]) for r in spec["feature_reactions"]]
+    # Cofactor accounting rides alongside the 8-wide feature vector rather than
+    # extending it: every shipped checkpoint declares fba_context_dim = 8, so
+    # widening the vector would invalidate all of them.
+    if spec.get("cofactor_metabolites"):
+        result["cofactor_turnover"] = cofactor_turnover(
+            scoped, solution, spec["cofactor_metabolites"]
+        )
+        result["cofactor_scope"] = (
+            "gross turnover (production equals consumption at steady state); "
+            "pool levels and concentrations are not modelled"
+        )
 
     condition = {
         "model_id": model_id,
