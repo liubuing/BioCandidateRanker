@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import itertools
 import math
 import random
 from pathlib import Path
@@ -84,8 +85,52 @@ SCENARIO_FEATURE_IDS = (
     "target_selector",
 )
 
-TARGET_SELECTORS = {"growth": 0.0, "nadph": 1.0, "nadh": 2.0, "atp": 3.0}
+TARGET_SELECTORS = {
+    "growth": 0.0,
+    "nadph": 1.0,
+    "nadh": 2.0,
+    "atp": 3.0,
+    "accoa": 4.0,     # royal-jelly-acid precursor supply
+    "capacity": 5.0,  # flux through the target demand reaction
+}
 TARGETS = tuple(TARGET_SELECTORS)
+
+# Each model declares its own 8-wide input contract and its own target set. The
+# width stays 8 everywhere so a checkpoint's fba_context_dim is unchanged; what
+# the slots mean is per model, because a yeast scenario and an E. coli scenario
+# are not the same question. Slots 6 and 7 are spare in the yeast contract and
+# the target selector is last in both.
+SCENARIO_FEATURE_IDS_BY_MODEL = {
+    "iML1515": SCENARIO_FEATURE_IDS,
+    "iJO1366": SCENARIO_FEATURE_IDS,
+    "yeast_metatwin": (
+        "medium_lower_bound:r_1714",
+        "medium_lower_bound:r_1992",
+        "route_selector",
+        "pox1_closed",
+        "objective_selector",
+        "biomass_floor_fraction",
+        "spare",
+        "target_selector",
+    ),
+}
+
+MODEL_TARGETS = {
+    "iML1515": ("growth", "nadph", "nadh", "atp"),
+    "iJO1366": ("growth", "nadph", "nadh", "atp"),
+    "yeast_metatwin": ("growth", "capacity", "nadph", "nadh", "atp", "accoa"),
+}
+
+# Route A is the free-acid route, route B the CoA-thioester route (see
+# royal_jelly_acid for the reaction ids and the chemistry).
+ROUTE_SELECTORS = {"A": 0.0, "B": 1.0}
+OBJECTIVE_SELECTORS = {"growth": 0.0, "target": 1.0}
+
+# The external target configuration the yeast grid needs; read-only.
+YEAST_TARGET_CONFIG = Path(
+    "D:/biological/Metabolic model prediction/Integrated_Yeast_MetaTwin_Deployment"
+    "/10_generic_target_workflow/examples/target_workflow_10h2da_reference.json"
+)
 # The paper measures NADPH, NADH and ATP; growth is kept because it was the
 # original surrogate target and every comparison baseline reports it.
 TARGET_REACTION_IDS = {
@@ -93,6 +138,10 @@ TARGET_REACTION_IDS = {
     "nadph": "cofactor_turnover:nadph",
     "nadh": "cofactor_turnover:nadh",
     "atp": "cofactor_turnover:atp",
+    "accoa": "cofactor_turnover:accoa",
+    # a flux through the model's target demand reaction; the scenario name in the
+    # provenance records which route and objective produced it
+    "capacity": "target_demand_flux",
 }
 
 GLUCOSE_GRID = (3.0, 6.0, 9.0, 12.0, 15.0, 18.0)
@@ -119,11 +168,34 @@ SPLITS = ("train", "validation", "test")
 
 
 def _scenario_vector(
-    scenario: dict[str, Any], glucose: float, oxygen: float, target: str = "growth"
+    scenario: dict[str, Any],
+    glucose: float,
+    oxygen: float,
+    target: str = "growth",
+    model_id: str = "iML1515",
 ) -> tuple[float, ...]:
-    """Encode one (scenario, target) pair as the 8-wide scenario-input vector."""
+    """Encode one (scenario, target) pair as the model's 8-wide input vector.
+
+    The vector is 8 wide for every model; what the slots mean is declared in
+    SCENARIO_FEATURE_IDS_BY_MODEL, and the target selector is always last.
+    """
     if target not in TARGET_SELECTORS:
         raise ValueError(f"unknown target {target!r}; known: {list(TARGET_SELECTORS)}")
+    if target not in MODEL_TARGETS.get(model_id, ()):
+        raise ValueError(f"target {target!r} is not declared for {model_id}")
+
+    if model_id == "yeast_metatwin":
+        return (
+            float(glucose),
+            float(oxygen),
+            ROUTE_SELECTORS[scenario["route"]],
+            1.0 if scenario.get("pox1_closed") else 0.0,
+            OBJECTIVE_SELECTORS[scenario["objective"]],
+            float(scenario.get("biomass_floor_fraction", 0.0)),
+            0.0,  # spare
+            TARGET_SELECTORS[target],
+        )
+
     fusion = scenario.get("fusion") or {}
     return (
         float(glucose),
@@ -139,11 +211,44 @@ def _scenario_vector(
 
 FUSION_CO2_CAP = 5.0
 
+# Royal jelly acid media grid. The yeast model file caps glucose uptake at 1.0,
+# so the grid spans below and above that cap rather than the E. coli values.
+YEAST_GLUCOSE_GRID = (0.25, 0.5, 1.0, 2.0, 3.0)
+YEAST_OXYGEN_GRID = (250.0, 500.0, 750.0, 1000.0, 1500.0)
+YEAST_ROUTES = ("A", "B")
+YEAST_OBJECTIVES = ("growth", "target")
+YEAST_BIOMASS_FLOOR_FRACTION = 0.1
+
 
 def build_scenarios(model_id: str) -> list[dict[str, Any]]:
-    """Enumerate the full grid: medium combos crossed with genetic scenarios."""
+    """Enumerate the model's full grid: medium combos crossed with scenarios."""
+    rows: list[dict[str, Any]] = []
+    if model_id == "yeast_metatwin":
+        for route, pox1_closed, objective in itertools.product(
+            YEAST_ROUTES, (False, True), YEAST_OBJECTIVES
+        ):
+            for glucose in YEAST_GLUCOSE_GRID:
+                for oxygen in YEAST_OXYGEN_GRID:
+                    scenario = {
+                        "name": f"route{route}_{'pox1_off' if pox1_closed else 'pox1_on'}_{objective}",
+                        "route": route,
+                        "pox1_closed": pox1_closed,
+                        "objective": objective,
+                        "biomass_floor_fraction": (
+                            YEAST_BIOMASS_FLOOR_FRACTION if objective == "target" else 0.0
+                        ),
+                    }
+                    rows.append(
+                        {
+                            "model_id": model_id,
+                            "scenario": scenario,
+                            "glucose": glucose,
+                            "oxygen": oxygen,
+                        }
+                    )
+        return rows
+
     scenarios = IML1515_SCENARIOS if model_id == "iML1515" else IJO1366_SCENARIOS
-    rows = []
     for scenario in scenarios:
         for glucose in GLUCOSE_GRID:
             for oxygen in OXYGEN_GRID:
@@ -158,7 +263,8 @@ def build_scenarios(model_id: str) -> list[dict[str, Any]]:
     return rows
 
 
-def _condition_hash(model_id: str, scenario_name: str, glucose: float, oxygen: float) -> str:
+def _condition_hash(model_id: str, scenario: dict[str, Any], glucose: float, oxygen: float) -> str:
+    scenario_name = scenario.get("name", scenario.get("route", "baseline"))
     payload = json.dumps(
         {"model": model_id, "scenario": scenario_name, "glucose": glucose, "oxygen": oxygen},
         sort_keys=True,
@@ -183,6 +289,9 @@ def run_fba_grid(
     from .fba_context import CORE_COFACTORS, add_fusion_pathways, cofactor_turnover
 
     spec = MODEL_REGISTRY[model_id]
+    if model_id == "yeast_metatwin":
+        return _run_yeast_grid(model=model, model_sha256=model_sha256)
+
     base = model if model is not None else load_model(model_id)
     scoped = base.copy()
     scoped.objective = spec["objective_id"]
@@ -253,16 +362,19 @@ def run_fba_grid(
             dropped.append({"scenario": scenario["name"], "glucose": glucose, "oxygen": oxygen})
             continue
 
-        scenario_id = _condition_hash(model_id, scenario["name"], glucose, oxygen)
+        scenario_id = _condition_hash(model_id, scenario, glucose, oxygen)
+        scenario_name = scenario.get("name", scenario.get("route", "baseline"))
         for target, value in targets.items():
             rows.append(
                 {
                     "model_id": model_id,
-                    "scenario_name": scenario["name"],
+                    "scenario_name": scenario_name,
                     "glucose": glucose,
                     "oxygen": oxygen,
                     "target": target,
-                    "features": list(_scenario_vector(scenario, glucose, oxygen, target)),
+                    "features": list(
+                        _scenario_vector(scenario, glucose, oxygen, target, model_id)
+                    ),
                     "log10_flux": math.log10(value),
                     "value": value,
                     "condition_id": f"{scenario_id}#{target}",
@@ -274,9 +386,130 @@ def run_fba_grid(
         "model_id": model_id,
         "rows": rows,
         "dropped": dropped,
-        "feature_ids": list(SCENARIO_FEATURE_IDS),
+        "feature_ids": list(SCENARIO_FEATURE_IDS_BY_MODEL[model_id]),
         "objective_id": spec["objective_id"],
         "model_sha256": model_sha256,
+        "claim_boundary": SURROGATE_CLAIM_BOUNDARY,
+        "fba_claim_boundary": FBA_CLAIM_BOUNDARY,
+    }
+
+
+def _run_yeast_grid(
+    *, model=None, model_sha256: str | None = None
+) -> dict[str, Any]:
+    """Solve the royal-jelly-acid scenario grid on the yeast model.
+
+    Every scenario shares one extended model copy. Per scenario the medium, the
+    route (the other one is blocked so each capacity is that route's own), the
+    POX1 choice and the objective are applied, then the targets are read at the
+    resulting optimum: growth, the target demand flux, and the cofactor
+    turnovers. Infeasible combinations are dropped and reported rather than
+    guessed at.
+    """
+    from .fba_context import cofactor_turnover
+    from .royal_jelly_acid import (
+        BIOMASS_ID,
+        POX1_REACTION,
+        ROUTE_A,
+        ROUTE_B,
+        TARGET_DEMAND,
+        build_candidate_extension,
+        load_target_config,
+    )
+
+    spec = MODEL_REGISTRY["yeast_metatwin"]
+    base = model if model is not None else load_model("yeast_metatwin")
+    scoped = base.copy()
+    build_candidate_extension(scoped, load_target_config(YEAST_TARGET_CONFIG))
+
+    routes = {"A": ROUTE_A, "B": ROUTE_B}
+    cofactor_ids = {
+        label: spec["cofactor_metabolites"][label]
+        for label in ("nadph", "nadh", "atp", "accoa")
+    }
+
+    rows: list[dict[str, Any]] = []
+    dropped: list[dict[str, Any]] = []
+    for row in build_scenarios("yeast_metatwin"):
+        scenario = row["scenario"]
+        glucose, oxygen = row["glucose"], row["oxygen"]
+        scenario_name = scenario["name"]
+
+        with scoped:
+            scoped.reactions.get_by_id("r_1714").lower_bound = -float(glucose)
+            scoped.reactions.get_by_id("r_1992").lower_bound = -float(oxygen)
+            if scenario["pox1_closed"]:
+                scoped.reactions.get_by_id(POX1_REACTION).bounds = (0.0, 0.0)
+            for other, reaction_ids in routes.items():
+                if other == scenario["route"]:
+                    continue
+                for reaction_id in reaction_ids:
+                    scoped.reactions.get_by_id(reaction_id).bounds = (0.0, 0.0)
+
+            growth_max = float(scoped.slim_optimize())
+            if growth_max <= 0:
+                dropped.append({"scenario": scenario_name, "glucose": glucose,
+                                "oxygen": oxygen, "reason": "no growth"})
+                continue
+
+            if scenario["objective"] == "growth":
+                scoped.objective = BIOMASS_ID
+            else:
+                scoped.reactions.get_by_id(BIOMASS_ID).lower_bound = (
+                    growth_max * scenario["biomass_floor_fraction"]
+                )
+                scoped.objective = TARGET_DEMAND
+
+            solution = scoped.optimize()
+            if solution.status != "optimal":
+                dropped.append({"scenario": scenario_name, "glucose": glucose,
+                                "oxygen": oxygen, "reason": solution.status})
+                continue
+
+            values: dict[str, float] = {
+                "growth": float(solution.fluxes[BIOMASS_ID]),
+                "capacity": float(solution.fluxes[TARGET_DEMAND]),
+            }
+            turnover = cofactor_turnover(scoped, solution, cofactor_ids)
+            for label in ("nadph", "nadh", "atp", "accoa"):
+                info = turnover.get(label, {})
+                value = info.get("gross_turnover")
+                if info.get("status") == "reported" and value is not None:
+                    values[label] = float(value)
+
+        usable = {k: v for k, v in values.items() if v > 1e-9}
+        if "growth" not in usable:
+            dropped.append({"scenario": scenario_name, "glucose": glucose,
+                            "oxygen": oxygen, "reason": "no measurable growth"})
+            continue
+
+        scenario_id = _condition_hash("yeast_metatwin", scenario, glucose, oxygen)
+        for target, value in usable.items():
+            rows.append(
+                {
+                    "model_id": "yeast_metatwin",
+                    "scenario_name": scenario_name,
+                    "glucose": glucose,
+                    "oxygen": oxygen,
+                    "target": target,
+                    "features": list(
+                        _scenario_vector(scenario, glucose, oxygen, target, "yeast_metatwin")
+                    ),
+                    "log10_flux": math.log10(value),
+                    "value": value,
+                    "condition_id": f"{scenario_id}#{target}",
+                    "scenario_id": scenario_id,
+                }
+            )
+
+    return {
+        "model_id": "yeast_metatwin",
+        "rows": rows,
+        "dropped": dropped,
+        "feature_ids": list(SCENARIO_FEATURE_IDS_BY_MODEL["yeast_metatwin"]),
+        "objective_id": spec["objective_id"],
+        "model_sha256": model_sha256,
+        "target_config": str(YEAST_TARGET_CONFIG),
         "claim_boundary": SURROGATE_CLAIM_BOUNDARY,
         "fba_claim_boundary": FBA_CLAIM_BOUNDARY,
     }
@@ -575,7 +808,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-id", default="iML1515", choices=sorted(MODEL_REGISTRY))
     parser.add_argument("--output-dir", default=None)
-    parser.add_argument("--epochs", type=int, default=120)
+    # 900 is the yeast default because its scenario space mixes binary regime
+    # switches with continuous media axes: 250 epochs does not converge and
+    # yields a surrogate that fails to beat the mean baseline on half its
+    # targets. The E. coli grids converge well inside 250.
+    parser.add_argument("--epochs", type=int, default=900)
     parser.add_argument("--seed", type=int, default=7)
     args = parser.parse_args()
 
@@ -595,6 +832,55 @@ SCENARIOS_BY_NAME: dict[str, dict[str, Any]] = {
     for scenario in scenarios
 }
 
+# The yeast scenarios are generated (route x POX1 x objective), not hand-listed,
+# so their name table is derived from the grid rather than written twice.
+YEAST_SCENARIOS_BY_NAME: dict[str, dict[str, Any]] = {
+    row["scenario"]["name"]: row["scenario"]
+    for row in build_scenarios("yeast_metatwin")
+}
+
+SCENARIOS_BY_MODEL: dict[str, dict[str, dict[str, Any]]] = {
+    "iML1515": SCENARIOS_BY_NAME,
+    "iJO1366": SCENARIOS_BY_NAME,
+    "yeast_metatwin": YEAST_SCENARIOS_BY_NAME,
+}
+
+
+def trained_grid_bounds(model_id: str) -> dict[str, tuple[float, float]]:
+    """The glucose/oxygen envelope each model's surrogate was trained on.
+
+    A surrogate asked outside this range is extrapolating, and the failure is
+    silent: an E. coli medium (glucose 15) queried against the yeast surrogate
+    returns a plausible-looking number that is nothing like the FBA answer. The
+    endpoints report this so a caller can refuse or re-run with cobra.
+    """
+    if model_id == "yeast_metatwin":
+        return {
+            "glucose": (min(YEAST_GLUCOSE_GRID), max(YEAST_GLUCOSE_GRID)),
+            "oxygen": (min(YEAST_OXYGEN_GRID), max(YEAST_OXYGEN_GRID)),
+        }
+    return {
+        "glucose": (min(GLUCOSE_GRID), max(GLUCOSE_GRID)),
+        "oxygen": (min(OXYGEN_GRID), max(OXYGEN_GRID)),
+    }
+
+
+def check_query_in_range(
+    model_id: str, glucose: float, oxygen: float
+) -> list[str]:
+    """Return a warning per axis that falls outside the trained envelope."""
+    bounds = trained_grid_bounds(model_id)
+    warnings = []
+    for axis, value in (("glucose", glucose), ("oxygen", oxygen)):
+        low, high = bounds[axis]
+        if not (low <= value <= high):
+            warnings.append(
+                f"{axis} {value:g} is outside the trained range [{low:g}, {high:g}] "
+                f"for {model_id}; the surrogate is extrapolating and the value "
+                "should be treated as invalid"
+            )
+    return warnings
+
 
 def scenario_input_vector(
     model_id: str, preset: str, glucose: float, oxygen: float, target: str = "growth"
@@ -605,27 +891,33 @@ def scenario_input_vector(
     it to feed a scenario into a surrogate checkpoint through the ordinary
     prediction endpoint.
     """
-    if preset not in SCENARIOS_BY_NAME:
+    table = SCENARIOS_BY_MODEL.get(model_id)
+    if table is None:
+        raise ValueError(f"no scenario table for {model_id}")
+    if preset not in table:
         raise ValueError(
-            f"unknown scenario {preset!r}; known: {sorted(SCENARIOS_BY_NAME)}"
+            f"unknown scenario {preset!r} for {model_id}; known: {sorted(table)}"
         )
-    scenario = SCENARIOS_BY_NAME[preset]
+    scenario = table[preset]
     if scenario.get("fusion") and model_id != "iJO1366":
         raise ValueError(f"scenario {preset!r} requires the iJO1366 fusion layer")
     if target not in TARGET_SELECTORS:
         raise ValueError(f"unknown target {target!r}; known: {list(TARGET_SELECTORS)}")
-    features = list(_scenario_vector(scenario, glucose, oxygen, target))
+    if target not in MODEL_TARGETS.get(model_id, ()):
+        raise ValueError(f"target {target!r} is not declared for {model_id}")
+    features = list(_scenario_vector(scenario, glucose, oxygen, target, model_id))
     return {
         "features": features,
         "target": target,
         "target_selector": TARGET_SELECTORS[target],
+        "out_of_range": check_query_in_range(model_id, glucose, oxygen),
         "metadata": {
             "schema_version": 1,
             "feature_ids": list(SCENARIO_FEATURE_IDS),
             "model_id": model_id,
             "solver_id": "glpk",
             "objective_id": MODEL_REGISTRY[model_id]["objective_id"],
-            "condition_id": _condition_hash(model_id, preset, glucose, oxygen),
+            "condition_id": _condition_hash(model_id, scenario, glucose, oxygen),
         },
         "claim_boundary": SURROGATE_CLAIM_BOUNDARY,
     }

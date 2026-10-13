@@ -164,7 +164,12 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         "feature_reactions": YEAST_FEATURE_REACTIONS,
         "presets": ("baseline",),
         "cofactor_metabolites": YEAST_COFACTORS,
-        "default_glucose": 10.0,
+        # 1.0 is the model file's own glucose uptake cap and the medium the
+        # external 10H2DA anchor (0.274011) was produced with. An earlier value
+        # of 10.0 was a generic batch rate that this model cannot represent and
+        # that fell outside the surrogate's trained grid, so a default-configured
+        # call and the documented reference case disagreed.
+        "default_glucose": 1.0,
         "default_oxygen": 1000.0,
         "provenance_key": "yeast_metatwin",
     },

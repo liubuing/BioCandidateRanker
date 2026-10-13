@@ -209,8 +209,13 @@ def test_yeast_baseline_is_optimal_with_eight_features(yeast):
     assert len(result["features"]) == 8
     assert result["metadata"]["model_id"] == "yeast_metatwin"
     assert result["metadata"]["objective_id"] == "r_2111"
-    # declared registration defaults: glucose 10 aerobic, oxygen at the file's cap
-    assert result["fluxes"]["r_1714"] == pytest.approx(-10.0)
+    # Declared registration defaults: glucose at the model file's own uptake cap,
+    # oxygen at the file's cap. This was 10.0, a generic batch rate the model
+    # cannot represent, which also put the default outside the yeast surrogate's
+    # trained envelope and disagreed with the medium the external 10H2DA anchor
+    # (0.274011) was produced with.
+    assert result["fluxes"]["r_1714"] == pytest.approx(-1.0)
+    assert result["growth"] == pytest.approx(0.0895, abs=1e-3)
     # the POX1 precursor gate that feeds the 10H2DA reference chain is in the vector
     assert "flux:r_0120" in result["metadata"]["feature_ids"]
 

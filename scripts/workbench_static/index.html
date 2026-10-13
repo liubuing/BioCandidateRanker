@@ -187,12 +187,16 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
           <p class="sub" data-i18n="surrIntro"></p>
           <label for="surr-model" data-i18n="surrSelect"></label>
           <select id="surr-model"></select>
+          <label for="surr-scenario" data-i18n="surrScenario"></label>
+          <select id="surr-scenario"></select>
           <label for="surr-target" data-i18n="surrTarget"></label>
           <select id="surr-target">
             <option value="growth" data-i18n="surrTargetGrowth"></option>
             <option value="nadph" data-i18n="surrTargetNadph"></option>
             <option value="nadh" data-i18n="surrTargetNadh"></option>
             <option value="atp" data-i18n="surrTargetAtp"></option>
+            <option value="accoa" data-i18n="surrTargetAccoa"></option>
+            <option value="capacity" data-i18n="surrTargetCapacity"></option>
           </select>
           <button class="primary" id="btn-surr" data-i18n="surrBtn"></button>
           <div id="surr-results" style="margin-top:12px"></div>
@@ -251,9 +255,11 @@ const I18N = {
     surrAbsErr: '绝对误差 (log10)',
     surrNeedTruth: '请先运行 FBA 获得真值，再进行代理对比',
     surrNoTruth: '尚未运行 FBA 真值',
+    surrScenario: '代理场景（与上方 FBA 预设不同）',
     surrTarget: '预测目标',
     surrTargetGrowth: '生长速率', surrTargetNadph: 'NADPH 供给',
     surrTargetNadh: 'NADH 供给', surrTargetAtp: 'ATP 供给',
+    surrTargetAccoa: '乙酰-CoA 供给（酵母）', surrTargetCapacity: '目标产物容量（酵母）',
     surrTruthHint: '真值取自当前 FBA 结果（生长取生物量，辅因子取总周转）',
     batchTitle: '批量预测',
     batchIntro: '粘贴与 CLI predict 命令相同格式的 JSON——候选列表或带 "candidates" 键的对象。结果以表格和原始 JSON 呈现。',
@@ -330,9 +336,11 @@ const I18N = {
     surrAbsErr: 'Absolute error (log10)',
     surrNeedTruth: 'Run the FBA truth first, then compare against the surrogate',
     surrNoTruth: 'No FBA truth yet',
+    surrScenario: 'Surrogate scenario (separate from the FBA preset above)',
     surrTarget: 'Target',
     surrTargetGrowth: 'Growth rate', surrTargetNadph: 'NADPH supply',
     surrTargetNadh: 'NADH supply', surrTargetAtp: 'ATP supply',
+    surrTargetAccoa: 'Acetyl-CoA supply (yeast)', surrTargetCapacity: 'Target capacity (yeast)',
     surrTruthHint: 'Truth is read from the current FBA result (biomass for growth, gross turnover for cofactors)',
     batchTitle: 'Batch prediction',
     batchIntro: 'Paste the same JSON the CLI predict command reads — a list of candidates or an object with a "candidates" key. Results appear as a table plus raw JSON.',
@@ -435,6 +443,7 @@ function applyLang() {
   if (lastBatch) renderBatchResult(lastBatch);
   renderFbaModelSelect();
   renderSurrogateSelect();
+  renderSurrogateScenarioSelect();
   renderFbaBadge();
   if (lastFba) renderFbaResult(lastFba);
   loadHealth();
@@ -668,6 +677,9 @@ async function loadFbaStatus() {
     FBA_STATUS = await api('/api/fba/status');
     renderFbaModelSelect();
     renderSurrogateSelect();
+    // must run after the status arrives: applyLang() runs first at boot, when
+    // FBA_STATUS is still null, so the scenario list would otherwise stay empty
+    renderSurrogateScenarioSelect();
   } catch (e) { showError(t('errLoadFba') + e.message); }
 }
 function renderFbaModelSelect() {
@@ -685,7 +697,22 @@ function renderFbaPresetSelect() {
   const presets = (FBA_STATUS.models[id] && FBA_STATUS.models[id].presets) || [];
   $('g-preset').innerHTML = presets.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
 }
-$('g-model').addEventListener('change', renderFbaPresetSelect);
+$('g-model').addEventListener('change', () => {
+  // every selector depends on the model, and so does the medium: carrying the
+  // E. coli values (15/20) over to yeast silently puts the surrogate outside its
+  // trained envelope
+  renderFbaPresetSelect();
+  renderSurrogateSelect();
+  renderSurrogateScenarioSelect();
+  applyModelMediumDefaults();
+});
+
+function applyModelMediumDefaults() {
+  const model = (FBA_STATUS && FBA_STATUS.models && FBA_STATUS.models[$('g-model').value]) || {};
+  const { default_glucose: glucose, default_oxygen: oxygen } = model;
+  if (typeof glucose === 'number') $('g-glc').value = glucose;
+  if (typeof oxygen === 'number') $('g-o2').value = oxygen;
+}
 function renderFbaResult(payload) {
   const fluxRows = Object.entries(payload.fluxes).map(([rid, v]) => {
     const range = payload.fva && payload.fva[rid]
@@ -767,8 +794,31 @@ $('btn-fba-attach').addEventListener('click', () => {
 });
 
 /* ---------- surrogate compare ---------- */
+function renderSurrogateScenarioSelect() {
+  const modelId = $('g-model').value;
+  const model = (FBA_STATUS && FBA_STATUS.models && FBA_STATUS.models[modelId]) || {};
+  const scenarios = model.surrogate_scenarios || [];
+  const targets = model.surrogate_targets || [];
+  $('surr-scenario').innerHTML = scenarios
+    .map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  // 'baseline' is a real yeast surrogate scenario name only by coincidence, so
+  // prefer an exact match and otherwise leave the first entry selected
+  if (scenarios.includes('baseline')) $('surr-scenario').value = 'baseline';
+  const allowed = new Set(targets);
+  [...document.querySelectorAll('#surr-target option')].forEach(option => {
+    option.hidden = targets.length > 0 && !allowed.has(option.value);
+  });
+  if (!allowed.has($('surr-target').value) && targets.length) {
+    $('surr-target').value = targets[0];
+  }
+}
+
 function renderSurrogateSelect() {
-  const list = (FBA_STATUS && FBA_STATUS.surrogates) || [];
+  // Only the surrogates for the currently selected GEM model: several are
+  // installed and showing another one would misrepresent which model answers.
+  const modelId = $('g-model').value;
+  const list = ((FBA_STATUS && FBA_STATUS.surrogates) || [])
+    .filter(s0 => s0.gem_model_id === modelId);
   $('surr-model').innerHTML = list.map(s0 => {
     const rmse = s0.test_rmse_log10 != null ? ` — RMSE(log10) ${s0.test_rmse_log10.toFixed(4)}` : '';
     return `<option value="${esc(s0.path)}">${esc(s0.gem_model_id)}${esc(rmse)}</option>`;
@@ -780,7 +830,7 @@ $('btn-surr').addEventListener('click', async () => {
     const target = $('surr-target').value;
     const payload = await api('/api/fba/surrogate_predict', {
       model_id: $('g-model').value,
-      preset: $('g-preset').value,
+      preset: $('surr-scenario').value || $('g-preset').value,
       glucose: parseFloat($('g-glc').value) || 15,
       oxygen: parseFloat($('g-o2').value) || 20,
       target: target,
@@ -790,14 +840,18 @@ $('btn-surr').addEventListener('click', async () => {
     if (lastFba) {
       if (target === 'growth') {
         truth = lastFba.growth;
+      } else if (target === 'capacity') {
+        truth = null; // the flux table carries it; compare manually
       } else if (lastFba.cofactor_turnover && lastFba.cofactor_turnover[target]
                  && lastFba.cofactor_turnover[target].status === 'reported') {
         truth = lastFba.cofactor_turnover[target].gross_turnover;
       }
     }
     const err = truth != null && truth > 0 ? Math.abs(Math.log10(payload.value) - Math.log10(truth)) : null;
+    const outOfRange = payload.out_of_range || [];
     const pct = truth != null && truth > 0 ? Math.abs(payload.value - truth) / truth * 100 : null;
     $('surr-results').innerHTML = `
+      ${outOfRange.length ? `<div class="error" style="margin-bottom:10px">${outOfRange.map(esc).join('<br>')}</div>` : ''}
       <table><thead><tr><th>${t('surrGrowth')}</th><th>${t('surrTruth')}</th><th>${t('surrAbsErr')}</th></tr></thead>
       <tbody><tr>
         <td class="num"><strong>${payload.value.toFixed(4)}</strong></td>

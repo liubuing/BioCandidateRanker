@@ -450,10 +450,21 @@ def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
     task = result["predictions"][0]["tasks"].get("log10_flux", {})
     if task.get("status") != "trained":
         raise ValueError("surrogate checkpoint has no trained log10_flux task")
+    out_of_range = vector.get("out_of_range", [])
     return {
         "surrogate": surrogate_path,
         "gem_model_id": model_id,
         "target": target,
+        # Extrapolation is not a crash, so the value is still returned, but it is
+        # labelled and the caller is told to use cobra instead. The key belongs on
+        # the returned payload, not on the intermediate prediction result.
+        "out_of_range": out_of_range,
+        "out_of_range_note": (
+            "This query is outside the surrogate's trained envelope; use the FBA "
+            "run above for a valid answer."
+        )
+        if out_of_range
+        else None,
         "value": 10 ** float(task["mean"]),
         "mean_log10": float(task["mean"]),
         "standard_deviation_log10": task.get("standard_deviation"),
@@ -525,8 +536,26 @@ def fba_status(root: Path) -> dict[str, Any]:
                     "objective_id": fba_context.MODEL_REGISTRY[model_id]["objective_id"],
                     "citation": fba_context.MODEL_REGISTRY[model_id]["citation"],
                     "presets": fba_context.presets_for(model_id),
+                "default_glucose": fba_context.MODEL_REGISTRY[model_id].get("default_glucose"),
+                "default_oxygen": fba_context.MODEL_REGISTRY[model_id].get("default_oxygen"),
                 }
             )
+            # The surrogate has its own scenario vocabulary: for yeast the FBA
+            # presets and the trained scenarios do not overlap at all, and
+            # feeding an FBA preset name to the surrogate fails.
+            try:
+                from biocandidate import fba_surrogate
+
+                entry["surrogate_scenarios"] = sorted(
+                    fba_surrogate.SCENARIOS_BY_MODEL.get(model_id, {})
+                )
+                entry["surrogate_targets"] = list(
+                    fba_surrogate.MODEL_TARGETS.get(model_id, ())
+                )
+            except Exception as error:  # noqa: BLE001 - status must survive
+                entry["surrogate_scenarios"] = []
+                entry["surrogate_targets"] = []
+                entry["surrogate_error"] = str(error)
         except Exception as error:  # noqa: BLE001 - status must survive a bad config
             entry.update({"available": False, "error": str(error)})
         models[model_id] = entry
