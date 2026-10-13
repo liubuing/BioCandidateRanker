@@ -258,6 +258,214 @@ def peroxisomal_nadph_supply_scan(
     return report
 
 
+# Idealized reducing-power shuttles: NADPH and its oxidised partner swapped
+# across a membrane, one for one. Real shuttles are not free - they run through
+# malate/oxaloacetate or a membrane protein and consume something - so these are
+# upper bounds on what a shuttle could buy, not predictions. They exist to answer
+# one question: if the peroxisomal pool could be fed from elsewhere, would the
+# IDP3 bottleneck disappear?
+SHUTTLE_DEFINITIONS = {
+    "cytosol_to_peroxisome": {
+        "stoichiometry": {"s_1212": -1, "s_1211": -1, "s_1207": 1, "s_1215": 1},
+        "name": "cytosol-peroxisome NADPH/NADP+ exchange (idealized)",
+        "source_compartment": "c",
+    },
+    "mitochondrion_to_peroxisome": {
+        "stoichiometry": {"s_1214": -1, "s_1211": -1, "s_1210": 1, "s_1215": 1},
+        "name": "mitochondrion-peroxisome NADPH/NADP+ exchange (idealized)",
+        "source_compartment": "m",
+    },
+}
+
+
+def add_shuttle(model, shuttle_key: str) -> str:
+    """Add one idealized shuttle reaction, idempotently. Returns its id."""
+    import cobra
+
+    definition = SHUTTLE_DEFINITIONS[shuttle_key]
+    reaction_id = "SHUTTLE_" + shuttle_key.upper()
+    if reaction_id in model.reactions:
+        return reaction_id
+    reaction = cobra.Reaction(reaction_id)
+    reaction.name = definition["name"]
+    reaction.lower_bound = -1000.0
+    reaction.upper_bound = 1000.0
+    model.add_reactions([reaction])
+    reaction.add_metabolites(
+        {model.metabolites.get_by_id(k): v for k, v in definition["stoichiometry"].items()}
+    )
+    return reaction_id
+
+
+def shuttle_comparison(
+    target_config_path: str | Path,
+    *,
+    route: str = "A",
+    pox1_closed: bool = False,
+    idp3_capacities: tuple[float, ...] = (0.05, 0.1, 0.2, 0.3, 0.5, 1.0),
+) -> dict[str, Any]:
+    """Does opening a reducing-power connection relieve the IDP3 bottleneck?
+
+    The model connects the cytosolic NADPH pool to the ER, the ER membrane and
+    the lipid particle, but not to the peroxisome: the peroxisomal NADPH/NADP+
+    pair appears in three reactions in total and has exactly one producer. If the
+    route's yield is limited by that single enzyme, connecting the pool should
+    lift the limit - and that is the modelling form of the compartmentalization
+    question the 2025 yeast paper addressed by moving its P450 into mitochondria.
+    """
+    context = route_context(route, pox1_closed=pox1_closed)
+    report: dict[str, Any] = {
+        "route": route,
+        "pox1_closed": pox1_closed,
+        "scenarios": {},
+        "shuttle_definitions": {
+            key: value["name"] for key, value in SHUTTLE_DEFINITIONS.items()
+        },
+        "claim_boundary": CLAIM_BOUNDARY,
+        "idealization": (
+            "Shuttles are free one-for-one exchanges with no enzyme, no energy cost "
+            "and no competing demand. They therefore upper-bound the benefit of "
+            "connecting the pools, and a real shuttle must be shown to pay for itself."
+        ),
+    }
+
+    for key in ("none", *SHUTTLE_DEFINITIONS):
+        model = load_model(MODEL_ID)
+        build_candidate_extension(model, load_target_config(target_config_path))
+        if key != "none":
+            add_shuttle(model, key)
+
+        def apply(scoped, _key=key):
+            context(scoped)
+
+        scan = enzyme_capacity_scan(
+            model,
+            IDP3_REACTION,
+            TARGET_DEMAND,
+            idp3_capacities,
+            context=apply,
+        )
+        report["scenarios"][key] = {
+            "shuttle": None if key == "none" else SHUTTLE_DEFINITIONS[key]["name"],
+            "unconstrained_target": scan["unconstrained_target"],
+            "idp3_knee": scan["knee_rounded_from_grid"] or scan["knee_capacity"],
+            "idp3_still_binding": scan["knee_rounded_from_grid"] is not None,
+            "capacity_vs_no_shuttle": (
+                scan["unconstrained_target"] / report["scenarios"]["none"]["unconstrained_target"]
+                if "none" in report["scenarios"]
+                else None
+            ),
+        }
+    return report
+
+
+# 10-HDA, C10H18O3, g/mol. Used only to express a model flux in mass terms.
+TARGET_MOLECULAR_WEIGHT = 186.25
+GLUCOSE_MOLECULAR_WEIGHT = 180.16
+
+TITER_CAVEAT = (
+    "A titer is biomass times time times realised specific productivity; the model "
+    "has no biomass trajectory and no enzyme, toxicity or secretion limit, so this "
+    "number is an upper bound on what the flux could support, not a production "
+    "forecast."
+)
+
+
+def capacity_to_titer(
+    capacity_mmol_gdw_h: float,
+    *,
+    biomass_gdw_l: float,
+    hours: float,
+    molecular_weight: float = TARGET_MOLECULAR_WEIGHT,
+) -> dict[str, Any]:
+    """Express a model capacity as an implied titer, with assumptions named.
+
+    Reported so the gap against a measured titer can be stated rather than left
+    implicit: genome-scale models have no enzyme, toxicity or transport limit, so
+    their capacity sits well above what a real strain reaches, and quoting the
+    flux without that gap invites reading it as a forecast.
+    """
+    specific = capacity_mmol_gdw_h * molecular_weight
+    return {
+        "capacity_mmol_gdw_h": capacity_mmol_gdw_h,
+        "molecular_weight_g_mol": molecular_weight,
+        "specific_productivity_mg_gdw_h": specific,
+        "biomass_gdw_l": biomass_gdw_l,
+        "hours": hours,
+        "implied_titer_mg_l": specific * biomass_gdw_l * hours,
+        "caveat": TITER_CAVEAT,
+    }
+
+
+def carbon_limitation_check(
+    target_config_path: str | Path,
+    *,
+    route: str = "A",
+    pox1_closed: bool = False,
+    glucose_levels: tuple[float, ...] = (1.0, 2.0, 3.0, 5.0),
+    oxygen: float = 1000.0,
+) -> dict[str, Any]:
+    """Is the route limited by carbon supply or by something internal?
+
+    At the optimum the only binding constraint this model reports is the glucose
+    exchange, and capacity scales with it at a stable yield, which says the
+    internal machinery - cofactors included - is not what caps production. If
+    capacity instead plateaued, an internal step would be limiting.
+    """
+    rows: list[dict[str, Any]] = []
+    for glucose in glucose_levels:
+        model = load_model(MODEL_ID)
+        build_candidate_extension(model, load_target_config(target_config_path))
+        with model:
+            # the medium must be passed INTO the applier: route_context carries its
+            # own defaults and setting the bounds before calling it has no effect
+            route_context(
+                route, pox1_closed=pox1_closed, glucose=glucose, oxygen=oxygen
+            )(model)
+            model.objective = TARGET_DEMAND
+            solution = model.optimize()
+            if solution.status != "optimal":
+                rows.append({"glucose": glucose, "status": solution.status, "capacity": None})
+                continue
+            capacity = float(solution.objective_value)
+            rows.append(
+                {
+                    "glucose": glucose,
+                    "status": "optimal",
+                    "capacity": capacity,
+                    "molar_yield": capacity / glucose,
+                    "carbon_yield": capacity * 10.0 / (glucose * 6.0),
+                }
+            )
+
+    solved = [row for row in rows if row["capacity"] is not None]
+    yields = [row["molar_yield"] for row in solved]
+    capacities = [row["capacity"] for row in solved]
+    gain = (max(capacities) / min(capacities)) if capacities and min(capacities) else None
+    spread = (max(yields) - min(yields)) / max(yields) if yields and max(yields) else None
+    # Carbon-limited means BOTH: capacity rises with the supply AND the yield holds.
+    # Capacity rising would be enough on its own; a stable yield alone proves
+    # nothing, because a constant capacity also gives a stable yield.
+    carbon_limited = (
+        gain is not None and gain > 1.05 and spread is not None and spread < 0.05
+    )
+    return {
+        "status": "reported",
+        "route": route,
+        "rows": rows,
+        "capacity_gain_factor": gain,
+        "molar_yield_spread_fraction": spread,
+        "carbon_supply_limited": carbon_limited,
+        "interpretation": (
+            "Capacity rising with the supply while the yield holds means carbon is the "
+            "cap and nothing internal is. Capacity rising but less than proportionally "
+            "- a falling yield - means an internal step starts to bind at the level "
+            "where it happens, and that level is worth investigating."
+        ),
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
 def analyze(
     target_config_path: str | Path,
     *,
@@ -444,9 +652,36 @@ def main() -> int:
     parser.add_argument("--route", default="A", choices=("A", "B"))
     parser.add_argument("--supply-scan", action="store_true",
                         help="scan the peroxisomal NADPH producer's capacity ceiling")
+    parser.add_argument("--shuttle-compare", action="store_true",
+                        help="compare the route with and without reducing-power shuttles")
+    parser.add_argument("--carbon-check", action="store_true",
+                        help="test whether capacity is carbon-limited or internally limited")
+    parser.add_argument("--titer", action="store_true",
+                        help="convert the anchor capacity to an implied titer")
+    parser.add_argument("--biomass-gdw-l", type=float, default=20.0)
+    parser.add_argument("--hours", type=float, default=10.0)
     args = parser.parse_args()
 
-    if args.supply_scan:
+    if args.titer:
+        import json as _json
+
+        anchor = analyze(args.target_config, pox1_closed=args.close_pox1)
+        capacity = anchor["routes"][f"route_{args.route}_" + (
+            "free_acid" if args.route == "A" else "coa_thioester")]["target_capacity"]
+        print(_json.dumps(
+            capacity_to_titer(capacity, biomass_gdw_l=args.biomass_gdw_l, hours=args.hours),
+            indent=2,
+        ))
+        return 0
+    if args.carbon_check:
+        report = carbon_limitation_check(
+            args.target_config, route=args.route, pox1_closed=args.close_pox1
+        )
+    elif args.shuttle_compare:
+        report = shuttle_comparison(
+            args.target_config, route=args.route, pox1_closed=args.close_pox1
+        )
+    elif args.supply_scan:
         report = peroxisomal_nadph_supply_scan(
             args.target_config, route=args.route, pox1_closed=args.close_pox1
         )

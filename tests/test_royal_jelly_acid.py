@@ -36,6 +36,14 @@ requires_target = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
+def yeast():
+    """The bare yeast model, for tests that do not need the candidate layer."""
+    from biocandidate.fba_context import load_model
+
+    return load_model("yeast_metatwin")
+
+
+@pytest.fixture(scope="module")
 def report():
     return rja.analyze(TARGET_CONFIG)
 
@@ -277,3 +285,117 @@ def test_idp3_capacity_is_a_one_to_one_gate_on_the_route():
     assert knee is not None
     assert knee == pytest.approx(scan["unconstrained_target"], rel=1e-6)
     assert scan["knee_as_multiple_of_reference"] == pytest.approx(1.0, rel=1e-3)
+
+
+# --- what actually limits the route ----------------------------------------------
+
+
+@requires_model
+@requires_target
+def test_peroxisomal_pool_has_no_transporter_while_other_compartments_do():
+    """The absence is specific to the peroxisome, not a general property.
+
+    The model ships NADPH/NADP+ exchanges for the ER, the ER membrane and the
+    lipid particle. That the peroxisome has none is therefore a modelling gap
+    worth naming, not evidence that yeast cannot move reducing power.
+    """
+    from biocandidate.fba_context import load_model
+
+    model = load_model("yeast_metatwin")
+    peroxisomal = model.metabolites.get_by_id("s_1215")
+    crossing = [
+        reaction.id
+        for reaction in model.reactions
+        if peroxisomal in reaction.metabolites
+        and len({metabolite.compartment for metabolite in reaction.metabolites}) > 1
+    ]
+    assert crossing == [], crossing
+
+    shuttle_compartments = set()
+    for reaction in model.reactions:
+        if "NADPH transport" in reaction.name or "NADP(+) transport" in reaction.name:
+            shuttle_compartments |= {metabolite.compartment for metabolite in reaction.metabolites}
+    assert {"er", "erm", "lp"} <= shuttle_compartments, shuttle_compartments
+
+
+@requires_model
+@requires_target
+def test_shuttles_relieve_the_idp3_bottleneck_without_raising_capacity():
+    """The decisive result: IDP3 can gate the route, but it is not the current cap.
+
+    Adding a free exchange makes IDP3 stop binding, yet the achievable target does
+    not move at all. So the peroxisomal reducing-power supply is a risk if IDP3 is
+    under-expressed, not the factor that limits production here.
+    """
+    comparison = rja.shuttle_comparison(TARGET_CONFIG)
+    scenarios = comparison["scenarios"]
+    baseline = scenarios["none"]
+    assert baseline["idp3_still_binding"] is True
+
+    for key in ("cytosol_to_peroxisome", "mitochondrion_to_peroxisome"):
+        entry = scenarios[key]
+        assert entry["idp3_still_binding"] is False, key
+        assert entry["unconstrained_target"] == pytest.approx(
+            baseline["unconstrained_target"], rel=1e-9
+        ), f"{key} changed the capacity, which would mean IDP3 was the cap"
+    assert "upper" in comparison["idealization"]
+
+
+@requires_model
+@requires_target
+def test_capacity_is_carbon_limited_at_a_stable_yield():
+    """Raising the glucose supply raises the capacity proportionally.
+
+    With a stable ~31 percent molar yield across a fivefold supply range, nothing
+    internal - cofactor pools included - is capping production at this medium.
+    """
+    check = rja.carbon_limitation_check(TARGET_CONFIG)
+    assert check["carbon_supply_limited"] is True
+    assert check["capacity_gain_factor"] > 5.0
+    assert check["molar_yield_spread_fraction"] < 0.05
+    for row in check["rows"]:
+        assert row["capacity"] > 0
+        assert 0.28 < row["molar_yield"] < 0.34
+        # the hydroxylation adds mass, so the carbon yield is the higher figure
+        assert 0.45 < row["carbon_yield"] < 0.55
+
+
+def test_titer_conversion_names_its_assumptions():
+    """A flux is not a titer; the conversion must carry the caveat with it."""
+    result = rja.capacity_to_titer(0.274011, biomass_gdw_l=20.0, hours=10.0)
+    assert result["specific_productivity_mg_gdw_h"] == pytest.approx(
+        0.274011 * rja.TARGET_MOLECULAR_WEIGHT
+    )
+    assert result["implied_titer_mg_l"] == pytest.approx(
+        result["specific_productivity_mg_gdw_h"] * 20.0 * 10.0
+    )
+    assert "not a production forecast" in result["caveat"]
+
+
+def test_add_shuttle_is_idempotent(yeast):
+    """Re-adding must not duplicate the reaction and break mass balance."""
+    model = yeast.copy()
+    first = rja.add_shuttle(model, "cytosol_to_peroxisome")
+    before = len(model.reactions)
+    second = rja.add_shuttle(model, "cytosol_to_peroxisome")
+    assert first == second
+    assert len(model.reactions) == before
+
+
+def test_shuttle_definitions_move_one_reducing_equivalent(yeast):
+    """Each shuttle must be balanced: one NADPH in, one out, across two copies.
+
+    Checked by metabolite id, not by name: the model holds several copies named
+    "NADPH" and a name-keyed lookup silently collapses them, keeping only the
+    last one and hiding an unbalanced reaction.
+    """
+    for key, definition in rja.SHUTTLE_DEFINITIONS.items():
+        model = yeast.copy()
+        rja.add_shuttle(model, key)
+        reaction = model.reactions.get_by_id("SHUTTLE_" + key.upper())
+        coefficients = {metabolite.id: value for metabolite, value in reaction.metabolites.items()}
+        assert coefficients == definition["stoichiometry"], key
+        assert reaction.boundary is False, key
+        # the exchange swaps the reduced and oxidised forms one for one
+        assert list(coefficients.values()).count(-1) == 2, key
+        assert list(coefficients.values()).count(1) == 2, key
