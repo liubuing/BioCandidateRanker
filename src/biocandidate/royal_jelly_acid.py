@@ -38,6 +38,7 @@ from .fba_context import (
     MODEL_REGISTRY,
     cofactor_turnover,
     load_model,
+    oxidative_burden,
 )
 from .fba_context import (
     YEAST_METATWIN_MODEL_ID as MODEL_ID,
@@ -217,9 +218,22 @@ def analyze(
                     for reaction_id in reaction_ids
                 }
                 entry["pox1_flux"] = float(solution.fluxes[POX1_REACTION])
+                spec = MODEL_REGISTRY[MODEL_ID]
                 turnover = cofactor_turnover(
-                    model, solution, MODEL_REGISTRY[MODEL_ID]["cofactor_metabolites"]
+                    model, solution, spec["cofactor_metabolites"]
                 )
+                # flavins are useless here (see the module docstring), so the
+                # degradation side is read from oxygen and peroxide instead
+                burden = oxidative_burden(model, solution, spec["oxidant_metabolites"])
+                entry["oxidative_burden"] = {
+                    label: {
+                        "produced": burden[label].get("produced"),
+                        "consumed": burden[label].get("consumed"),
+                        "top_producers": burden[label].get("top_producers", []),
+                        "top_consumers": burden[label].get("top_consumers", []),
+                    }
+                    for label in ("h2o2", "o2")
+                }
                 entry["cofactor_turnover"] = {
                     label: {
                         "status": turnover[label].get("status"),

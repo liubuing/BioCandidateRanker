@@ -402,3 +402,37 @@ def test_yeast_flavin_flux_is_zero_at_baseline(yeast):
     assert turnover["fad"]["gross_turnover"] / result["growth"] < 1e-4
     # while the thioester supply for fatty-acid synthesis does carry flux
     assert turnover["malcoa"]["gross_turnover"] > 0
+
+
+def test_every_model_declares_oxidant_handles():
+    """A model missing these silently drops the degradation-side reporting.
+
+    This happened during development: a duplicated key left one model without an
+    oxidant map, and the route analysis quietly lost its oxygen/peroxide section
+    for that model instead of failing.
+    """
+    for model_id, spec in fba_context.MODEL_REGISTRY.items():
+        oxidants = spec.get("oxidant_metabolites")
+        assert oxidants, f"{model_id} declares no oxidant handles"
+        assert set(oxidants) == {"h2o2", "o2"}, model_id
+
+
+@pytest.mark.parametrize("model_id", ["iML1515", "iJO1366", "yeast_metatwin"])
+def test_oxidant_ids_exist_in_their_model(model_id):
+    model = fba_context.load_model(model_id)
+    for label, metabolite_id in fba_context.MODEL_REGISTRY[model_id]["oxidant_metabolites"].items():
+        assert metabolite_id in model.metabolites, f"{model_id} lacks {label} ({metabolite_id})"
+
+
+def test_oxidative_burden_is_reported_with_gross_directions(iml1515):
+    """Oxygen is both taken up and consumed internally, so both directions matter."""
+    result = fba_context.run_fba_context(
+        model_id="iML1515", preset="baseline", model=iml1515
+    )
+    burden = result["oxidative_burden"]
+    assert set(burden) == {"h2o2", "o2"}
+    oxygen = burden["o2"]
+    assert oxygen["status"] == "reported"
+    assert oxygen["consumed"] > 0
+    assert oxygen["top_consumers"], "the respiratory consumer must be identifiable"
+    assert burden["h2o2"]["status"] == "reported"

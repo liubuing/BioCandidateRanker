@@ -139,3 +139,65 @@ def test_minimum_enzyme_follows_the_gecko_bound():
     assert rja.minimum_enzyme_for_flux(2.0, 3600.0) == pytest.approx(0.5)
     with pytest.raises(ValueError):
         rja.minimum_enzyme_for_flux(0.0, 1.0)
+
+
+# --- oxidative burden: the degradation-side handle flavins cannot give ------------
+
+
+def test_flavin_dependent_oxidases_carry_no_flavin_in_the_model():
+    """Why FAD turnover cannot stand in for oxidase activity.
+
+    POX1 and its five paralogues are written as acyl-CoA + O2 -> enoyl-CoA +
+    H2O2. That is correct chemistry for a flavin-dependent oxidase: the FAD
+    cycles inside the reaction as a catalyst, so the net reaction contains no
+    flavin and FAD turnover would be zero regardless of how hard the enzyme
+    works. The handles that do move with oxidase flux are O2 and H2O2.
+    """
+    from biocandidate.fba_context import load_model
+    from biocandidate.royal_jelly_acid import POX1_REACTION
+
+    model = load_model("yeast_metatwin")
+    reaction = model.reactions.get_by_id(POX1_REACTION)
+    names = {(metabolite.name or "").lower() for metabolite in reaction.metabolites}
+    assert not any("fad" in name for name in names), names
+    assert "oxygen" in names and "hydrogen peroxide" in names, names
+
+    # the same is true of the whole acyl-CoA oxidase family, not just POX1
+    oxidases = [r for r in model.reactions if "acyl-coa oxidase" in r.name.lower()]
+    assert len(oxidases) >= 5, [r.id for r in oxidases]
+    for oxidase in oxidases:
+        assert not any(
+            "fad" in (metabolite.name or "").lower() for metabolite in oxidase.metabolites
+        ), oxidase.id
+
+
+@requires_model
+@requires_target
+def test_route_analysis_reports_oxygen_and_peroxide(report):
+    for name, entry in report["routes"].items():
+        burden = entry["oxidative_burden"]
+        assert set(burden) == {"o2", "h2o2"}, name
+        assert burden["o2"]["consumed"] > 0, name
+        assert burden["h2o2"]["produced"] > 0, name
+        assert burden["h2o2"]["produced"] <= burden["o2"]["consumed"] + 1e-9, name
+
+
+@requires_model
+@requires_target
+def test_pox1_and_the_omega_hydroxylase_dominate_the_route_burden(report):
+    """The two route-specific oxygen users must be identifiable, not averaged away."""
+    entry = report["routes"]["route_A_free_acid"]
+    capacity = entry["target_capacity"]
+
+    o2_consumers = {
+        item["reaction_id"]: item["flux"] for item in entry["oxidative_burden"]["o2"]["top_consumers"]
+    }
+    # the P450 omega-hydroxylation consumes exactly one O2 per product
+    assert o2_consumers["CAND_T2DEC_OMEGA_HYDROXYLASE_P"] == pytest.approx(capacity, rel=1e-6)
+    # POX1 is the other route-specific oxygen user
+    assert o2_consumers["r_0120"] == pytest.approx(capacity, rel=1e-6)
+
+    producers = [item["reaction_id"] for item in entry["oxidative_burden"]["h2o2"]["top_producers"]]
+    assert producers[0] == "r_0120", producers
+    # peroxide is produced by the oxidase family, so the total exceeds POX1 alone
+    assert entry["oxidative_burden"]["h2o2"]["produced"] > capacity

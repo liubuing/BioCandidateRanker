@@ -85,6 +85,17 @@ YEAST_FEATURE_REACTIONS = (
 # grow without touching the surrogate contract.
 CORE_COFACTORS = ("nadph", "nadh", "atp")
 
+# Oxidative burden handles. Flavin-dependent OXIDASES (the acyl-CoA oxidase
+# family) carry their FAD as an internal cycling catalyst, so the net reaction
+# contains O2 and H2O2 and no flavin - which is why FAD turnover cannot stand in
+# for oxidase activity. What such a step actually consumes is oxygen and what it
+# creates is peroxide, and both are metabolites the models track.
+OXIDANT_METABOLITES = {
+    "iML1515": {"h2o2": "h2o2_c", "o2": "o2_c"},
+    "iJO1366": {"h2o2": "h2o2_c", "o2": "o2_c"},
+    "yeast_metatwin": {"h2o2": "s_0840", "o2": "s_1279"},
+}
+
 E_COLI_COFACTORS = {
     # core redox and energy
     "nadph": "nadph_c",
@@ -137,6 +148,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         + SHARED_FLUX_REACTIONS,
         "presets": None,  # None means every BASE_PRESETS entry applies
         "cofactor_metabolites": E_COLI_COFACTORS,
+        "oxidant_metabolites": OXIDANT_METABOLITES["iML1515"],
         "default_glucose": DEFAULT_GLUCOSE,
         "default_oxygen": DEFAULT_OXYGEN,
         "provenance_key": "iML1515_presets",
@@ -149,6 +161,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         + SHARED_FLUX_REACTIONS,
         "presets": None,
         "cofactor_metabolites": E_COLI_COFACTORS,
+        "oxidant_metabolites": OXIDANT_METABOLITES["iJO1366"],
         "default_glucose": DEFAULT_GLUCOSE,
         "default_oxygen": DEFAULT_OXYGEN,
         "provenance_key": "iJO1366_fusion",
@@ -164,6 +177,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
         "feature_reactions": YEAST_FEATURE_REACTIONS,
         "presets": ("baseline",),
         "cofactor_metabolites": YEAST_COFACTORS,
+        "oxidant_metabolites": OXIDANT_METABOLITES["yeast_metatwin"],
         # 1.0 is the model file's own glucose uptake cap and the medium the
         # external 10H2DA anchor (0.274011) was produced with. An earlier value
         # of 10.0 was a generic batch rate that this model cannot represent and
@@ -460,6 +474,59 @@ def cofactor_turnover(
     return report
 
 
+
+
+def oxidative_burden(
+    model,
+    solution,
+    oxidant_metabolites: dict[str, str],
+    top_n: int = 5,
+) -> dict[str, Any]:
+    """Oxygen consumed and peroxide produced, plus the reactions responsible.
+
+    Reported per direction rather than net: a cell consumes oxygen for both
+    respiration and oxidases, and produces peroxide that its peroxiredoxins and
+    catalase must clear, so the gross figures are the ones with engineering
+    meaning.
+    """
+    report: dict[str, Any] = {}
+    for label, metabolite_id in oxidant_metabolites.items():
+        if metabolite_id not in model.metabolites:
+            report[label] = {"status": "metabolite_absent", "metabolite_id": metabolite_id}
+            continue
+        metabolite = model.metabolites.get_by_id(metabolite_id)
+        produced = consumed = 0.0
+        producers: list[tuple[str, float]] = []
+        consumers: list[tuple[str, float]] = []
+        for reaction in model.reactions:
+            coefficient = reaction.metabolites.get(metabolite)
+            if coefficient is None:
+                continue
+            contribution = coefficient * float(solution.fluxes[reaction.id])
+            if contribution > 0:
+                produced += contribution
+                producers.append((reaction.id, contribution))
+            elif contribution < 0:
+                consumed += -contribution
+                consumers.append((reaction.id, -contribution))
+        producers.sort(key=lambda item: -item[1])
+        consumers.sort(key=lambda item: -item[1])
+        report[label] = {
+            "status": "reported",
+            "metabolite_id": metabolite_id,
+            "unit": "mmol gDW^-1 h^-1",
+            "produced": produced,
+            "consumed": consumed,
+            "top_producers": [
+                {"reaction_id": rid, "flux": flux} for rid, flux in producers[:top_n]
+            ],
+            "top_consumers": [
+                {"reaction_id": rid, "flux": flux} for rid, flux in consumers[:top_n]
+            ],
+        }
+    return report
+
+
 def run_fba_context(
     *,
     model_id: str = "iML1515",
@@ -563,6 +630,9 @@ def run_fba_context(
     if spec.get("cofactor_metabolites"):
         result["cofactor_turnover"] = cofactor_turnover(
             scoped, solution, spec["cofactor_metabolites"]
+        )
+        result["oxidative_burden"] = oxidative_burden(
+            scoped, solution, spec.get("oxidant_metabolites", {})
         )
         result["cofactor_scope"] = (
             "gross turnover (production equals consumption at steady state); "
