@@ -436,3 +436,74 @@ def test_oxidative_burden_is_reported_with_gross_directions(iml1515):
     assert oxygen["consumed"] > 0
     assert oxygen["top_consumers"], "the respiratory consumer must be identifiable"
     assert burden["h2o2"]["status"] == "reported"
+
+
+# --- marginal cost -----------------------------------------------------------------
+
+
+def test_least_squares_recovers_a_known_line():
+    slope, intercept, r2 = fba_context._least_squares([0.0, 1.0, 2.0], [1.0, 3.0, 5.0])
+    assert slope == pytest.approx(2.0)
+    assert intercept == pytest.approx(1.0)
+    assert r2 == pytest.approx(1.0)
+
+
+def test_least_squares_reports_a_poor_fit_honestly():
+    """A curved response must not be summarised as a clean slope."""
+    _, _, r2 = fba_context._least_squares([0.0, 1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 10.0])
+    assert r2 < 0.9
+
+
+def test_marginal_cost_needs_a_maximisable_target(iml1515):
+    result = fba_context.marginal_cofactor_cost(
+        iml1515,
+        "EX_glc__D_e",  # a lower-bounded exchange, not a producible flux
+        cofactor_metabolites={"nadph": "nadph_c"},
+        level_fractions=(0.5, 1.0),
+    )
+    assert result["status"] != "reported"
+
+
+def test_marginal_nadph_cost_is_positive_and_recorded(iml1515):
+    """The core claim of the analysis: making more product costs more NADPH."""
+    result = fba_context.marginal_cofactor_cost(
+        iml1515,
+        "BIOMASS_Ec_iML1515_core_75p37M",
+        cofactor_metabolites={"nadph": "nadph_c", "atp": "atp_c"},
+        objective_reaction="ATPM",
+        level_fractions=(0.25, 0.5, 0.75, 1.0),
+    )
+    assert result["status"] == "reported"
+    assert len(result["points"]) == 4
+    nadph = result["marginal"]["nadph"]
+    assert nadph["slope_per_unit_product"] is not None
+    # levels are ascending and every point carries the tracked quantities
+    levels = [point["level"] for point in result["points"]]
+    assert levels == sorted(levels)
+    for point in result["points"]:
+        assert set(point["cofactors"]) == {"nadph", "atp"}
+        assert all(value is not None for value in point["cofactors"].values())
+
+
+def test_marginal_ranking_is_sorted_by_cost(iml1515):
+    result = fba_context.marginal_cofactor_cost(
+        iml1515,
+        "BIOMASS_Ec_iML1515_core_75p37M",
+        cofactor_metabolites={"nadph": "nadph_c", "atp": "atp_c"},
+        objective_reaction="ATPM",
+        level_fractions=(0.25, 1.0),
+    )
+    slopes = [item["slope_per_unit_product"] for item in result["ranking_by_cost"]]
+    assert slopes == sorted(slopes, reverse=True)
+
+
+def test_marginal_objective_is_reported_when_named(iml1515):
+    result = fba_context.marginal_cofactor_cost(
+        iml1515,
+        "BIOMASS_Ec_iML1515_core_75p37M",
+        cofactor_metabolites={"nadph": "nadph_c"},
+        objective_reaction="ATPM",
+        level_fractions=(0.25, 1.0),
+    )
+    assert result["objective"] is not None
+    assert result["objective"]["slope_per_unit_product"] is not None

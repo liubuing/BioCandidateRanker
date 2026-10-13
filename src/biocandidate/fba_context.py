@@ -33,7 +33,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .data import FBA_FEATURE_SCHEMA_VERSION
 
@@ -525,6 +525,167 @@ def oxidative_burden(
             ],
         }
     return report
+
+
+def _least_squares(xs: list[float], ys: list[float]) -> tuple[float, float, float]:
+    """Slope, intercept and R^2 of a simple linear fit.
+
+    R^2 is reported because a "marginal cost" is only a meaningful single number
+    when the response is close to linear in the product level; a poor fit means
+    the cost is regime-dependent and the slope should not be quoted alone.
+    """
+    count = len(xs)
+    if count < 2:
+        return float("nan"), float("nan"), float("nan")
+    mean_x = sum(xs) / count
+    mean_y = sum(ys) / count
+    sxx = sum((x - mean_x) ** 2 for x in xs)
+    if sxx == 0:
+        return float("nan"), float("nan"), float("nan")
+    sxy = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+    slope = sxy / sxx
+    intercept = mean_y - slope * mean_x
+    ss_tot = sum((y - mean_y) ** 2 for y in ys)
+    if ss_tot == 0:
+        return slope, intercept, 1.0
+    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys))
+    return slope, intercept, 1.0 - ss_res / ss_tot
+
+
+def marginal_cofactor_cost(
+    model,
+    target_reaction: str,
+    *,
+    cofactor_metabolites: dict[str, str],
+    oxidant_metabolites: dict[str, str] | None = None,
+    objective_reaction: str | None = None,
+    level_fractions: tuple[float, ...] = (0.25, 0.5, 0.75, 1.0),
+    context: Callable[[Any], None] | None = None,
+) -> dict[str, Any]:
+    """Cost of producing one more unit of the target, in cofactor turnover.
+
+    Reporting total turnover at a single optimum does not answer what to
+    engineer: the LP sits at the same vertex, so the numbers do not move when the
+    product level changes. The informative quantity is the marginal one, obtained
+    by fixing the target flux at graded levels and optimising something else -
+    biomass by default - then regressing each tracked quantity on the level.
+
+    The context callable applies the scenario (medium, route, gate) to the model
+    copy, so this stays model- and scenario-agnostic. A biomass floor is NOT
+    imposed here: fixing the product flux at a level already determines how much
+    growth is possible, and keeping a floor as well would make the curve a
+    constrained slice rather than the trade-off itself.
+    """
+    base = model.copy()
+    if context is not None:
+        context(base)
+
+    probe = base.copy()
+    probe.objective = target_reaction
+    probe_solution = probe.optimize()
+    if probe_solution.status != "optimal":
+        return {"status": probe_solution.status, "error": "target is not maximisable"}
+    capacity = float(probe_solution.objective_value)
+    if capacity <= 0:
+        return {"status": "no_capacity", "capacity": capacity}
+
+    # Without a named objective the target itself would be maximised, which pins
+    # the LP at one vertex and yields no trade-off curve, so the objective column
+    # is left empty rather than reported as a meaningless constant.
+    objective_named = objective_reaction is not None
+
+    tracked = dict(cofactor_metabolites)
+    if oxidant_metabolites:
+        tracked.update({f"oxidant:{name}": mid for name, mid in oxidant_metabolites.items()})
+
+    points: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for fraction in level_fractions:
+        level = capacity * fraction
+        with base:
+            target = base.reactions.get_by_id(target_reaction)
+            target.lower_bound = level
+            target.upper_bound = level
+            if objective_reaction is not None:
+                base.objective = objective_reaction
+            solution = base.optimize()
+            if solution.status != "optimal":
+                skipped.append({"fraction": fraction, "level": level,
+                                "status": solution.status})
+                continue
+            entry: dict[str, Any] = {
+                "fraction": fraction,
+                "level": level,
+                "objective_value": (
+                    float(solution.fluxes[objective_reaction]) if objective_named else None
+                ),
+                "cofactors": {},
+            }
+            turnover = cofactor_turnover(base, solution, tracked)
+            for label, info in turnover.items():
+                entry["cofactors"][label] = info.get("gross_turnover")
+            points.append(entry)
+
+    if len(points) < 2:
+        return {
+            "status": "insufficient_points",
+            "capacity": capacity,
+            "points": points,
+            "skipped": skipped,
+        }
+
+    levels = [p["level"] for p in points]
+    marginal: dict[str, Any] = {}
+    for label in points[0]["cofactors"]:
+        series = [p["cofactors"][label] for p in points]
+        if any(value is None for value in series):
+            marginal[label] = {"status": "incomplete"}
+            continue
+        slope, _, r2 = _least_squares(levels, series)
+        marginal[label] = {
+            "slope_per_unit_product": slope,
+            "r_squared": r2,
+            "linear": r2 == r2 and r2 > 0.9,
+        }
+
+    objective_series = [p["objective_value"] for p in points]
+    objective_summary = None
+    if all(value is not None for value in objective_series):
+        slope, _, r2 = _least_squares(levels, objective_series)
+        objective_summary = {
+            "slope_per_unit_product": slope,
+            "r_squared": r2,
+            "linear": r2 == r2 and r2 > 0.9,
+        }
+
+    ranked = sorted(
+        (
+            (label, info["slope_per_unit_product"])
+            for label, info in marginal.items()
+            if info.get("slope_per_unit_product") is not None
+        ),
+        key=lambda item: -item[1],
+    )
+    return {
+        "status": "reported",
+        "target_reaction": target_reaction,
+        "capacity": capacity,
+        "level_fractions": list(level_fractions),
+        "points": points,
+        "skipped": skipped,
+        "marginal": marginal,
+        "objective": objective_summary,
+        "largest_positive_cost": ranked[0][0] if ranked and ranked[0][1] > 0 else None,
+        "ranking_by_cost": [
+            {"label": label, "slope_per_unit_product": slope} for label, slope in ranked
+        ],
+        "interpretation": (
+            "A positive slope is cofactor turnover the network must add per unit of "
+            "product; a negative slope means the product route is cheaper in that "
+            "cofactor than the activity it displaces. Slopes with a low R-squared are "
+            "regime-dependent and should not be quoted as a single number."
+        ),
+    }
 
 
 def run_fba_context(

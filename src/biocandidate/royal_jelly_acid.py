@@ -38,6 +38,7 @@ from .fba_context import (
     MODEL_REGISTRY,
     cofactor_turnover,
     load_model,
+    marginal_cofactor_cost,
     oxidative_burden,
 )
 from .fba_context import (
@@ -150,6 +151,71 @@ def _route_reactions(model) -> dict[str, list[str]]:
     if all(r in model.reactions for r in ROUTE_B):
         routes["route_B_coa_thioester"] = list(ROUTE_B)
     return routes
+
+
+def route_context(
+    route: str,
+    *,
+    pox1_closed: bool,
+    glucose: float = 1.0,
+    oxygen: float = 1000.0,
+):
+    """Build the scenario applier the marginal analysis needs.
+
+    Kept separate from analyze() so the marginal curve is measured under the same
+    medium, route and gate as the capacity it is derived from.
+    """
+    routes = {"A": ROUTE_A, "B": ROUTE_B}
+    if route not in routes:
+        raise ValueError(f"unknown route {route!r}; known: {sorted(routes)}")
+    other = "B" if route == "A" else "A"
+
+    def apply(model) -> None:
+        model.reactions.get_by_id("r_1714").lower_bound = -float(glucose)
+        model.reactions.get_by_id("r_1992").lower_bound = -float(oxygen)
+        if pox1_closed:
+            model.reactions.get_by_id(POX1_REACTION).bounds = (0.0, 0.0)
+        for reaction_id in routes[other]:
+            model.reactions.get_by_id(reaction_id).bounds = (0.0, 0.0)
+
+    return apply
+
+
+def marginal_route_cost(
+    target_config_path: str | Path,
+    *,
+    route: str = "A",
+    pox1_closed: bool = False,
+    glucose: float = 1.0,
+    oxygen: float = 1000.0,
+    level_fractions: tuple[float, ...] = (0.25, 0.5, 0.75, 1.0),
+) -> dict[str, Any]:
+    """What one more unit of 10-HDA costs the cell, per cofactor and in growth."""
+    from .fba_context import MODEL_REGISTRY as registry
+
+    model = load_model(MODEL_ID)
+    build_candidate_extension(model, load_target_config(target_config_path))
+    spec = registry[MODEL_ID]
+
+    report = marginal_cofactor_cost(
+        model,
+        TARGET_DEMAND,
+        cofactor_metabolites={
+            label: spec["cofactor_metabolites"][label]
+            for label in ("nadph", "nadh", "atp", "accoa", "malcoa")
+        },
+        oxidant_metabolites=spec["oxidant_metabolites"],
+        objective_reaction=BIOMASS_ID,
+        level_fractions=level_fractions,
+        context=route_context(
+            route, pox1_closed=pox1_closed, glucose=glucose, oxygen=oxygen
+        ),
+    )
+    report["route"] = route
+    report["pox1_closed"] = pox1_closed
+    report["medium"] = {"glucose": glucose, "oxygen": oxygen}
+    report["claim_boundary"] = CLAIM_BOUNDARY
+    return report
 
 
 def analyze(
@@ -328,9 +394,17 @@ def main() -> int:
     parser.add_argument("--close-pox1", action="store_true",
                         help="block the acyl-CoA oxidase entrance (POX1 knockout)")
     parser.add_argument("--output", default=None)
+    parser.add_argument("--marginal", action="store_true",
+                        help="report the marginal cofactor cost per unit product")
+    parser.add_argument("--route", default="A", choices=("A", "B"))
     args = parser.parse_args()
 
-    report = analyze(args.target_config, pox1_closed=args.close_pox1)
+    if args.marginal:
+        report = marginal_route_cost(
+            args.target_config, route=args.route, pox1_closed=args.close_pox1
+        )
+    else:
+        report = analyze(args.target_config, pox1_closed=args.close_pox1)
     text = json.dumps(report, indent=2)
     if args.output:
         Path(args.output).write_text(text + "\n", encoding="utf-8")
