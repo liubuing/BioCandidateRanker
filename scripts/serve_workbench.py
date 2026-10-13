@@ -409,11 +409,19 @@ def fba_scenario_vector(root: Path, body: dict[str, Any]) -> dict[str, Any]:
     """Encode one scenario as a surrogate's fba_context input."""
     from biocandidate import fba_surrogate
 
+    # Defaults come from the model registry, not from a re-export: the yeast
+    # model's medium (10 / 1000) differs from the E. coli one, and relying on a
+    # re-exported constant is how this broke when an unused import was tidied.
+    from biocandidate.fba_context import DEFAULT_GLUCOSE, DEFAULT_OXYGEN, MODEL_REGISTRY
+
+    model_id = str(body.get("model_id", "iML1515"))
+    spec = MODEL_REGISTRY.get(model_id, {})
     return fba_surrogate.scenario_input_vector(
-        str(body.get("model_id", "iML1515")),
+        model_id,
         str(body.get("preset", "baseline")),
-        float(body.get("glucose", fba_surrogate.DEFAULT_GLUCOSE)),
-        float(body.get("oxygen", fba_surrogate.DEFAULT_OXYGEN)),
+        float(body.get("glucose", spec.get("default_glucose", DEFAULT_GLUCOSE))),
+        float(body.get("oxygen", spec.get("default_oxygen", DEFAULT_OXYGEN))),
+        str(body.get("target", "growth")),
     )
 
 
@@ -422,10 +430,11 @@ def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
     from biocandidate import fba_surrogate
 
     model_id = str(body.get("model_id", "iML1515"))
+    target = str(body.get("target", "growth"))
     surrogate_path = body.get("surrogate_path") or f"artifacts/fba-surrogate-{model_id}/best.pt"
-    vector = fba_scenario_vector(root, body)
+    vector = fba_scenario_vector(root, {**body, "target": target})
     candidate = {
-        "candidate_id": f"surrogate-{model_id}-{body.get('preset', 'baseline')}",
+        "candidate_id": f"surrogate-{model_id}-{body.get('preset', 'baseline')}-{target}",
         "sequence": "X",
         "substrate_smiles": "O",
         "reaction": fba_surrogate.MODEL_REGISTRY[model_id]["objective_id"],
@@ -444,7 +453,8 @@ def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
     return {
         "surrogate": surrogate_path,
         "gem_model_id": model_id,
-        "growth": 10 ** float(task["mean"]),
+        "target": target,
+        "value": 10 ** float(task["mean"]),
         "mean_log10": float(task["mean"]),
         "standard_deviation_log10": task.get("standard_deviation"),
         "condition_id": vector["metadata"]["condition_id"],

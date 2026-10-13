@@ -68,6 +68,11 @@ CARRIER_CONTEXT = {
 }
 
 # Scenario-input features: the 8-wide fba_context contract for surrogates.
+# Slot 8 selects WHICH quantity the caller asks about. A record carries a single
+# log10_flux label with one flux_label_metadata slot, so a scenario that yields
+# several quantities is emitted once per target and the selector is the only
+# thing distinguishing those rows. Growth keeps selector 0.0, so growth-only
+# surrogates trained before this change stay valid under the same contract.
 SCENARIO_FEATURE_IDS = (
     "medium_lower_bound:EX_glc__D_e",
     "medium_lower_bound:EX_o2_e",
@@ -76,8 +81,19 @@ SCENARIO_FEATURE_IDS = (
     "medium_lower_bound:EX_co2_e",
     "knockout:ptsG",
     "overexpression:THD2pp",
-    "overexpression:NADK",
+    "target_selector",
 )
+
+TARGET_SELECTORS = {"growth": 0.0, "nadph": 1.0, "nadh": 2.0, "atp": 3.0}
+TARGETS = tuple(TARGET_SELECTORS)
+# The paper measures NADPH, NADH and ATP; growth is kept because it was the
+# original surrogate target and every comparison baseline reports it.
+TARGET_REACTION_IDS = {
+    "growth": None,  # resolved to the model's biomass objective at build time
+    "nadph": "cofactor_turnover:nadph",
+    "nadh": "cofactor_turnover:nadh",
+    "atp": "cofactor_turnover:atp",
+}
 
 GLUCOSE_GRID = (3.0, 6.0, 9.0, 12.0, 15.0, 18.0)
 OXYGEN_GRID = (0.0, 3.0, 6.0, 9.0, 12.0, 15.0, 18.0, 20.0, 21.0)
@@ -102,8 +118,12 @@ IJO1366_SCENARIOS = (
 SPLITS = ("train", "validation", "test")
 
 
-def _scenario_vector(scenario: dict[str, Any], glucose: float, oxygen: float) -> tuple[float, ...]:
-    """Encode one scenario as the 8-wide scenario-input vector."""
+def _scenario_vector(
+    scenario: dict[str, Any], glucose: float, oxygen: float, target: str = "growth"
+) -> tuple[float, ...]:
+    """Encode one (scenario, target) pair as the 8-wide scenario-input vector."""
+    if target not in TARGET_SELECTORS:
+        raise ValueError(f"unknown target {target!r}; known: {list(TARGET_SELECTORS)}")
     fusion = scenario.get("fusion") or {}
     return (
         float(glucose),
@@ -113,7 +133,7 @@ def _scenario_vector(scenario: dict[str, Any], glucose: float, oxygen: float) ->
         float(FUSION_CO2_CAP if fusion else 0.0),
         1.0 if scenario.get("ko") else 0.0,
         float(scenario["oe"][1]) if scenario.get("oe") else 0.0,
-        0.0,
+        TARGET_SELECTORS[target],
     )
 
 
@@ -160,7 +180,7 @@ def run_fba_grid(
     """
     if model_id not in MODEL_REGISTRY:
         raise ValueError(f"unknown model {model_id!r}; known: {sorted(MODEL_REGISTRY)}")
-    from .fba_context import add_fusion_pathways
+    from .fba_context import add_fusion_pathways, cofactor_turnover
 
     spec = MODEL_REGISTRY[model_id]
     base = model if model is not None else load_model(model_id)
@@ -211,26 +231,39 @@ def run_fba_grid(
             if oe_target:
                 oe_target[0].lower_bound = oe_target[1]
 
-        growth = None
+        targets: dict[str, float] = {}
         if solution.status == "optimal":
-            value = float(solution.objective_value)
-            growth = value if value > 1e-9 else None
-        if growth is None:
+            growth = float(solution.objective_value)
+            if growth > 1e-9:
+                targets["growth"] = growth
+            turnover = cofactor_turnover(
+                scoped, solution, spec["cofactor_metabolites"]
+            )
+            for label in ("nadph", "nadh", "atp"):
+                info = turnover.get(label, {})
+                value = info.get("gross_turnover")
+                if info.get("status") == "reported" and value and value > 1e-9:
+                    targets[label] = float(value)
+        if not targets:
             dropped.append({"scenario": scenario["name"], "glucose": glucose, "oxygen": oxygen})
             continue
 
-        rows.append(
-            {
-                "model_id": model_id,
-                "scenario_name": scenario["name"],
-                "glucose": glucose,
-                "oxygen": oxygen,
-                "features": list(_scenario_vector(scenario, glucose, oxygen)),
-                "log10_growth": math.log10(growth),
-                "growth": growth,
-                "condition_id": _condition_hash(model_id, scenario["name"], glucose, oxygen),
-            }
-        )
+        scenario_id = _condition_hash(model_id, scenario["name"], glucose, oxygen)
+        for target, value in targets.items():
+            rows.append(
+                {
+                    "model_id": model_id,
+                    "scenario_name": scenario["name"],
+                    "glucose": glucose,
+                    "oxygen": oxygen,
+                    "target": target,
+                    "features": list(_scenario_vector(scenario, glucose, oxygen, target)),
+                    "log10_flux": math.log10(value),
+                    "value": value,
+                    "condition_id": f"{scenario_id}#{target}",
+                    "scenario_id": scenario_id,
+                }
+            )
 
     return {
         "model_id": model_id,
@@ -262,14 +295,23 @@ def _record(row: dict[str, Any], fba_payload: dict[str, Any], source_row: int) -
             objective_id=fba_payload["objective_id"],
             condition_id=row["condition_id"],
         ),
-        log10_flux=row["log10_growth"],
+        log10_flux=row["log10_flux"],
         flux_label_metadata=FluxLabelMetadata(
             label_type=FluxLabelType.SIMULATED,
-            target_reaction_id=fba_payload["objective_id"],
+            # Growth names the biomass objective; the cofactor targets name a
+            # turnover quantity, which the metadata contract permits since
+            # target_reaction_id is any non-empty identifier and the canonical
+            # unit is the same mmol gDW^-1 h^-1 in both cases.
+            target_reaction_id=(
+                fba_payload["objective_id"]
+                if row["target"] == "growth"
+                else TARGET_REACTION_IDS[row["target"]]
+            ),
             canonical_unit=CANONICAL_LOG10_FLUX_UNIT,
             provenance_json=json.dumps(
                 {
                     "scenario": row["scenario_name"],
+                    "target": row["target"],
                     "glucose": row["glucose"],
                     "oxygen": row["oxygen"],
                     "model_sha256": fba_payload.get("model_sha256"),
@@ -284,22 +326,101 @@ def _record(row: dict[str, Any], fba_payload: dict[str, Any], source_row: int) -
 
 
 def assign_splits(rows: list[dict[str, Any]]) -> None:
-    """Deterministic ~72/14/14 split: sort by condition hash, then slice.
+    """Deterministic ~72/14/14 split, taken over SCENARIOS rather than rows.
+
+    A scenario contributes one row per target, and those rows share the same
+    scenario vector apart from the selector slot. Splitting rows independently
+    would put, say, the growth row of a scenario in train and its NADPH row in
+    test, which leaks the scenario across the split boundary. The unit of
+    assignment is therefore the scenario id, and every target inherits it.
 
     The hash sort pseudo-randomizes the order, so proportional slices of the
     sorted list are random samples; max(1, n//7) per minor partition keeps
     validation and test non-empty even on miniature grids.
     """
-    ordered = sorted(rows, key=lambda row: row["condition_id"])
-    n_val = max(1, len(ordered) // 7)
-    n_test = max(1, len(ordered) // 7)
-    for index, row in enumerate(ordered):
+    scenario_ids = sorted({row["scenario_id"] for row in rows})
+    n_val = max(1, len(scenario_ids) // 7)
+    n_test = max(1, len(scenario_ids) // 7)
+    assignment: dict[str, str] = {}
+    for index, scenario_id in enumerate(scenario_ids):
         if index < n_val:
-            row["split"] = "validation"
+            assignment[scenario_id] = "validation"
         elif index < n_val + n_test:
-            row["split"] = "test"
+            assignment[scenario_id] = "test"
         else:
-            row["split"] = "train"
+            assignment[scenario_id] = "train"
+    for row in rows:
+        row["split"] = assignment[row["scenario_id"]]
+
+
+def _per_target_metrics(
+    model,
+    loaders: dict[str, Any],
+    device,
+    partitions: dict[str, list[EnzymeSubstrateRecord]],
+    train_rows: list[dict[str, Any]],
+    test_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Test-set RMSE per target, each against its own train-mean baseline.
+
+    Predictions are made through the ordinary validation loader; rows are
+    matched back to their target through the provenance the record carries.
+    """
+    import torch
+
+    report: dict[str, Any] = {}
+    for row in test_rows:
+        report.setdefault(row["target"], {"count": 0, "squared_error": 0.0})
+    if not report:
+        return {}
+
+    loader = loaders["test"]
+    records = partitions["test"]
+    with torch.no_grad():
+        index = 0
+        for batch in loader:
+            batch = {name: value.to(device) for name, value in batch.items()}
+            output = model(batch)
+            means = output["mean"][:, 0].detach().cpu().tolist()
+            labels = batch["labels"][:, 0].detach().cpu().tolist()
+            for mean, label in zip(means, labels):
+                record = records[index]
+                target = json.loads(record.flux_label_metadata.provenance_json)["target"]
+                entry = report[target]
+                entry["count"] += 1
+                entry["squared_error"] += (mean - label) ** 2
+                index += 1
+
+    for target, entry in report.items():
+        train_labels = [row["log10_flux"] for row in train_rows if row["target"] == target]
+        test_labels = [row["log10_flux"] for row in test_rows if row["target"] == target]
+        baseline = float("nan")
+        if train_labels and test_labels:
+            mean_label = sum(train_labels) / len(train_labels)
+            baseline = math.sqrt(
+                sum((value - mean_label) ** 2 for value in test_labels) / len(test_labels)
+            )
+        entry["test_rmse_log10"] = math.sqrt(entry.pop("squared_error") / entry["count"])
+        entry["test_mean_baseline_rmse_log10"] = baseline
+        if baseline == baseline and entry["test_rmse_log10"] > 0:
+            entry["improvement_factor"] = baseline / entry["test_rmse_log10"]
+    return report
+
+
+def _pooled_baseline_rmse(
+    train_rows: list[dict[str, Any]], test_rows: list[dict[str, Any]]
+) -> float:
+    """RMSE of predicting each target with its own train-set mean."""
+    if not test_rows:
+        return float("nan")
+    total = 0.0
+    for row in test_rows:
+        train_labels = [
+            other["log10_flux"] for other in train_rows if other["target"] == row["target"]
+        ]
+        mean_label = sum(train_labels) / len(train_labels) if train_labels else 0.0
+        total += (row["log10_flux"] - mean_label) ** 2
+    return math.sqrt(total / len(test_rows))
 
 
 def train_surrogate(
@@ -383,12 +504,13 @@ def train_surrogate(
     validation_metrics = run_epoch(model, loaders["validation"], device)
     test_metrics = run_epoch(model, loaders["test"], device)
 
-    train_targets = [row["log10_growth"] for row in grid["rows"] if row["split"] == "train"]
-    mean_target = sum(train_targets) / len(train_targets)
+    # Per-target scoring, because the pooled loss mixes quantities whose spread
+    # differs by an order of magnitude: growth sits near 1 mmol gDW-1 h-1 while
+    # ATP turnover is around 70, so a single pooled RMSE would be dominated by
+    # the largest-flux target and would hide a bad growth fit.
+    train_rows = [row for row in grid["rows"] if row["split"] == "train"]
     test_rows = [row for row in grid["rows"] if row["split"] == "test"]
-    mean_baseline_mse = sum(
-        (row["log10_growth"] - mean_target) ** 2 for row in test_rows
-    ) / len(test_rows)
+    per_target = _per_target_metrics(model, loaders, device, partitions, train_rows, test_rows)
 
     metrics = {
         "status": "surrogate_trained",
@@ -399,6 +521,8 @@ def train_surrogate(
         "best_epoch": best_epoch,
         "seed": seed,
         "task": "log10_flux",
+        "targets": list(TARGETS),
+        "target_selectors": dict(TARGET_SELECTORS),
         "validation_tasks": {
             "log10_flux": {
                 "count": len(partitions["validation"]),
@@ -407,11 +531,19 @@ def train_surrogate(
         },
         "feature_ids": grid["feature_ids"],
         "rows": {name: len(values) for name, values in partitions.items()},
+        "scenarios": {
+            "train": len({row["scenario_id"] for row in train_rows}),
+            "test": len({row["scenario_id"] for row in test_rows}),
+        },
         "dropped_scenarios": len(grid["dropped"]),
         "train_rmse_log10": math.sqrt(train_metrics.loss),
         "validation_rmse_log10": math.sqrt(validation_metrics.loss),
         "test_rmse_log10": math.sqrt(test_metrics.loss),
-        "test_mean_baseline_rmse_log10": math.sqrt(mean_baseline_mse),
+        "per_target": per_target,
+        # Pooled figure kept alongside the breakdown: it is the single number a
+        # summary table can quote, while per_target is what tells you which
+        # quantity is actually well modelled.
+        "test_pooled_mean_baseline_rmse_log10": _pooled_baseline_rmse(train_rows, test_rows),
         "claim_boundary": SURROGATE_CLAIM_BOUNDARY,
     }
     save_checkpoint(
@@ -460,7 +592,7 @@ SCENARIOS_BY_NAME: dict[str, dict[str, Any]] = {
 
 
 def scenario_input_vector(
-    model_id: str, preset: str, glucose: float, oxygen: float
+    model_id: str, preset: str, glucose: float, oxygen: float, target: str = "growth"
 ) -> dict[str, Any]:
     """Build the surrogate's 8-wide fba_context input for one scenario.
 
@@ -475,9 +607,13 @@ def scenario_input_vector(
     scenario = SCENARIOS_BY_NAME[preset]
     if scenario.get("fusion") and model_id != "iJO1366":
         raise ValueError(f"scenario {preset!r} requires the iJO1366 fusion layer")
-    features = list(_scenario_vector(scenario, glucose, oxygen))
+    if target not in TARGET_SELECTORS:
+        raise ValueError(f"unknown target {target!r}; known: {list(TARGET_SELECTORS)}")
+    features = list(_scenario_vector(scenario, glucose, oxygen, target))
     return {
         "features": features,
+        "target": target,
+        "target_selector": TARGET_SELECTORS[target],
         "metadata": {
             "schema_version": 1,
             "feature_ids": list(SCENARIO_FEATURE_IDS),

@@ -187,6 +187,13 @@ pre.out { background: #10141b; color: #d6e2f2; border-radius: 8px; padding: 14px
           <p class="sub" data-i18n="surrIntro"></p>
           <label for="surr-model" data-i18n="surrSelect"></label>
           <select id="surr-model"></select>
+          <label for="surr-target" data-i18n="surrTarget"></label>
+          <select id="surr-target">
+            <option value="growth" data-i18n="surrTargetGrowth"></option>
+            <option value="nadph" data-i18n="surrTargetNadph"></option>
+            <option value="nadh" data-i18n="surrTargetNadh"></option>
+            <option value="atp" data-i18n="surrTargetAtp"></option>
+          </select>
           <button class="primary" id="btn-surr" data-i18n="surrBtn"></button>
           <div id="surr-results" style="margin-top:12px"></div>
         </div>
@@ -244,6 +251,10 @@ const I18N = {
     surrAbsErr: '绝对误差 (log10)',
     surrNeedTruth: '请先运行 FBA 获得真值，再进行代理对比',
     surrNoTruth: '尚未运行 FBA 真值',
+    surrTarget: '预测目标',
+    surrTargetGrowth: '生长速率', surrTargetNadph: 'NADPH 供给',
+    surrTargetNadh: 'NADH 供给', surrTargetAtp: 'ATP 供给',
+    surrTruthHint: '真值取自当前 FBA 结果（生长取生物量，辅因子取总周转）',
     batchTitle: '批量预测',
     batchIntro: '粘贴与 CLI predict 命令相同格式的 JSON——候选列表或带 "candidates" 键的对象。结果以表格和原始 JSON 呈现。',
     batchJsonLabel: '候选 JSON',
@@ -319,6 +330,10 @@ const I18N = {
     surrAbsErr: 'Absolute error (log10)',
     surrNeedTruth: 'Run the FBA truth first, then compare against the surrogate',
     surrNoTruth: 'No FBA truth yet',
+    surrTarget: 'Target',
+    surrTargetGrowth: 'Growth rate', surrTargetNadph: 'NADPH supply',
+    surrTargetNadh: 'NADH supply', surrTargetAtp: 'ATP supply',
+    surrTruthHint: 'Truth is read from the current FBA result (biomass for growth, gross turnover for cofactors)',
     batchTitle: 'Batch prediction',
     batchIntro: 'Paste the same JSON the CLI predict command reads — a list of candidates or an object with a "candidates" key. Results appear as a table plus raw JSON.',
     batchJsonLabel: 'Candidates JSON',
@@ -758,21 +773,34 @@ function renderSurrogateSelect() {
 $('btn-surr').addEventListener('click', async () => {
   try {
     showError(null);
+    const target = $('surr-target').value;
     const payload = await api('/api/fba/surrogate_predict', {
       model_id: $('g-model').value,
       preset: $('g-preset').value,
       glucose: parseFloat($('g-glc').value) || 15,
       oxygen: parseFloat($('g-o2').value) || 20,
+      target: target,
     });
-    const truth = (lastFba && lastFba.growth != null) ? lastFba.growth : null;
-    const err = truth != null ? Math.abs(Math.log10(payload.growth) - Math.log10(truth)) : null;
+    // Truth for the same target: biomass for growth, gross turnover for cofactors.
+    let truth = null;
+    if (lastFba) {
+      if (target === 'growth') {
+        truth = lastFba.growth;
+      } else if (lastFba.cofactor_turnover && lastFba.cofactor_turnover[target]
+                 && lastFba.cofactor_turnover[target].status === 'reported') {
+        truth = lastFba.cofactor_turnover[target].gross_turnover;
+      }
+    }
+    const err = truth != null && truth > 0 ? Math.abs(Math.log10(payload.value) - Math.log10(truth)) : null;
+    const pct = truth != null && truth > 0 ? Math.abs(payload.value - truth) / truth * 100 : null;
     $('surr-results').innerHTML = `
       <table><thead><tr><th>${t('surrGrowth')}</th><th>${t('surrTruth')}</th><th>${t('surrAbsErr')}</th></tr></thead>
       <tbody><tr>
-        <td class="num"><strong>${payload.growth.toFixed(4)}</strong></td>
+        <td class="num"><strong>${payload.value.toFixed(4)}</strong></td>
         <td class="num">${truth != null ? truth.toFixed(4) : t('surrNoTruth')}</td>
-        <td class="num">${err != null ? err.toFixed(4) : '—'}</td>
+        <td class="num">${err != null ? err.toFixed(4) + ` (${pct.toFixed(1)}%)` : '—'}</td>
       </tr></tbody></table>
+      <p class="note">${esc(t('surrTruthHint'))}</p>
       <p class="note">${esc(payload.claim_boundary)}</p>`;
   } catch (e) { showError(e.message); }
 });
