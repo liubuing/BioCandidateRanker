@@ -507,3 +507,101 @@ def test_marginal_objective_is_reported_when_named(iml1515):
     )
     assert result["objective"] is not None
     assert result["objective"]["slope_per_unit_product"] is not None
+
+
+# --- compartment-aware accounting ---------------------------------------------------
+
+
+@pytest.mark.parametrize("model_id", ["iML1515", "iJO1366", "yeast_metatwin"])
+def test_compartmental_copies_finds_the_declared_anchor_compartment(model_id):
+    """The anchor id must appear in its own expansion, keyed by its compartment."""
+    model = fba_context.load_model(model_id)
+    for label, anchor_id in fba_context.MODEL_REGISTRY[model_id]["cofactor_metabolites"].items():
+        copies = fba_context.compartmental_copies(model, anchor_id)
+        assert copies, f"{model_id}/{label}"
+        anchor = model.metabolites.get_by_id(anchor_id)
+        assert copies[anchor.compartment] == anchor_id, (model_id, label)
+
+
+def test_compartmental_copies_does_not_leak_unrelated_metabolites(yeast):
+    """Expansion is by exact name, so a similar name must not be swept in."""
+    copies = fba_context.compartmental_copies(yeast, "s_1212")
+    assert set(copies.values()) <= {m.id for m in yeast.metabolites}
+    for metabolite_id in copies.values():
+        assert (yeast.metabolites.get_by_id(metabolite_id).name or "").strip() == "NADPH"
+
+
+def test_yeast_nadph_has_copies_in_several_compartments(yeast):
+    """A single-pool figure would hide the pool the peroxisomal route actually uses."""
+    copies = fba_context.compartmental_copies(yeast, "s_1212")
+    assert {"c", "p", "m"} <= set(copies), copies
+    assert copies["p"] == "s_1215"
+    assert copies["m"] == "s_1214"
+
+
+def test_compartment_report_matches_the_flat_report_at_the_anchor(yeast):
+    result = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    flat = result["cofactor_turnover"]["nadph"]["gross_turnover"]
+    by_compartment = result["cofactor_by_compartment"]["nadph"]
+    # the flat report is anchored on the cytosolic copy, so they must agree there
+    assert by_compartment["c"]["gross_turnover"] == pytest.approx(flat)
+    assert by_compartment["c"]["metabolite_id"] == "s_1212"
+
+
+def test_compartment_report_marks_unused_pools(yeast):
+    result = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    report = result["cofactor_by_compartment"]
+    for label, compartments in report.items():
+        assert compartments, label
+        for name, info in compartments.items():
+            if info.get("status") != "reported":
+                continue
+            assert info["active"] is (info["gross_turnover"] > 1e-9), (label, name)
+    # nadph exists in the lipid particle but nothing routes through it here
+    assert report["nadph"]["lp"]["active"] is False
+
+
+# --- enzyme capacity scan -----------------------------------------------------------
+
+
+def test_capacity_scan_reports_the_knee_and_refines_it(iml1515):
+    """A coarse grid must not be the final answer: the knee is bisected."""
+    scan = fba_context.enzyme_capacity_scan(
+        iml1515,
+        "PFK",
+        "BIOMASS_Ec_iML1515_core_75p37M",
+        capacities=(1.0, 2.0, 5.0, 10.0, 20.0),
+    )
+    assert scan["status"] == "reported"
+    assert scan["unconstrained_target"] > 0
+    assert scan["knee_capacity"] is not None
+    if scan["knee_rounded_from_grid"] is not None:
+        assert scan["knee_rounded_from_grid"] <= scan["knee_capacity"] + 1e-9
+
+
+def test_capacity_scan_shows_the_target_falling_when_the_cap_binds(iml1515):
+    """Structural contract: monotone in the cap, reaching the unconstrained optimum.
+
+    This model routes around a PFK cap entirely - growth is unchanged even at a
+    ceiling of 0.1, because the pentose phosphate and Entner-Doudoroff routes can
+    carry the flux - so no binding is claimed here. The strict behaviour where
+    the cap IS the target is asserted in the royal jelly acid suite, on the
+    peroxisomal NADPH producer where it genuinely holds.
+    """
+    scan = fba_context.enzyme_capacity_scan(
+        iml1515,
+        "PFK",
+        "BIOMASS_Ec_iML1515_core_75p37M",
+        capacities=(0.1, 1.0, 100.0),
+    )
+    targets = [row["target"] for row in scan["rows"]]
+    assert all(target is not None for target in targets)
+    # monotone up to solver tolerance: repeated solves of the same optimum differ
+    # around the 14th decimal, which a strict sorted() comparison rejects
+    assert all(a <= b + 1e-9 for a, b in zip(targets, targets[1:])), targets
+    assert targets[-1] == pytest.approx(scan["unconstrained_target"])
+    assert scan["knee_capacity"] is not None

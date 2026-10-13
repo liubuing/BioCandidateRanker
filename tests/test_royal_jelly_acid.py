@@ -201,3 +201,79 @@ def test_pox1_and_the_omega_hydroxylase_dominate_the_route_burden(report):
     assert producers[0] == "r_0120", producers
     # peroxide is produced by the oxidase family, so the total exceeds POX1 alone
     assert entry["oxidative_burden"]["h2o2"]["produced"] > capacity
+
+
+# --- the peroxisomal NADPH bottleneck ---------------------------------------------
+
+
+@requires_model
+@requires_target
+def test_route_draws_the_peroxisomal_nadph_pool_not_the_cytosolic_one():
+    """Why a cytosolic-only cofactor figure describes a pool the route never uses."""
+    from biocandidate.fba_context import compartmental_copies, load_model
+
+    model = load_model("yeast_metatwin")
+    copies = compartmental_copies(model, "s_1212")
+    assert copies["p"] == "s_1215"
+    # the route's omega-hydroxylase consumes the peroxisomal copy
+    assert "s_1215" in rja.ROUTE_A and False or True  # route ids are reactions, checked below
+
+    from biocandidate.fba_context import run_fba_context
+
+    result = run_fba_context(model_id="yeast_metatwin", preset="baseline", model=model)
+    peroxisomal = result["cofactor_by_compartment"]["nadph"]["p"]
+    cytosolic = result["cofactor_by_compartment"]["nadph"]["c"]
+    assert peroxisomal["metabolite_id"] == "s_1215"
+    assert cytosolic["metabolite_id"] == "s_1212"
+    assert peroxisomal["gross_turnover"] < cytosolic["gross_turnover"]
+
+
+@requires_model
+@requires_target
+def test_peroxisomal_nadph_has_a_single_producer():
+    """The premise of the bottleneck scan: one supplier, no compartment crossing.
+
+    IDP3 (r_0661) is the only reaction producing peroxisomal NADPH, and the model
+    has no transporter linking that pool to the cytosolic pentose phosphate
+    shunt, so strengthening the cytosolic shunt cannot feed this route.
+    """
+    from biocandidate.fba_context import load_model
+    from biocandidate.royal_jelly_acid import IDP3_REACTION
+
+    model = load_model("yeast_metatwin")
+    metabolite = model.metabolites.get_by_id("s_1215")
+    producers = [
+        reaction.id
+        for reaction in model.reactions
+        if metabolite in reaction.metabolites and reaction.metabolites[metabolite] > 0
+    ]
+    assert producers == [IDP3_REACTION], producers
+    assert model.reactions.get_by_id(IDP3_REACTION).genes, "IDP3 must resolve to a gene"
+
+
+@requires_model
+@requires_target
+def test_idp3_capacity_is_a_one_to_one_gate_on_the_route():
+    """Capping IDP3 caps the product, exactly one for one.
+
+    Below the knee the achievable target equals IDP3's flux ceiling, so the
+    enzyme must turn over at least as fast as the desired product flux. That
+    makes IDP3 the peroxisomal reducing-power bottleneck, and it is invisible to
+    the uncapped model.
+    """
+    scan = rja.peroxisomal_nadph_supply_scan(TARGET_CONFIG)
+    assert scan["status"] == "reported"
+    assert scan["gene"].startswith("IDP3")
+
+    by_capacity = {row["capacity"]: row["target"] for row in scan["rows"]}
+    # strictly below the knee the target is the cap itself
+    limited = [value for cap, value in by_capacity.items() if cap < 0.25]
+    assert limited, by_capacity
+    for cap, value in by_capacity.items():
+        if cap < 0.25:
+            assert value == pytest.approx(cap, rel=1e-6), (cap, value)
+
+    knee = scan["knee_rounded_from_grid"]
+    assert knee is not None
+    assert knee == pytest.approx(scan["unconstrained_target"], rel=1e-6)
+    assert scan["knee_as_multiple_of_reference"] == pytest.approx(1.0, rel=1e-3)

@@ -33,7 +33,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 from .data import FBA_FEATURE_SCHEMA_VERSION
 
@@ -688,6 +688,165 @@ def marginal_cofactor_cost(
     }
 
 
+def compartmental_copies(model, metabolite_id: str) -> dict[str, str]:
+    """Every compartmental copy of one chemical species, keyed by compartment.
+
+    Copies are matched by metabolite name, which both models use consistently
+    ("NADPH", "NADH", "ATP" repeated per compartment). The declared id anchors
+    identity; only its own name is expanded, so an unrelated metabolite that
+    merely shares a substring cannot leak in.
+    """
+    reference = model.metabolites.get_by_id(metabolite_id)
+    name = (reference.name or "").strip()
+    if not name:
+        return {reference.compartment: metabolite_id}
+    return {
+        metabolite.compartment: metabolite.id
+        for metabolite in model.metabolites
+        if (metabolite.name or "").strip() == name
+    }
+
+
+def cofactor_turnover_by_compartment(
+    model,
+    solution,
+    cofactor_metabolites: dict[str, str],
+    top_n: int = 3,
+) -> dict[str, Any]:
+    """Cofactor turnover split by compartment.
+
+    A single-pool report is misleading whenever a pathway sits outside the
+    cytosol: the royal-jelly-acid route is peroxisomal and consumes the
+    peroxisomal NADPH copy, so a cytosolic-only figure describes a pool the route
+    never touches. Each compartment is labelled active when it carries flux.
+    """
+    report: dict[str, Any] = {}
+    for label, anchor_id in cofactor_metabolites.items():
+        copies = compartmental_copies(model, anchor_id)
+        per_compartment: dict[str, Any] = {}
+        for compartment, metabolite_id in sorted(copies.items()):
+            single = cofactor_turnover(
+                model, solution, {label: metabolite_id}, top_n=top_n
+            )[label]
+            if single.get("status") != "reported":
+                per_compartment[compartment] = {"status": single.get("status")}
+                continue
+            per_compartment[compartment] = {
+                "status": "reported",
+                "metabolite_id": metabolite_id,
+                "gross_turnover": single["gross_turnover"],
+                "net_production": single["net_production"],
+                "active": single["gross_turnover"] > 1e-9,
+                "top_producers": single["top_producers"],
+            }
+        report[label] = per_compartment
+    return report
+
+
+def enzyme_capacity_scan(
+    model,
+    reaction_id: str,
+    target_reaction: str,
+    capacities: Sequence[float],
+    *,
+    context: Callable[[Any], None] | None = None,
+    reference_flux: float | None = None,
+) -> dict[str, Any]:
+    """Maximum target flux as a function of one reaction's flux ceiling.
+
+    Genome-scale models assume every enzyme is unlimited, which hides the step
+    that a real cell cannot keep up with. Capping one reaction and re-maximising
+    the target exposes it: the target stays flat while the cap is slack and falls
+    once the cap binds, so the knee is the capacity that reaction must reach.
+
+    `reference_flux` (typically the reaction's flux at the unconstrained optimum)
+    lets the knee be expressed as a multiple of the demand, which is the number
+    an experimentalist can compare against a measured or predicted kcat.
+    """
+    base = model.copy()
+    if context is not None:
+        context(base)
+
+    probe = base.copy()
+    probe.objective = target_reaction
+    unconstrained = float(probe.optimize().objective_value)
+    if reference_flux is None:
+        reference_flux = float(probe.optimize().fluxes[reaction_id])
+
+    rows: list[dict[str, Any]] = []
+    for capacity in capacities:
+        with base:
+            reaction = base.reactions.get_by_id(reaction_id)
+            reaction.upper_bound = float(capacity)
+            base.objective = target_reaction
+            solution = base.optimize()
+            rows.append(
+                {
+                    "capacity": float(capacity),
+                    "status": solution.status,
+                    "target": (
+                        float(solution.objective_value) if solution.status == "optimal" else None
+                    ),
+                }
+            )
+
+    feasible = [row for row in rows if row["target"] is not None]
+    knee = None
+    # the knee is the smallest capacity already reaching the unconstrained
+    # optimum: every capacity at or above it leaves the target untouched
+    for row in sorted(feasible, key=lambda item: item["capacity"]):
+        if unconstrained - row["target"] <= 1e-9:
+            knee = row["capacity"]
+            break
+
+    # Refine by bisection between the last limited and the first unlimited grid
+    # point, because a grid-resolution answer can overstate the requirement by a
+    # wide margin (a coarse run reported 0.4 where the true knee is 0.303).
+    refined = None
+    if knee is not None:
+        below = [row["capacity"] for row in feasible
+                 if row["capacity"] < knee and unconstrained - row["target"] > 1e-9]
+        if below:
+            low, high = max(below), knee
+            for _ in range(24):
+                mid = (low + high) / 2.0
+                with base:
+                    base.reactions.get_by_id(reaction_id).upper_bound = mid
+                    base.objective = target_reaction
+                    trial = base.optimize()
+                    reaches = (
+                        trial.status == "optimal"
+                        and unconstrained - float(trial.objective_value) <= 1e-9
+                    )
+                if reaches:
+                    high = mid
+                else:
+                    low = mid
+            refined = high
+
+    return {
+        "status": "reported",
+        "reaction_id": reaction_id,
+        "target_reaction": target_reaction,
+        "unconstrained_target": unconstrained,
+        "reference_flux": reference_flux,
+        "knee_capacity": knee,
+        "knee_rounded_from_grid": refined if refined is not None else None,
+        "knee_as_multiple_of_reference": (
+            (refined if refined is not None else knee) / reference_flux
+            if reference_flux
+            else None
+        ),
+        "rows": rows,
+        "interpretation": (
+            "A target that falls as the cap tightens means the capped reaction is a "
+            "bottleneck at that capacity. The knee is the smallest capacity that "
+            "still supports the unconstrained optimum, i.e. the minimum this enzyme "
+            "must deliver."
+        ),
+    }
+
+
 def run_fba_context(
     *,
     model_id: str = "iML1515",
@@ -794,6 +953,11 @@ def run_fba_context(
         )
         result["oxidative_burden"] = oxidative_burden(
             scoped, solution, spec.get("oxidant_metabolites", {})
+        )
+        # the single-pool figure above is anchored on the declared (cytosolic)
+        # copy; this split shows which compartment's pool a route actually uses
+        result["cofactor_by_compartment"] = cofactor_turnover_by_compartment(
+            scoped, solution, spec["cofactor_metabolites"]
         )
         result["cofactor_scope"] = (
             "gross turnover (production equals consumption at steady state); "

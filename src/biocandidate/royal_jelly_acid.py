@@ -37,6 +37,8 @@ from .fba_context import (
     CORE_COFACTORS,
     MODEL_REGISTRY,
     cofactor_turnover,
+    cofactor_turnover_by_compartment,
+    enzyme_capacity_scan,
     load_model,
     marginal_cofactor_cost,
     oxidative_burden,
@@ -218,6 +220,44 @@ def marginal_route_cost(
     return report
 
 
+IDP3_REACTION = "r_0661"  # peroxisomal NADP-isocitrate dehydrogenase
+
+
+def peroxisomal_nadph_supply_scan(
+    target_config_path: str | Path,
+    *,
+    route: str = "A",
+    pox1_closed: bool = False,
+    capacities: tuple[float, ...] = (
+        0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 2.0,
+    ),
+) -> dict[str, Any]:
+    """Is the peroxisomal NADPH supply the bottleneck for this route?
+
+    In this model the peroxisomal NADPH pool has exactly one producer, the
+    peroxisomal isocitrate dehydrogenase IDP3 (r_0661), there is no
+    compartment-crossing transporter connecting it to the cytosolic pentose
+    phosphate shunt, and the model leaves IDP3 uncapped. Capping it and
+    re-maximising the target shows whether the route depends on a flux IDP3 must
+    actually be able to deliver.
+    """
+    model = load_model(MODEL_ID)
+    build_candidate_extension(model, load_target_config(target_config_path))
+    report = enzyme_capacity_scan(
+        model,
+        IDP3_REACTION,
+        TARGET_DEMAND,
+        capacities,
+        context=route_context(route, pox1_closed=pox1_closed),
+    )
+    report["gene"] = "IDP3 (YNL009W)"
+    report["role"] = "sole producer of the peroxisomal NADPH pool the route consumes"
+    report["route"] = route
+    report["pox1_closed"] = pox1_closed
+    report["claim_boundary"] = CLAIM_BOUNDARY
+    return report
+
+
 def analyze(
     target_config_path: str | Path,
     *,
@@ -291,6 +331,11 @@ def analyze(
                 # flavins are useless here (see the module docstring), so the
                 # degradation side is read from oxygen and peroxide instead
                 burden = oxidative_burden(model, solution, spec["oxidant_metabolites"])
+                # the route is peroxisomal, so the cytosolic-only figures describe
+                # a pool it never touches; report the split explicitly
+                entry["cofactor_by_compartment"] = cofactor_turnover_by_compartment(
+                    model, solution, spec["cofactor_metabolites"]
+                )
                 entry["oxidative_burden"] = {
                     label: {
                         "produced": burden[label].get("produced"),
@@ -397,9 +442,15 @@ def main() -> int:
     parser.add_argument("--marginal", action="store_true",
                         help="report the marginal cofactor cost per unit product")
     parser.add_argument("--route", default="A", choices=("A", "B"))
+    parser.add_argument("--supply-scan", action="store_true",
+                        help="scan the peroxisomal NADPH producer's capacity ceiling")
     args = parser.parse_args()
 
-    if args.marginal:
+    if args.supply_scan:
+        report = peroxisomal_nadph_supply_scan(
+            args.target_config, route=args.route, pox1_closed=args.close_pox1
+        )
+    elif args.marginal:
         report = marginal_route_cost(
             args.target_config, route=args.route, pox1_closed=args.close_pox1
         )
