@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "purpose": "F1a prospective prediction freeze for the royal jelly acid programme",
+  "frozen_on": "2026-10-13T04:58:03+00:00",
+  "status": "frozen_before_assay",
+  "substrate": {
+    "name": "10-oxodecanoate",
+    "note": "the F1a substrate, i.e. the second oxidation step of the 10-HDA route"
+  },
+  "assay_plan": {
+    "design": "purified enzyme or competent lysate, kcat and Km on 10-oxodecanoate",
+    "detection": "NADH coupled at 340 nm; the coupling enzyme must be shown not to be rate limiting",
+    "condition_matching": "pH, temperature, buffer and enzyme concentration recorded per enzyme so the four are compared under matched conditions"
+  },
+  "predictions": [
+    {
+      "uniprot": "P47771",
+      "gene": "ALD2",
+      "category_role": "broad aldehyde dehydrogenase",
+      "candidate_id": "ALD2_P47771_10oxo",
+      "predicted_log10_kcat": 1.3663005828857422,
+      "predicted_kcat_s-1": 23.24344959996123,
+      "predicted_standard_deviation_log10": 1.2744886875152588,
+      "predicted_rank": 1
+    },
+    {
+      "uniprot": "P54114",
+      "gene": "ALD3",
+      "category_role": "broad aldehyde dehydrogenase",
+      "candidate_id": "ALD3_P54114_10oxo",
+      "predicted_log10_kcat": 1.3515617847442627,
+      "predicted_kcat_s-1": 22.467863914935123,
+      "predicted_standard_deviation_log10": 1.2817271947860718,
+      "predicted_rank": 2
+    },
+    {
+      "uniprot": "P54115",
+      "gene": "ALD6",
+      "category_role": "broad aldehyde dehydrogenase",
+      "candidate_id": "ALD6_P54115_10oxo",
+      "predicted_log10_kcat": 1.2601690292358398,
+      "predicted_kcat_s-1": 18.2040923166652,
+      "predicted_standard_deviation_log10": 1.2477121353149414,
+      "predicted_rank": 3
+    },
+    {
+      "uniprot": "Q04458",
+      "gene": "HFD1",
+      "category_role": "long-chain fatty aldehyde dehydrogenase (category evidence)",
+      "candidate_id": "HFD1_Q04458_10oxo",
+      "predicted_log10_kcat": 0.7002682089805603,
+      "predicted_kcat_s-1": 5.014968494276093,
+      "predicted_standard_deviation_log10": 1.3208853006362915,
+      "predicted_rank": 4
+    }
+  ],
+  "prediction_identity": {
+    "predictions_path": "artifacts/10h2da-yeast-prediction/task2_10hda_terminal_oxidation-predictions.json",
+    "predictions_sha256": "665df1f86179b8ee7e89b284412312f5b6c9201b0e9f6ba7f7ba189bbe38b610",
+    "input_spec_path": "artifacts/10h2da-yeast-prediction/task2_10hda_terminal_oxidation.json",
+    "input_spec_sha256": "ac07d870f72393cf1a273654111f9fe586491544b8b319222181fe068ba777c9",
+    "sequence_files": [
+      [
+        "B8QHP1.fasta",
+        "1db2d0985492e2d52ed763f68416bd9aa254476b273d28d7f8768bd56acc20f7"
+      ],
+      [
+        "P00330.fasta",
+        "9c9dabcf20a38f423a67aecd8bf17e15368ec48842d033dfcecb307a2397414f"
+      ],
+      [
+        "P00331.fasta",
+        "632ba604824298d8f00a782495d397c677a183a7727a3ae75bfb4bacc0e52c96"
+      ],
+      [
+        "P13711.fasta",
+        "a0e76ee1f31984b8731de87a93437566dd0151e0103b13e9de23e493b85ed51b"
+      ],
+      [
+        "P16603.fasta",
+        "d1d15c5a3a4d5bf4a9f95d5a37ba35ef42055d220f8d50b82ae115a46a9ddde1"
+      ],
+      [
+        "P27796.fasta",
+        "0e70e388e433215b455a0c34a47561fb387f25d8fdf2c7009870545b57ff2af1"
+      ],
+      [
+        "P32771.fasta",
+        "4e6bd3c4956caafcd3b46434adadef0fc404f5545ab53fa8af3aaab6c828552a"
+      ],
+      [
+        "P39518.fasta",
+        "18bf84077cbaff64f71b07cff21377254bc109728805fd8fe7bdfe03213a0265"
+      ],
+      [
+        "P41903.fasta",
+        "4e7d71393717fc160baa1ec3dba0d882e128e32d00da9b1d1ec70ab3f173f8fa"
+      ],
+      [
+        "P47771.fasta",
+        "a7205e7f8df1de419ed1cc7e049b7e27a03f5026bffa643e14f64d6c9db87379"
+      ],
+      [
+        "P54114.fasta",
+        "0fb3f9cbf65a333c47094d3b37b80a67feb122c935835f685e959f818342e03a"
+      ],
+      [
+        "P54115.fasta",
+        "41559d1018386750719a4ca10db5b693310e94527571915798cd26879bb7d750"
+      ],
+      [
+        "Q02207.fasta",
+        "ba3fbb0dbf5b8e91192c079d0f5dac16ec67829e7d340bff0cf9368196d940de"
+      ],
+      [
+        "Q04458.fasta",
+        "b412e23fac2e190d04f3850817ae7861c3d7ac5e8471547c49204c83184347ec"
+      ],
+      [
+        "Q9Y8G7.fasta",
+        "a93b7195fdb3432ef47c35d2780a69a31435edb1b4c5784d4801a9f7f51fd402"
+      ]
+    ]
+  },
+  "decision_rule": {
+    "primary": "Spearman rank correlation between predicted and measured kcat across the four enzymes",
+    "secondary": "whether the measured best enzyme matches the predicted rank-1 enzyme",
+    "pre_registered": true,
+    "note": "Fixed now, before any measurement. If the primary statistic is computed differently later, that must be reported as a deviation."
+  },
+  "discriminating_power_check": {
+    "predicted_spread_log10": 0.6660323739051819,
+    "max_standard_deviation_log10": 1.3208853006362915,
+    "spread_exceeds_uncertainty": false,
+    "note": "Recorded before the assay because it bounds what the test can show. If the predicted spread is smaller than the model's own standard deviation, the ordering is not statistically distinguishable and a measured disagreement would not refute the model."
+  },
+  "claim_boundary": "Prospective prediction freeze only. The predictions were produced before this manifest and are uncalibrated; the assay has not been performed. Agreement or disagreement will be reported as recorded, without selecting the comparison rule after seeing the measurements."
+}

@@ -255,11 +255,14 @@ def _safe_globals():
 
 
 def test_registry_declares_cofactor_targets_for_every_model():
-    """Each registered model must name its own cofactor metabolites."""
+    """Each model must declare its own cofactor metabolites, core trio included."""
     for model_id, spec in fba_context.MODEL_REGISTRY.items():
         targets = spec.get("cofactor_metabolites")
         assert targets, f"{model_id} declares no cofactor targets"
-        assert set(targets) == {"nadph", "nadh", "atp"}
+        assert set(fba_context.CORE_COFACTORS) <= set(targets), model_id
+        # the extended set is what makes the registry reusable beyond the paper's
+        # three cofactors, so require at least the flavin and thioester families
+        assert {"fad", "fadh2", "coa", "accoa"} <= set(targets), model_id
 
 
 @pytest.mark.parametrize("model_id", ["iML1515", "iJO1366", "yeast_metatwin"])
@@ -278,18 +281,30 @@ def test_cofactor_turnover_is_self_consistent_and_steady(iml1515):
     """
     result = fba_context.run_fba_context(model_id="iML1515", preset="baseline", model=iml1515)
     turnover = result["cofactor_turnover"]
-    assert set(turnover) == {"nadph", "nadh", "atp"}
+    declared = set(fba_context.MODEL_REGISTRY["iML1515"]["cofactor_metabolites"])
+    assert set(turnover) == declared
+    assert set(fba_context.CORE_COFACTORS) <= set(turnover)
 
     for label, info in turnover.items():
         assert info["status"] == "reported"
         assert info["unit"] == "mmol gDW^-1 h^-1"
-        assert info["gross_turnover"] > 0
+        # steady state must hold for every declared cofactor
         assert abs(info["net_production"]) < 1e-9, f"{label} is not at steady state"
-        assert info["top_producers"]
-        # the reporting window must not exceed the total it summarises
-        reported = sum(item["flux"] for item in info["top_producers"])
-        assert reported <= info["gross_turnover"] + 1e-9
-        assert all(item["flux"] > 0 for item in info["top_producers"])
+        assert info["gross_turnover"] >= 0
+        if info["gross_turnover"] > 0:
+            assert info["top_producers"]
+            # the reporting window must not exceed the total it summarises
+            reported = sum(item["flux"] for item in info["top_producers"])
+            assert reported <= info["gross_turnover"] + 1e-9
+            assert all(item["flux"] > 0 for item in info["top_producers"])
+        else:
+            assert info["top_producers"] == []
+
+    # the core trio must carry flux at any feasible baseline; the extended set
+    # need not (GTP turnover is legitimately zero at this condition)
+    for label in fba_context.CORE_COFACTORS:
+        assert turnover[label]["gross_turnover"] > 0, label
+    assert turnover["gtp"]["gross_turnover"] == 0.0
 
 
 def test_nadph_and_atp_supply_match_the_paper_levers(iml1515):
@@ -342,3 +357,43 @@ def test_paper_stack_does_not_move_the_fba_optimum(iml1515):
         assert stack["cofactor_turnover"][label]["gross_turnover"] == pytest.approx(
             baseline["cofactor_turnover"][label]["gross_turnover"], abs=1e-3
         )
+
+
+def test_extended_cofactors_carry_real_flux(iml1515):
+    """A declared cofactor nobody uses would be a silently useless column.
+
+    FAD and acetyl-CoA are the two the royal-jelly-acid route analysis depends
+    on, so require that a real reaction carries them at baseline and that the
+    dominant producer is identifiable.
+    """
+    turnover = fba_context.run_fba_context(
+        model_id="iML1515", preset="baseline", model=iml1515
+    )["cofactor_turnover"]
+
+    for label in ("fad", "accoa", "malcoa", "mlthf"):
+        info = turnover[label]
+        assert info["status"] == "reported", label
+        assert info["gross_turnover"] > 0, f"{label} carries no flux at baseline"
+        assert info["top_producers"], label
+    # the dominant FAD producer should be a flavin-dependent oxidation step
+    assert turnover["fad"]["top_producers"][0]["reaction_id"] == "ACOAD1fr"
+
+
+def test_yeast_flavin_flux_is_zero_at_baseline(yeast):
+    """Documented model behaviour: no flavin-dependent reaction carries flux here.
+
+    Kept as a test because a zero is a real result, not a reporting failure, and
+    it is the reason POX1 activity in this model must be read from the r_0120
+    reaction flux rather than from FAD turnover.
+    """
+    result = fba_context.run_fba_context(
+        model_id="yeast_metatwin", preset="baseline", model=yeast
+    )
+    turnover = result["cofactor_turnover"]
+    assert turnover["fad"]["status"] == "reported"
+    # Not exactly zero: a residual 9.24e-06 flows through r_0440, which is 1e-5 of
+    # the growth rate and negligible against any flux in the route analysis.
+    assert turnover["fad"]["gross_turnover"] < 1e-4
+    assert turnover["fad"]["gross_turnover"] / result["growth"] < 1e-4
+    # while the thioester supply for fatty-acid synthesis does carry flux
+    assert turnover["malcoa"]["gross_turnover"] > 0

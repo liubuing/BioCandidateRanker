@@ -74,14 +74,59 @@ YEAST_FEATURE_REACTIONS = (
     "r_0120",  # acyl-CoA oxidase (decanoyl-CoA), POX1 precursor gate
 )
 
-# Cofactor accounting targets, per model naming. The paper's endpoint is the
+# Cofactor accounting targets, declared per model. The paper's endpoint is the
 # intracellular NADPH / NADH / ATP pool; FBA cannot report a pool level, so the
 # governed quantity here is gross turnover (production == consumption at steady
 # state) plus the reactions that dominate it.
-E_COLI_COFACTORS = {"nadph": "nadph_c", "nadh": "nadh_c", "atp": "atp_c"}
-# The yeast model uses s_ ids and keeps separate cytosolic / ER / mitochondrial
-# copies; only the cytosolic compartment is accounted here.
-YEAST_COFACTORS = {"nadph": "s_1212", "nadh": "s_1203", "atp": "s_0434"}
+#
+# CORE_COFACTORS is the subset the distilled surrogates train on and the set the
+# workbench panel leads with. Everything declared in a model's
+# cofactor_metabolites map is reported by run_fba_context, so the registry can
+# grow without touching the surrogate contract.
+CORE_COFACTORS = ("nadph", "nadh", "atp")
+
+E_COLI_COFACTORS = {
+    # core redox and energy
+    "nadph": "nadph_c",
+    "nadh": "nadh_c",
+    "atp": "atp_c",
+    # oxidised partners: turnover is reportable, the redox ratio is not (FBA has
+    # no concentrations)
+    "nad": "nad_c",
+    "nadp": "nadp_c",
+    # flavins: 29 FAD and 25 FADH2 reactions in iML1515
+    "fad": "fad_c",
+    "fadh2": "fadh2_c",
+    # thioesters: CoA appears in 80 reactions, acetyl-CoA in 41, malonyl-CoA is
+    # the fatty-acid synthase substrate
+    "coa": "coa_c",
+    "accoa": "accoa_c",
+    "malcoa": "malcoa_c",
+    # one-carbon carriers (the pantothenate paper's third lever)
+    "thf": "thf_c",
+    "mlthf": "mlthf_c",
+    "gtp": "gtp_c",
+}
+
+# The yeast model uses s_ ids and keeps separate copies per compartment; the
+# cytosolic one is declared unless the compartment is functionally required.
+# Note POX1 (r_0120) is written without an explicit flavin in this model, so its
+# activity must be read from the reaction flux itself, not from FAD turnover.
+YEAST_COFACTORS = {
+    "nadph": "s_1212",
+    "nadh": "s_1203",
+    "atp": "s_0434",
+    "nad": "s_1198",
+    "nadp": "s_1207",
+    "fad": "s_0687",
+    "fadh2": "s_0689",
+    "coa": "s_0529",
+    "accoa": "s_0373",
+    "malcoa": "s_1101",
+    "thf": "s_1487",
+    "mlthf": "s_0306",
+    "gtp": "s_0785",
+}
 
 MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     "iML1515": {

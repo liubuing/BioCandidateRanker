@@ -710,15 +710,19 @@ function renderFbaResult(payload) {
 function renderCofactorTurnover(payload) {
   const turnover = payload.cofactor_turnover;
   if (!turnover) return '';
-  const rows = ['nadph', 'nadh', 'atp'].map(label => {
+  // Render every declared cofactor, core trio first, then the extended set.
+  const CORE = ['nadph', 'nadh', 'atp'];
+  const order = [...CORE, ...Object.keys(turnover).filter(k => !CORE.includes(k))];
+  const rows = order.map(label => {
     const info = turnover[label];
     if (!info || info.status !== 'reported') {
       return `<tr><td>${esc(label.toUpperCase())}</td><td colspan="3"><span class="pill dim">${esc(info ? info.status : 'absent')}</span></td></tr>`;
     }
     const sources = info.top_producers
-      .map(item => `${esc(item.reaction_id)} ${item.flux.toFixed(2)}`).join(', ');
+      .map(item => `${esc(item.reaction_id)} ${item.flux.toFixed(2)}`).join(', ') || '—';
+    const isCore = CORE.includes(label);
     return `<tr>
-      <td><strong>${esc(label.toUpperCase())}</strong><div class="sub mono">${esc(info.metabolite_id)}</div></td>
+      <td><strong>${esc(label.toUpperCase())}</strong>${isCore ? ' <span class="pill dim">论文口径</span>' : ''}<div class="sub mono">${esc(info.metabolite_id)}</div></td>
       <td class="num">${info.gross_turnover.toFixed(3)}</td>
       <td class="metrics">${sources}</td>
       <td class="num metrics">${info.net_production.toExponential(1)}</td>

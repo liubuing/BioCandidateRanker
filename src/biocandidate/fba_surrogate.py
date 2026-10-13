@@ -180,7 +180,7 @@ def run_fba_grid(
     """
     if model_id not in MODEL_REGISTRY:
         raise ValueError(f"unknown model {model_id!r}; known: {sorted(MODEL_REGISTRY)}")
-    from .fba_context import add_fusion_pathways, cofactor_turnover
+    from .fba_context import CORE_COFACTORS, add_fusion_pathways, cofactor_turnover
 
     spec = MODEL_REGISTRY[model_id]
     base = model if model is not None else load_model(model_id)
@@ -236,10 +236,15 @@ def run_fba_grid(
             growth = float(solution.objective_value)
             if growth > 1e-9:
                 targets["growth"] = growth
+            # only the core trio: the surrogate contract is fixed at these three
+            # plus growth, and scanning all declared cofactors per scenario would
+            # multiply the grid cost for targets nothing consumes
             turnover = cofactor_turnover(
-                scoped, solution, spec["cofactor_metabolites"]
+                scoped,
+                solution,
+                {label: spec["cofactor_metabolites"][label] for label in CORE_COFACTORS},
             )
-            for label in ("nadph", "nadh", "atp"):
+            for label in CORE_COFACTORS:
                 info = turnover.get(label, {})
                 value = info.get("gross_turnover")
                 if info.get("status") == "reported" and value and value > 1e-9:

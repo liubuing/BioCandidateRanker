@@ -31,7 +31,6 @@ import json
 import sys
 from pathlib import Path
 
-import cobra
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
@@ -100,50 +99,15 @@ def load_sequence_lengths() -> dict[str, int]:
 
 
 def build_candidate_extension(model, target_config: dict) -> None:
-    """Re-construct the external project's candidate layer (idempotent)."""
-    for row in target_config["compounds"]:
-        met_id = row["model_metabolite_id"]
-        if met_id in model.metabolites:
-            continue
-        model.add_metabolites([
-            cobra.Metabolite(
-                met_id,
-                formula=row["formula"],
-                charge=int(row["charge"]),
-                name=row["name"],
-                compartment="p",
-            )
-        ])
-    for row in target_config["candidate_reactions"]:
-        if row["reaction_id"] in model.reactions:
-            continue
-        reaction = cobra.Reaction(row["reaction_id"])
-        reaction.name = row["name"]
-        reaction.lower_bound = 0.0
-        reaction.upper_bound = 1000.0
-        model.add_reactions([reaction])
-        stoichiometry = row["stoichiometry"]
-        if isinstance(stoichiometry, str):
-            stoichiometry = json.loads(stoichiometry)
-        model.reactions.get_by_id(row["reaction_id"]).add_metabolites(
-            {model.metabolites.get_by_id(k): v for k, v in stoichiometry.items()}
-        )
-    demands = {
-        "DM_s_1507": {"s_1507": -1},
-        "DM_CAND_T2DEC_P": {"cand_t2dec_p": -1},
-        TARGET_DEMAND: {"cand_10h2da_p": -1},
-    }
-    for demand_id, stoichiometry in demands.items():
-        if demand_id in model.reactions:
-            continue
-        reaction = cobra.Reaction(demand_id)
-        reaction.name = f"demand {demand_id}"
-        reaction.lower_bound = 0.0
-        reaction.upper_bound = 1000.0
-        model.add_reactions([reaction])
-        reaction.add_metabolites(
-            {model.metabolites.get_by_id(k): v for k, v in stoichiometry.items()}
-        )
+    """Delegate to the shared implementation in biocandidate.royal_jelly_acid.
+
+    The logic moved there when the focused route analysis needed the same
+    candidate layer; keeping one copy means the pilot's anchor and the route
+    analysis cannot drift apart.
+    """
+    from biocandidate.royal_jelly_acid import build_candidate_extension as build
+
+    build(model, target_config)
 
 
 def solve_target(model) -> dict[str, float | str]:
