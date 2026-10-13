@@ -153,3 +153,62 @@
 ## 附：一句话总结
 
 **这套系统目前的状态是：代谢网络和辅因子供给预测已经可以实用（误差个位数百分比，毫秒级），酶动力学数值预测可以用于相对排序但绝对精度有限，而"预测能否指导真实菌株改造"这一核心问题尚未通过实验验证——卡点不在计算，而在缺一批独立实验数据。**
+
+---
+
+# 附录：数据请求发送清单（一页）
+
+本附录是操作性内容，供决定"发哪些、以谁的名义发"时使用。含第三方研究者的联系邮箱，**请勿对外流传本页**。
+
+## 发送前的统一准备（三分钟，一次做完）
+
+全部草稿末尾都有同样三个空位，填一次即可复制到每封：
+
+| 待填字段 | 内容 |
+|---|---|
+| `[SENDER NAME]` | 发件人姓名（建议以导师或课题组成员名义） |
+| `[ORGANIZATION]` | 单位全称 |
+| `[CONTACT]` | 可公开回复的联系方式 |
+
+统一的随信附件（多数草稿会引用）：`docs/TARGETED_DATA_REQUESTS.md`（说明整体需求），必要时加 `configs/temporal_absolute_kinetics_protocol.json`（准入协议原文）。
+
+## 清单
+
+### 第一优先（缺了这两条，项目就停在原地）
+
+| # | 收件人 | 主题 | 附件 | 待填 |
+|---|---|---|---|---|
+| **1** | Mark C. Hall `<mchall@purdue.edu>`<br>备用通道：Purdue 图书馆数据表单 | Request for files and construct metadata for dataset 10.4231/429k-qe94 | `docs/TARGETED_DATA_REQUESTS.md`<br>`configs/temporal_absolute_kinetics_protocol.json` | 仅发件人字段 |
+| **8** | **需你指定真实合作方**（当前为占位符） | Independent multi-family enzyme kcat measurement panel for a frozen evaluation | 无（可附准入协议） | 发件人字段 + **收件人身份** |
+
+- **第 1 号**：DataCite 显示该数据集有 43 个文件，但仓库端点从本地访问失败（TLS 错误）。要的是文件本身或恢复访问，不是新实验。
+- **第 8 号**：唯一能补上 108 条缺口的途径（5 家族 ×20 测定）。需要你判断哪位老师/哪个组适合承接，以及是否以本组名义发起合作。
+
+### 第二优先（另两条工作流的解锁开关）
+
+| # | 收件人 | 主题 | 附件 | 待填 |
+|---|---|---|---|---|
+| **2** | SABIO-RK 团队 `<sabiork@h-its.org>`<br>升级通道：HITS `<info@h-its.org>` | Permission and exact-assay-sequence request for governed Km model training | `artifacts/external/governed-km-sabio-rk/blocker.json`<br>`docs/TARGETED_DATA_REQUESTS.md` | 仅发件人字段 |
+| **3** | Eduard Kerkhoven `<eduardk@chalmers.se>`<br>备用：yeast-GEM 仓库 issue | Data dictionary and provenance for yeast-GEM v9.1.0 anaerobic flux table | `artifacts/experimental-yeast-flux/blocker.json`<br>`docs/TARGETED_DATA_REQUESTS.md` | 仅发件人字段 |
+
+- **第 2 号**：要的是**使用许可**（能否训练、能否存检查点、能否发表），不是数据本身。启用 Km 训练。
+- **第 3 号**：要的是**数据字典**（该通量表无表头，列含义未知）。启用实验通量训练。
+
+### 第三优先（逐条抢救已有文献，渐进收益）
+
+| # | 收件人 | 主题 | 预计可得 | 待填 |
+|---|---|---|---|---|
+| **5** | Tina R. Tuveng `<tina.tuveng@nmbu.no>` | Oxygen saturation evidence for steady-state kcat assays in DOI 10.1021/acs.biochem.6c00183 | 最多 27 行（需氧饱和证据） | 仅发件人字段 |
+| **6** | Yifeng Wei `<wei_yifeng@sifbi.a-star.edu.sg>`<br>Xinan Jiao `<jiao@yzu.edu.cn>`<br>Yan Zhou `<yan_zhou@yzu.edu.cn>` | Exact assayed fusion sequences for the kinetic rows in DOI 10.1002/advs.202512937 | 4 行（Table 2 第 2/5/8/11 行） | 仅发件人字段 |
+| **7** | Sulan Luo `<sulan2g021@xu.edu.cn>`<br>Yong Wu `<wuyong@gxu.edu.cn>` | Assayed VaPAL2 active-core termini and GN10-SL structure for DOI 10.1016/j.jbc.2026.111301 | 待定（活性核心末端 + 底物结构） | 仅发件人字段 |
+| **4** | **需你指定真实实验合作者** | Invitation to run an independently custodied blind enzyme candidate campaign | 三份 handoff 文件（见下） | 发件人字段 + **收件人身份** |
+
+第 4 号的随信包（`artifacts/external/prospective-candidate-ranking/handoff/`）：`README.md`、`protocol.json`、`custodian-agreement.template.json`。它是唯一要求**独立保管人**的设计——标签在预测存入前不向建模方公开。
+
+## 发送后各记一行
+
+每发出一封，在队列里补记 `sent_at` 与邮件引用即可（`artifacts/external/external-request-queue.json`），进度会反映到项目面板上。目前面板显示 **0 / 8**。
+
+## 一处需要你补登记的技术细节
+
+第 5、6、7、8 号目前**没有进入请求队列**（只有草稿文件），面板因此把它们计为"未登记"。发送前需要先补队列条目，否则发出的信在项目记录里是缺失的——这会直接影响后续"哪些请求已发、是否收到回复"的可追溯性。
