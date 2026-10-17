@@ -399,3 +399,203 @@ def test_shuttle_definitions_move_one_reducing_equivalent(yeast):
         # the exchange swaps the reduced and oxidised forms one for one
         assert list(coefficients.values()).count(-1) == 2, key
         assert list(coefficients.values()).count(1) == 2, key
+
+
+# --- the price of the shunt ---------------------------------------------------
+#
+# The free shuttle answers "would the IDP3 bottleneck disappear if the pools were
+# connected". These tests answer the question that follows: at what price does the
+# answer change, and how much rate is needed. Both are measured rather than
+# assumed, because the answer in this model turned out to be that the route is not
+# gated by the peroxisomal pool at all.
+
+
+@pytest.fixture(scope="module")
+def shuttle_cost():
+    """Priced and capped shuttles, kept to a small grid on purpose."""
+    return rja.shuttle_cost_scan(
+        TARGET_CONFIG,
+        atp_costs=(0.0, 1.0),
+        capacities=(None, 0.05),
+    )
+
+
+@requires_model
+def test_shuttle_price_is_charged_in_the_source_compartment(yeast):
+    """A priced shuttle hydrolyses ATP where the ATP is, and does not reverse."""
+    model = yeast.copy()
+    reaction_id = rja.add_shuttle(
+        model, "cytosol_to_peroxisome", version="atp_driven", atp_cost=1.0
+    )
+    reaction = model.reactions.get_by_id(reaction_id)
+    coefficients = {metabolite.id: value for metabolite, value in reaction.metabolites.items()}
+    for metabolite_id, coefficient in rja.ENERGY_DRIVER_STOICHIOMETRY.items():
+        assert coefficients[metabolite_id] == coefficient, metabolite_id
+    assert reaction.lower_bound == 0.0, "a priced shuttle must not run backwards"
+    assert coefficients["s_0434"] == -1, "ATP is consumed on the cytosolic face"
+
+
+@requires_model
+def test_partial_atp_prices_get_their_own_reaction(yeast):
+    """A fractional price must not collide with the integer one."""
+    model = yeast.copy()
+    half = rja.add_shuttle(model, "cytosol_to_peroxisome", version="atp_driven", atp_cost=0.5)
+    whole = rja.add_shuttle(model, "cytosol_to_peroxisome", version="atp_driven", atp_cost=1.0)
+    free = rja.add_shuttle(model, "cytosol_to_peroxisome")
+    assert len({half, whole, free}) == 3
+    assert model.reactions.get_by_id(half).metabolites[
+        model.metabolites.get_by_id("s_0434")
+    ] == pytest.approx(-0.5)
+
+
+def test_add_shuttle_rejects_an_unknown_version(yeast):
+    with pytest.raises(ValueError, match="unknown shuttle version"):
+        rja.add_shuttle(yeast.copy(), "cytosol_to_peroxisome", version="free_lunch")
+
+
+def test_add_shuttle_rejects_a_negative_price(yeast):
+    with pytest.raises(ValueError, match="non-negative"):
+        rja.add_shuttle(yeast.copy(), "cytosol_to_peroxisome", version="free", atp_cost=-1.0)
+
+
+@requires_model
+@requires_target
+def test_free_shuttle_buys_almost_nothing_and_a_priced_one_is_not_used(shuttle_cost):
+    """The measured answer, and the reason the plan changed.
+
+    Two facts a reader would guess wrong. The free shuttle lifts the capacity by a
+    fraction of a percent at most, so there is no relief to sell; and at the first
+    positive price the LP stops using the shuttle altogether rather than paying,
+    because IDP3 supplies the same cofactor for nothing. A shuttle is therefore
+    only worth building against a constraint this model does not contain.
+    """
+    assert shuttle_cost["relief_is_negligible"] is True
+    assert shuttle_cost["free_shuttle_benefit"] <= 0.01
+    assert shuttle_cost["min_atp_cost_with_unused_shuttle"] == pytest.approx(1.0)
+    assert shuttle_cost["monotone_in_atp_cost"] is True
+    assert shuttle_cost["capacity_insensitive_to_price"] is True
+    # zero is a legitimate price, so only a strictly positive one can be the price
+    # at which a shuttle is abandoned
+    assert shuttle_cost["min_atp_cost_with_unused_shuttle"] > 0
+
+
+@requires_model
+@requires_target
+def test_a_rate_capped_shuttle_substitutes_for_idp3_without_changing_cofactor(shuttle_cost):
+    """The two sources add up, so a slow transporter is not a partial cure.
+
+    With the shuttle capped below the flux the route needs, the model carries the
+    remainder on IDP3 and the capacity comes out bit-for-bit what it was uncapped.
+    That is what substitute means here: only the sum of the two matters, so there
+    is no threshold of shuttle rate to clear.
+    """
+    capped = [row for row in shuttle_cost["rows"] if row["capacity"] is not None]
+    assert capped, "the fixture must include a capped shuttle"
+    assert shuttle_cost["capacity_insensitive_to_cap"] is True
+    for row in capped:
+        assert row["shuttle_flux"] <= row["capacity"] + 1e-9
+        # the shuttle takes its cap, and IDP3 the rest
+        assert row["shuttle_flux"] + row["idp3_flux"] == pytest.approx(
+            shuttle_cost["no_shuttle"]["target_capacity"], rel=1e-6
+        )
+    # approx rather than a set: optima that are the same to biology still differ
+    # in the eighth decimal, and a set of floats would call that two capacities
+    capacities = [row["target_capacity"] for row in capped]
+    assert max(capacities) == pytest.approx(min(capacities), rel=1e-6), capacities
+
+
+# --- the carbon bill and the oxygen column ------------------------------------
+
+
+@pytest.fixture(scope="module")
+def supply():
+    """One target and one aeration level: the smallest grid that runs the ladder."""
+    return rja.supply_requirement(
+        TARGET_CONFIG,
+        target_titers_mg_l=(rja.QLU_MEASURED_TITER_MG_L,),
+        oxygen_levels=(1000.0,),
+    )
+
+
+@requires_model
+def test_oxygen_species_are_found_in_every_compartment(yeast):
+    """The recycling check has to see all six copies or it sees nothing."""
+    species = rja.oxygen_species(yeast)
+    compartments = {
+        metabolite.compartment
+        for metabolite in yeast.metabolites
+        if metabolite.id in species
+    }
+    assert len(species) >= 5
+    assert {"c", "m", "p", "e"} <= compartments, compartments
+
+
+@requires_model
+def test_restricting_the_exchange_set_removes_nothing_the_model_needs(yeast):
+    """Closing the engineered exports must leave growth exactly where it was.
+
+    The claim under test is that the model does not depend on any of the several
+    hundred exchanges no yeast fermentation performs. If growth moved, the
+    restriction would be removing something load-bearing and every supply number
+    computed under it would be suspect.
+    """
+    open_model = yeast.copy()
+    reference = float(open_model.optimize().objective_value)
+    closed = rja.restrict_to_physiological_exchanges(open_model)
+    assert closed > 100, "this model ships a much larger exchange set than yeast uses"
+    assert float(open_model.optimize().objective_value) == pytest.approx(reference, rel=1e-9)
+
+
+@requires_model
+@requires_target
+def test_the_marginal_carbon_bill_is_far_below_the_average_at_a_low_titer(supply):
+    """At 298.6 mg/L the process pays for biomass, not for a bad pathway.
+
+    Average and marginal answer different questions and differ by a factor of
+    several here. The average is what a balance sheet sees; the marginal is what
+    one more gram costs, and the marginal is what belongs next to the
+    stoichiometric floor when asking whether the route is inefficient.
+    """
+    entry = supply["targets"][f"titer_{rja.QLU_MEASURED_TITER_MG_L:g}_mg_l"]
+    average = entry["average_glucose_g_per_g_product"]
+    marginal = entry["marginal_glucose_g_per_g_product"]
+    assert average > 0 and marginal > 0
+    assert marginal < average / 3, (average, marginal)
+
+    # the stoichiometric floor: ten carbons of product from six-carbon glucose
+    theoretical = (10.0 / 6.0) * rja.GLUCOSE_MOLECULAR_WEIGHT / rja.TARGET_MOLECULAR_WEIGHT
+    assert 1.0 < theoretical < 2.0
+    assert marginal > theoretical, "the model cannot beat the carbon balance"
+    assert marginal < 5 * theoretical, marginal
+
+
+@requires_model
+@requires_target
+def test_the_oxygen_column_is_reported_as_unusable_rather_than_as_encouraging(supply):
+    """Catalase regenerates oxygen, so no aeration ceiling can bind.
+
+    This is a finding, not a limitation to bury: the model can be made to say a
+    route needs no oxygen because the peroxisomal oxidases and catalase form an
+    internal loop. The test pins that the report says so, names the reactions, and
+    does not present the aeration rows as a result.
+    """
+    assert supply["oxygen_column_interpretable"] is False
+    entry = supply["targets"][f"titer_{rja.QLU_MEASURED_TITER_MG_L:g}_mg_l"]
+    cycling = entry["carbon_bill_at_min_oxygen"]["internal_oxygen_cycling"]
+    assert cycling["occurring"] is True
+    producers = {row["reaction"] for row in cycling["producers"]}
+    assert {"r_0255", "r_0256"} <= producers, producers  # the two catalases
+    assert "catalase" in supply["oxygen_column_note"]
+    assert entry["min_oxygen_uptake"] <= 1e-6
+
+
+@requires_model
+@requires_target
+def test_every_aeration_ceiling_is_reported_as_non_binding_for_the_route(supply):
+    """Flat is reported as flat: no ceiling in the grid costs any extra carbon."""
+    entry = supply["targets"][f"titer_{rja.QLU_MEASURED_TITER_MG_L:g}_mg_l"]
+    assert entry["bill_is_flat_in_oxygen"] is True
+    for row in entry["rows"]:
+        assert row["aeration_limited"] is False, row
+        assert abs(row["carbon_penalty_vs_free_oxygen"]) < 0.01, row
+
