@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-DEFAULT_AUDIT = Path("artifacts/external/temporal-global-family-audit/readiness-audit.json")
-DEFAULT_RELEASE_MANIFEST = Path("configs/software_implementation_release_v6.json")
+DEFAULT_AUDIT = Path("artifacts/external/temporal-global-family-audit-20261004-targeted/readiness-audit.json")
+DEFAULT_RELEASE_MANIFEST = Path("configs/software_implementation_release_v7.json")
 
 GATES = (
     (

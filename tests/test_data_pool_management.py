@@ -18,8 +18,8 @@ def pool(tmp_path, monkeypatch):
                      "csv_accepted_records": 1, "disposition": "accepted_pool_source"}],
     })
     for name in ("configs/temporal_absolute_kinetics_protocol.json",
-                 "configs/software_implementation_release_v6.json",
-                 "artifacts/external/temporal-global-family-audit/readiness-audit.json"):
+                 "configs/software_implementation_release_v7.json",
+                 "artifacts/external/temporal-global-family-audit-20261004-targeted/readiness-audit.json"):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}")

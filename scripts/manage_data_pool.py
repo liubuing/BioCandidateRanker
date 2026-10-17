@@ -202,8 +202,8 @@ def manage(root: Path, budget: int, verify: bool = False, reviewed: tuple = ()) 
                       and f["kind"] != "evidence"]
         controls = []
         for name in ("configs/temporal_absolute_kinetics_protocol.json",
-                     "artifacts/external/temporal-global-family-audit/readiness-audit.json",
-                     "configs/software_implementation_release_v6.json"):
+                     "artifacts/external/temporal-global-family-audit-20261004-targeted/readiness-audit.json",
+                     "configs/software_implementation_release_v7.json"):
             controls.append({"path": name, "sha256": digest(root / name)})
         controls_changed = bool(old_report) and old_report.get("controls") != controls
         removed_sources = sorted(({f["source_id"] for f in previous.values()
