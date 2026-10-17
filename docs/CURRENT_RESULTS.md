@@ -93,8 +93,11 @@ implementation has advanced through maintenance releases:
 - `software-implementation-v6`: engineering closeout release; curated scripts expose the
   development corpus through `--development-corpus`, and the release verifier default now
   points at the current closed baseline instead of v1.
+- `software-implementation-v7`: re-freeze after the MMseqs2 subprocess-decoding hardening
+  in `src/biocandidate/data/homology.py` and the verifier default bump; frozen file scope
+  unchanged from v6.
 
-The closed baseline is `configs/software_implementation_release_v6.json`; v1 through v5
+The closed baseline is `configs/software_implementation_release_v7.json`; v1 through v6
 remain as historical records.
 
 The following scientific workstreams are `blocked_pending_external_data`:
