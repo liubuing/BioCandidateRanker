@@ -1403,6 +1403,8 @@ def main() -> int:
                         help="price the peroxisomal shuttle in ATP and cap its rate")
     parser.add_argument("--supply-requirement", action="store_true",
                         help="carbon and oxygen bill for a target titer, with overflow markers")
+    parser.add_argument("--prosthetic-ledger", action="store_true",
+                        help="the enzyme-bound cofactor bill (FAD/FMN/heme) that FBA cannot see")
     parser.add_argument("--titer", action="store_true",
                         help="convert the anchor capacity to an implied titer")
     parser.add_argument("--biomass-gdw-l", type=float, default=20.0)
@@ -1435,6 +1437,12 @@ def main() -> int:
             pox1_closed=args.close_pox1,
             biomass_gdw_l=args.biomass_gdw_l,
             hours=args.hours,
+        )
+    elif args.prosthetic_ledger:
+        from .prosthetic_ledger import route_ledger
+
+        report = route_ledger(
+            args.target_config, route=args.route, pox1_closed=args.close_pox1
         )
     elif args.shuttle_compare:
         report = shuttle_comparison(
