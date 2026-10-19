@@ -13,15 +13,18 @@ Start with:
 Then run:
 
 ```powershell
-python scripts\verify_software_release.py --manifest configs\software_implementation_release_v6.json
+python scripts\verify_software_release.py --manifest configs\software_implementation_release_v9.json
 python -m pytest -q
 python -m ruff check .
 ```
 
 Current scientific state: `blocked_pending_external_data`.
 
-Current external benchmark pool: 192 records, 25 global families, 54 substrates. Do not
-generate predictions for this pool until all frozen readiness gates pass.
+Current external benchmark pool: 209 accepted records / 28 global families / 66
+substrates (201 / 28 / 65 after the eight documented quality holds). Do not
+generate predictions for this pool until all frozen readiness gates pass; the
+raw pool is 91 records and two families short, and the carry-forward pool is 99
+records and two families short.
 
 External requests are drafts only; zero messages were sent. Sender name `chy` was supplied,
 but organization and email were not. No real prospective campaign collaborator or
