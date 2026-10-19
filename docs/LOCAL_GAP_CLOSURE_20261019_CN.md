@@ -34,7 +34,7 @@
 
 ### 3. 外部队列登记
 
-此前 8 份草稿只有 4 份在队列里。现在 8 份全部登记（仍然 0 封发出）：
+此前 8 份草稿只有 4 份在队列里。现在 **9 份**全部登记（仍然 0 封发出）：
 
 - `purdue-cdc14-files-v1`
 - `sabio-rk-permission-sequences-v1`
@@ -44,8 +44,9 @@
 - `phage-fusion-construct-v1`（新增）
 - `vapal2-active-core-v1`（新增）
 - `absolute-kcat-panel-v1`（新增，收件人仍待定）
+- `purdue-cdc14-construct-details-v1`（新增，Purdue follow-up）
 
-`tests/test_external_request_queue.py` 已同步为 8 条；`sent_at` 与
+`tests/test_external_request_queue.py` 已同步为 9 条；`sent_at` 与
 `message_reference` 仍全部为空，`messages_sent` 仍为 0。
 `scripts/external_request_status.py` 重新对账后 `untracked_drafts` 与 `issues`
 均为空。
