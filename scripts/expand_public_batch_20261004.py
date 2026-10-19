@@ -1,7 +1,6 @@
 """Second, explicitly selected batch of 20 benign enzymology primary-source leads."""
 import concurrent.futures as cf
 import json
-from pathlib import Path
 import batch_public_kinetics_20261004 as discovery
 
 BASE=discovery.BASE

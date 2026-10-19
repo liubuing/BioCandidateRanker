@@ -27,4 +27,4 @@ jobs:
         # The release manifest also freezes gitignored artifact identities (checkpoints,
         # audit receipts) that only exist in a prepared workspace, not a fresh clone.
         if: ${{ hashFiles('artifacts/unikp_audit.json') != '' }}
-        run: python scripts/verify_software_release.py --manifest configs/software_implementation_release_v7.json
+        run: python scripts/verify_software_release.py --manifest configs/software_implementation_release_v8.json

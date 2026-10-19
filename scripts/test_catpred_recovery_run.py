@@ -1,6 +1,6 @@
 """Actual upstream CPU training: uninterrupted vs epoch-0 interruption/restart."""
 from pathlib import Path
-import os,subprocess,sys,json,time
+import os,subprocess,sys,json
 ROOT=Path(__file__).resolve().parents[1];BASE=ROOT/'artifacts/catpred-mode-b'
 
 def main():

@@ -6,7 +6,7 @@ Start with:
 
 1. `docs/PROJECT_STATE_ARCHIVE_2026-07-27.md`
 2. `artifacts/project-state-archive-2026-07-27.json`
-3. `configs/software_implementation_release_v7.json`
+3. `configs/software_implementation_release_v8.json`
 4. `configs/external_data_blockers.json`
 5. `docs/DATA_ARRIVAL_RUNBOOK.md`
 

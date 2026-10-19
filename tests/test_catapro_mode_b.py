@@ -1,6 +1,5 @@
 """Guard the new baseline against row-order, cache, and partition contamination."""
 import importlib.util
-import json
 from pathlib import Path
 
 import numpy as np

@@ -44,7 +44,7 @@ def main():
         assert np.isfinite(p).all() and np.isfinite(s).all() and (s>0).all()
         dest=OUT/f'seed{seed}.csv'
         with dest.open('w',encoding='utf-8',newline='') as f:
-            w=csv.writer(f);w.writerow(['pair_id','prediction','label','sd','sequence_length']);w.writerows((r['pair_id'],a,b,c,int(l)) for r,a,b,c,l in zip(rows,p,y,s,lengths))
+            w=csv.writer(f);w.writerow(['pair_id','prediction','label','sd','sequence_length']);w.writerows((r['pair_id'],a,b,c,int(length)) for r,a,b,c,length in zip(rows,p,y,s,lengths))
         logs=[json.loads(line) for line in (BASE/f'seed{seed}/train.log').read_text().splitlines() if line.startswith('{')];epochs=[r for r in logs if 'epoch' in r]
         best_rmse=min(epochs,key=lambda r:r['validation_tasks']['log10_kcat']['rmse'])
         selected=next(r for r in epochs if r['epoch']==payload['epoch'])

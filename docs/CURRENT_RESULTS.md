@@ -97,7 +97,7 @@ implementation has advanced through maintenance releases:
   in `src/biocandidate/data/homology.py` and the verifier default bump; frozen file scope
   unchanged from v6.
 
-The closed baseline is `configs/software_implementation_release_v7.json`; v1 through v6
+The closed baseline is `configs/software_implementation_release_v8.json`; v1 through v6
 remain as historical records.
 
 The following scientific workstreams are `blocked_pending_external_data`:

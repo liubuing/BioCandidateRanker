@@ -40,7 +40,7 @@ def main() -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("configs/software_implementation_release_v7.json"),
+        default=Path("configs/software_implementation_release_v8.json"),
     )
     args = parser.parse_args()
     issues = verify_release(args.root, args.manifest)

@@ -1,7 +1,7 @@
 """Review 26 metadata groups / 106 rows; preserve the historical pool and gates."""
 import hashlib
 import json
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

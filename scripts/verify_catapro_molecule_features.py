@@ -1,6 +1,5 @@
 """Compare cached GPU molecule features against pinned upstream CPU extraction."""
 import json
-from pathlib import Path
 import numpy as np
 import run_catapro_mode_b as runner
 

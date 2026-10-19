@@ -1,6 +1,6 @@
 """Audit saved predictions and append CataPro to a new, non-overwriting comparison."""
 from pathlib import Path
-import csv,json,hashlib,statistics,sys
+import csv,json,hashlib,sys
 import torch
 
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))

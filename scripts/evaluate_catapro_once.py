@@ -1,5 +1,4 @@
 """Evaluate three pre-frozen CataPro checkpoints on the existing internal test once."""
-from pathlib import Path
 from datetime import datetime,timezone
 import csv,json,hashlib,sys,statistics
 import numpy as np

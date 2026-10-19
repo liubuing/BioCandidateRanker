@@ -1,5 +1,4 @@
 """Evidence-backed campaign review; retains all original pool decisions."""
-import csv
 import hashlib
 import json
 import xml.etree.ElementTree as ET

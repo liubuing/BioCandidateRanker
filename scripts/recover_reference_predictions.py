@@ -1,7 +1,6 @@
 """Replay frozen ESM2 checkpoints solely to recover aligned predictions for inference."""
 from pathlib import Path
 import csv,json,hashlib,sys
-import numpy as np
 import torch
 
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
@@ -22,8 +21,6 @@ def main():
         if sha(ROOT/entry['path'])!=entry['sha256']:raise ValueError('Frozen file changed: '+entry['path'])
     source_manifest=read(ROOT/'configs/unikp_source_manifest.json')
     assert sha(SOURCE)==source_manifest['identity']['sha256']
-    split=read(ROOT/'artifacts/homology-final/homology_split.json')
-    indices={r['source_row'] for r in split['rows'] if r['split']=='test'}
     records=read_unikp_json(SOURCE).records
     records=apply_split_manifest(records,ROOT/'artifacts/homology-final/homology_split.json',source_identity=source_manifest['identity'])
     records=[r for r in aggregate_pair_measurements(records) if r.split=='test']

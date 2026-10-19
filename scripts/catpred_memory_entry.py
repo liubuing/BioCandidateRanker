@@ -1,5 +1,4 @@
 """Read verified CPU ESM cache tensors through mmap; preserve model numerics."""
-from pathlib import Path
 import catpred_noncanonical_entry
 
 def install_memory_adapter():
