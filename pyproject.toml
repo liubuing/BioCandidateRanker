@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.5"]
+dev = ["pytest>=8", "ruff==0.15.22"]
 baseline = ["scikit-learn>=1.5"]
 simulation = ["cobra>=0.30"]
 esm2 = ["fair-esm>=2.0"]
