@@ -19,14 +19,17 @@ checkpoints, and reports stay under this repository.
 - **torch >= 2.6 CLI predict**: checkpoints saved before torch 2.6 embed
   `torch.torch_version.TorchVersion`, which `weights_only=True` loading in
   `training.load_checkpoint` rejects, so `predict` and `evaluate` fail on this
-  machine's torch 2.12. `training.py` is part of the frozen v6 manifest and
-  cannot be edited in place; the workbench server
+  machine's torch 2.12. `training.py` is part of the frozen release manifests
+  (v6–v9) and cannot be edited in place; the workbench server
   (`scripts/serve_workbench.py`) wraps checkpoint loading in a
   `safe_globals` allowlist and is the working inference path. For CLI-only
   reproduction, install `torch<2.6`.
-- **No calibration artifact matches the shipped checkpoints**, so conformal
-  interval columns stay empty until a matching artifact is produced with
-  `fit-calibration`.
+- **Calibration coverage is partial**: a validation-only grouped-CV artifact at
+  `artifacts/uncertainty-calibration-v2/grouped-cv.json` matches
+  `artifacts/full-homology-baseline/best.pt` (identity calibrator, 1,640
+  validation records), and the workbench returns conformal intervals for it.
+  Other checkpoints have no matching artifact. The artifact is not an external
+  calibration claim and does not improve point accuracy.
 
 ## Software Implementation Release
 
@@ -151,15 +154,22 @@ The frozen curation policy is documented in `docs/TEMPORAL_BENCHMARK_PROTOCOL.md
 hashes, and exclusion evidence are under
 `artifacts/external/temporal-absolute-kinetics`.
 
-The strict registry currently sees 192 accepted records and 54 primary/varied-substrate PubChem
-CIDs across finalized sources before exact global sequence mapping. The global audit maps
-all 192 records from 18 sources to 203 exact row/component sequences; they form 25 global
-families and contain 54 substrates. No family exceeds 20 records, so the label-independent
-cap retains all 192 mapped records. The eight held PMC12329711 controls resolve to three
-homology exclusions, one nonfinite exclusion, and four exact-tag-mapping blockers; they add
-no accepted records. MMseqs2 uses frozen version
-`5d152c612b6ad2a56f657b7a02c127eceaea2a75` at 30% identity, 80% coverage, and coverage
-mode 0.
+The current curation pool is newer than the frozen v9 baseline: the 2026-10-04
+targeted global audit reports **209 accepted records / 28 global families / 66
+substrates / 21 sources**, with 220 mapped component sequences. The 2026-10-05
+full-pool quality register carries **201 records / 28 families / 65 substrates**
+forward and holds eight CtNDT inosine rows for source consistency; zero records
+were deleted. The earlier 2026-07-27 strict audit (192 records / 25 families /
+54 substrates) remains pinned in the v9 release manifest and is superseded for
+current counts by the targeted audit.
+
+No family exceeds 20 records, so the label-independent cap retains all 209
+mapped records. The substrate gate passes (65 carry-forward / 66 raw against 50);
+the 300-record and 30-family gates fail. On the raw pool the shortfall is 91
+records and two families; if the eight held rows remain excluded it is 99 records
+and two families. MMseqs2 uses frozen version
+`5d152c612b6ad2a56f657b7a02c127eceaea2a75` at 30% identity, 80% coverage, and
+coverage mode 0.
 
 The fourth and fifth discovery rounds are frozen in machine-readable registries under
 `artifacts/external/temporal-absolute-kinetics`. The fifth round adds 10 previously
@@ -179,10 +189,10 @@ hits. The rows and complete hit evidence are retained as homology exclusions und
 `artifacts/external/temporal-absolute-kinetics/europepmc-PMC12676663`; fragment-activation
 rate constants are excluded as non-`kcat` endpoints.
 
-This remains a curation pool, not a benchmark. The exact mapped subset passes the
-50-substrate gate with 54 identities but fails the 300-record and 30-family gates; unresolved rows fail closed.
-No model predictions may be generated until every gate passes and the final record list and
-checkpoint are frozen.
+This remains a curation pool, not a benchmark. It fails the 300-record and
+30-family gates (91/2 short on the raw pool, 99/2 short on the carry-forward
+pool); the 50-substrate gate passes. No model predictions may be generated until
+every gate passes and the final record list and checkpoint are frozen.
 
 ### Prospective Candidate Ranking
 

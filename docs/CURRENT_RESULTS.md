@@ -96,9 +96,19 @@ implementation has advanced through maintenance releases:
 - `software-implementation-v7`: re-freeze after the MMseqs2 subprocess-decoding hardening
   in `src/biocandidate/data/homology.py` and the verifier default bump; frozen file scope
   unchanged from v6.
+- `software-implementation-v8`: added the enforceable lint gate and re-pinned the frozen
+  file list without changing scientific results.
+- `software-implementation-v9` (2026-10-19): pinned `ruff==0.15.22`, which is the version
+  validated locally; the unpinned range resolved to a newer release whose default rules
+  flagged 467 findings the pinned gate does not. Frozen file scope unchanged from v8.
 
-The closed baseline is `configs/software_implementation_release_v9.json`; v1 through v6
+The closed baseline is `configs/software_implementation_release_v9.json`; v1 through v8
 remain as historical records.
+
+Calibration coverage is partial: `artifacts/uncertainty-calibration-v2/grouped-cv.json`
+matches `artifacts/full-homology-baseline/best.pt` (identity calibrator, 1,640 validation
+records) and the workbench returns conformal intervals for it. Other checkpoints have no
+matching artifact, and the artifact is not an external calibration claim.
 
 The following scientific workstreams are `blocked_pending_external_data`:
 
@@ -137,6 +147,12 @@ The corpus has corpus-level provenance only, redistribution permission is not ve
 and overlap with existing kinetic predictors prevents independent benchmark claims.
 
 ## Prospective Temporal Curation
+
+> October 19 current-state reconciliation: the 2026-10-04 targeted audit reports
+> **209 accepted records / 28 families / 66 substrates / 21 sources**; the
+> 2026-10-05 quality register carries **201 / 28 / 65** forward with eight CtNDT
+> inosine rows held. The 2026-07-27 strict audit (192 / 25 / 54) remains pinned in
+> the v9 manifest but is superseded for current counts. No predictions were run.
 
 The prospective protocol was frozen before curation at
 `configs/temporal_absolute_kinetics_protocol.json`. It requires a primary article dated

@@ -18,7 +18,7 @@ pytestmark = pytest.mark.skipif(
 def test_external_request_queue_does_not_claim_messages_were_sent():
     queue = json.loads(QUEUE.read_text(encoding="utf-8"))
     assert queue["messages_sent"] == 0
-    assert len(queue["requests"]) == 4
+    assert len(queue["requests"]) == 8
     assert all(item["sent_at"] is None for item in queue["requests"])
     assert all(item["message_reference"] is None for item in queue["requests"])
 

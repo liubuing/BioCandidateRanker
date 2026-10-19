@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_on": "2026-07-27",
+  "updated_on": "2026-10-19",
   "default_status": "blocked_pending_external_data",
   "discovery_policy": "Do not use broad literature discovery as the primary workstream. Use targeted repository requests, author requests, or experimental collaboration.",
   "failure_policy": "Attempt one bounded correction for an isolated acquisition or schema problem; if unresolved, record it, skip it, and continue. HTTP 404 responses are not retried in the same cycle.",
@@ -8,9 +8,15 @@
     {
       "id": "absolute_kinetics_expansion",
       "status": "blocked_pending_external_data",
-      "current": {"records": 192, "global_families": 25, "unique_substrates": 54},
+      "current": {"records": 201, "global_families": 28, "unique_substrates": 65},
+      "historical_pool": {"records": 209, "global_families": 28, "unique_substrates": 66},
+      "quality_hold": {
+        "records": 8,
+        "reason": "CtNDT inosine rows held for source consistency; zero deletions"
+      },
       "required": {"records": 300, "global_families": 30, "unique_substrates": 50},
-      "minimum_external_delta": {"records": 108, "new_global_families": 5, "unique_substrates": 0},
+      "minimum_external_delta": {"records": 99, "new_global_families": 2, "unique_substrates": 0},
+      "raw_pool_delta": {"records": 91, "new_global_families": 2, "unique_substrates": 0},
       "latest_targeted_acquisition_receipt": "artifacts/external/temporal-absolute-kinetics/targeted-acquisition-receipt-2026-07-27.json",
       "unblock_when": "All frozen temporal, license, exact-construct, saturation, provenance, exact-overlap, and MMseqs gates pass and the final record list is frozen.",
       "priority_requests": ["Purdue Cdc14 deposited workbooks and construct files", "authors of already audited zero-hit families with unresolved exact constructs or saturation evidence", "new experimental collaboration spanning at least five unrelated families"]

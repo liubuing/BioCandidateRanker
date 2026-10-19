@@ -197,7 +197,8 @@ rather than a hand-maintained list.
 - **The training corpus cannot be redistributed**, so the deposit is code, protocols, and
   derived artifacts only. `artifacts/full-homology-baseline/best.pt` is a checkpoint
   trained on that corpus; it ships as a declared derivative.
-- **The prospective pool is 108 records and 5 families short** of its frozen gate, and
+- **The prospective pool is 99 records and 2 families short** of its frozen gate on the
+  quality-hold basis (91 records and 2 families on the raw 209-record basis), and
   two families are already at the 20-record cap.
 
 ## Order of operations before submission
