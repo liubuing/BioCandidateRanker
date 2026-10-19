@@ -45,8 +45,16 @@
 
 `tests/test_external_request_queue.py` 已同步为 8 条；`sent_at` 与
 `message_reference` 仍全部为空，`messages_sent` 仍为 0。
+`scripts/external_request_status.py` 重新对账后 `untracked_drafts` 与 `issues`
+均为空。
 
-### 4. 归档测试
+### 4. 就绪度页面
+
+重新生成 `artifacts/readiness-dashboard.html`：阻塞项从 6 项降到 3 项，
+只剩 `pool-gate`、`no-outreach`、`placeholders`。这 3 项都需要外部动作
+（数据、发信、真实收件人），本机不能再补。
+
+### 5. 归档测试
 
 `tests/test_project_state_archive.py` 原先把 `RESUME_HERE.md` 当作不可变归档文件，
 但后续版本会正常更新这个"当前发布指针"，导致 1 项失败。现改为：
