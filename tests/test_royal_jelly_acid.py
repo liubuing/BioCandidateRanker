@@ -373,6 +373,7 @@ def test_titer_conversion_names_its_assumptions():
     assert "not a production forecast" in result["caveat"]
 
 
+@requires_model
 def test_add_shuttle_is_idempotent(yeast):
     """Re-adding must not duplicate the reaction and break mass balance."""
     model = yeast.copy()
@@ -383,6 +384,7 @@ def test_add_shuttle_is_idempotent(yeast):
     assert len(model.reactions) == before
 
 
+@requires_model
 def test_shuttle_definitions_move_one_reducing_equivalent(yeast):
     """Each shuttle must be balanced: one NADPH in, one out, across two copies.
 

@@ -207,6 +207,7 @@ def test_platform_schema_rejects_blank_sequence_before_the_adapter():
 
 
 @requires_platform
+@requires_platform
 @pytest.mark.parametrize(
     "capability,sequence,expected_status",
     [
