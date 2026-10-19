@@ -2,9 +2,16 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "acquire_sabio_rk_km.py"
+
+pytestmark = pytest.mark.skipif(
+    not (ROOT / "artifacts" / "external" / "governed-km-sabio-rk").is_dir(),
+    reason="the prepared acquisition workspace under artifacts/ is required",
+)
 SPEC = importlib.util.spec_from_file_location("acquire_sabio_rk_km", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None

@@ -152,6 +152,7 @@ def test_minimum_enzyme_follows_the_gecko_bound():
 # --- oxidative burden: the degradation-side handle flavins cannot give ------------
 
 
+@requires_model
 def test_flavin_dependent_oxidases_carry_no_flavin_in_the_model():
     """Why FAD turnover cannot stand in for oxidase activity.
 
@@ -448,11 +449,13 @@ def test_partial_atp_prices_get_their_own_reaction(yeast):
     ] == pytest.approx(-0.5)
 
 
+@requires_model
 def test_add_shuttle_rejects_an_unknown_version(yeast):
     with pytest.raises(ValueError, match="unknown shuttle version"):
         rja.add_shuttle(yeast.copy(), "cytosol_to_peroxisome", version="free_lunch")
 
 
+@requires_model
 def test_add_shuttle_rejects_a_negative_price(yeast):
     with pytest.raises(ValueError, match="non-negative"):
         rja.add_shuttle(yeast.copy(), "cytosol_to_peroxisome", version="free", atp_cost=-1.0)

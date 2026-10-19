@@ -2,6 +2,8 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (
@@ -12,6 +14,11 @@ SOURCE = (
     / "europepmc-PMC12329711"
 )
 
+
+pytestmark = pytest.mark.skipif(
+    not SOURCE.is_dir(),
+    reason="the prepared acquisition workspace under artifacts/ is required",
+)
 
 def test_unresolved_control_constructs_are_terminally_excluded() -> None:
     with (SOURCE / "candidate_records.csv").open(newline="", encoding="utf-8") as handle:
