@@ -25,6 +25,11 @@ PLATFORM = Path(r"D:\biological\Metabolic model prediction\Integrated_Yeast_Meta
 PLATFORM_RUNTIME = PLATFORM / "04_prediction_plugins/plugin_runtime"
 CHECKPOINT = ROOT / "artifacts/esm2-t6-opt-seed7/best.pt"
 
+requires_checkpoint = pytest.mark.skipif(
+    not CHECKPOINT.is_file(),
+    reason="the prepared workspace checkpoint is required",
+)
+
 requires_platform = pytest.mark.skipif(
     not PLATFORM_RUNTIME.is_dir(),
     reason="the Yeast-MetaTwin Platform checkout is required",
@@ -207,6 +212,7 @@ def test_platform_schema_rejects_blank_sequence_before_the_adapter():
 
 
 @requires_platform
+@requires_checkpoint
 @requires_platform
 @pytest.mark.parametrize(
     "capability,sequence,expected_status",
@@ -319,6 +325,7 @@ def test_benchmark_manifests_are_blocked_and_honest(tmp_path):
 # --- installer ------------------------------------------------------------------
 
 
+@requires_checkpoint
 @requires_platform
 def test_installer_is_idempotent_and_uninstall_is_byte_exact(tmp_path):
     stage = tmp_path / "platform"
@@ -352,6 +359,7 @@ def test_installer_is_idempotent_and_uninstall_is_byte_exact(tmp_path):
     assert not (runtime / "biocandidate.py").exists()
 
 
+@requires_checkpoint
 @requires_platform
 def test_dry_run_writes_nothing(tmp_path):
     stage = tmp_path / "platform"
