@@ -56,7 +56,20 @@
 只剩 `pool-gate`、`no-outreach`、`placeholders`。这 3 项都需要外部动作
 （数据、发信、真实收件人），本机不能再补。
 
-### 5. 归档测试
+### 5. Purdue Cdc14 数据获取
+
+`purr.purdue.edu` 本轮已可访问，因此直接把 CC0 的 52 MB bundle 下载到本机，
+不再等外部邮件回复。已解包 42 个数据文件 + 数据字典，并把
+`Fig5E_S3D_hCdc14_DiFMUP_Normalization.xlsx` 中的 6 个 hCdc14 构建体、
+3 次试验的 kcat/KM 暂存为 18 行候选 CSV（`admitted_records = 0`）。
+hCdc14A 1-413 与 hCdc14B 1-411 对 UniKP reference 的 pinned MMseqs2 搜索为
+**0 命中**，支持其作为新的同源冷家族。详见
+`docs/PURDUE_CDC14_ACQUISITION_20261019_CN.md`。
+
+这项只解除了“运输失败”，没有解除“精确构建序列、hCdc14B 位点、逐 assay
+酶浓度、MMseqs 同源、家族 cap”五道策展门，所以没有把候选行写入接受池。
+
+### 6. 归档测试
 
 `tests/test_project_state_archive.py` 原先把 `RESUME_HERE.md` 当作不可变归档文件，
 但后续版本会正常更新这个"当前发布指针"，导致 1 项失败。现改为：
@@ -70,6 +83,8 @@
 前瞻池仍缺 **99 条记录 / 2 个新家族**（原始口径 91 / 2）。本机没有可合法新增的
 合格直接动力学记录：第四、五轮候选来源没有一个同时通过 exact construct、底物、
 饱和/端点、许可与 MMseqs 同源五道门；8 条 CtNDT 肌苷记录仍因来源一致性暂挂。
+Purdue Cdc14 虽已获取并暂存 18 行，但尚未闭合精确构建与同源审计，因此按
+fail-closed 仍计 **0 条新增接受记录**。
 因此没有为了凑数而放宽门槛，也没有把工业过程数据混入动力学池。
 
 要真正解阻，仍然只能走：
@@ -95,5 +110,6 @@ python -m ruff check .
 
 ## 结论
 
-本机能补的只是口径、面板、队列、校准说明和归档测试；**前瞻池的科学缺口没有被
-"补"掉，也不应该用本机数据伪造掉**。当前仍是 `blocked_pending_external_data`。
+本机能补的是口径、面板、队列、校准说明、归档测试，以及把 Purdue Cdc14 从
+"不可达"变成"已获取待策展"；**前瞻池的科学缺口没有被"补"掉，也不应该用本机
+数据伪造掉**。当前仍是 `blocked_pending_external_data`。
