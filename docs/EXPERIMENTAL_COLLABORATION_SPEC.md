@@ -1,5 +1,9 @@
 # Experimental Collaboration Specification
 
+> Execution drafts for the prospective kcat panel: `docs/PANEL_PROTOCOL_20261020_CN.md`,
+> `docs/PANEL_DATA_DICTIONARY_20261020_CN.md`, and
+> `docs/PANEL_BUDGET_TIMELINE_20261020_CN.md`. They are drafts, not frozen protocols.
+
 ## Absolute Kinetics Panel
 
 Design the next panel to fill the frozen deficits directly:

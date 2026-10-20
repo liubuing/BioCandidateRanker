@@ -205,6 +205,18 @@ selection, a blind prediction deposit, and one final campaign-level evaluation. 
 not reopen or extend the closed EnzEngDB or IMDH tests and creates no benchmark data or
 scores unless a supplied evidence package passes readiness.
 
+### Prospective Wet-Lab kcat Panel
+
+A separate prospective wet-lab panel is specified in draft form at
+`docs/PANEL_PROTOCOL_20261020_CN.md`, `docs/PANEL_DATA_DICTIONARY_20261020_CN.md`, and
+`docs/PANEL_BUDGET_TIMELINE_20261020_CN.md`, with machine-readable parameters at
+`configs/panel_protocol_20261020.json`. The design is 8 primary + 2 backup families,
+8 constructs per family, 3 substrates per construct, 3 independent protein batches, and
+targets 108–128 admissible records under a 20-record-per-family cap. It is a new
+unpublished cohort: it does not count toward the temporal literature pool's 300/30/50
+gates unless later published, licensed, and re-audited under the frozen temporal protocol.
+The documents are drafts and are not frozen.
+
 ## Development Training
 
 ```powershell

@@ -1,5 +1,14 @@
 # Current Results
 
+> October 20 prospective-panel drafting: the wet-lab kcat panel now has a draft protocol,
+> data dictionary, budget/timeline, and machine-readable parameter file. It is a separate
+> unpublished cohort targeting 108–128 records across 8 primary + 2 backup families; it
+> does not count toward the temporal literature pool's 300/30/50 gates unless later
+> published, licensed, and re-audited. No families, constructs, labels, or predictions were
+> generated. See `docs/PANEL_PROTOCOL_20261020_CN.md`,
+> `docs/PANEL_DATA_DICTIONARY_20261020_CN.md`, and
+> `docs/PANEL_BUDGET_TIMELINE_20261020_CN.md`.
+
 > October 7 small-molecule follow-up: three additional full texts acquired, six reference queries screened, and three LcOe 229 measurements staged with temperature/pH/enzyme concentration. Four no-hit queries represent two sources, not four families. LcOe GenBank/PDB sequences differ at four residues; 13B22 mutation numbering also disagrees with its deposit. CsCE/AOL reference queries have development hits and remain distinct from unconfirmed assayed constructs. Zero admissions; 201 carry-forward / eight held unchanged. See `docs/SMALL_MOLECULE_FOLLOWUP_20261007_CN.md`.
 
 > October 7 priority-source follow-up: all five FLS PDB-reference queries (WT plus four variants) have qualifying development hits, around 93% identity; exact experimental constructs remain unconfirmed and the source is deprioritized. Six AxyAgu115A rows use polymeric beechwood xylan and fail the frozen defined-substrate scope. Supplements remain inaccessible; the Figshare supplement also carries a different license. Zero admissions or predictions; 201 carry-forward / eight held unchanged. See `docs/PRIORITY_SOURCE_FOLLOWUP_20261007_CN.md`.
