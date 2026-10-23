@@ -1,3 +1,9 @@
+"""Pins the temporal-pool registry: evidence must be finalized and hash-matched
+before rows count, pending or malformed sources fail closed, finalized
+zero-candidate sources are reported without blocking, and the CLI exits
+non-zero while a blocker stands.
+"""
+
 import csv
 import hashlib
 import json

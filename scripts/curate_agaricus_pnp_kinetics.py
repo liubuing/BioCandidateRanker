@@ -1,3 +1,15 @@
+"""Curate the Agaricus bisporus purine nucleoside phosphorylase (AbPNP) row from DOI
+10.3390/jof11040268.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12028538:
+candidate_records.csv (one inosine kcat row), provenance.json, construct_sequences.fasta,
+and homology-audit.json (or prescreen-audit.json while the frozen mmseqs run is unavailable).
+
+The exact assayed sequence is the deposited codon-optimized construct WEP24514.1
+(EF + native residues 2-304 + C-terminal His6). The row is accepted only when MMseqs2
+against the frozen development reference returns zero hits; any hit forces
+excluded_homology, and a missing frozen executable leaves the row pending_homology.
+"""
 from __future__ import annotations
 
 import csv
@@ -43,10 +55,12 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
+    """Fetch each URL in URLS into RAW, leaving any already-downloaded file untouched."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -57,6 +71,7 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -65,6 +80,8 @@ def read_fasta(path: Path) -> str:
 
 
 def validate_sources() -> tuple[str, str, int, str]:
+    """Check article markers, construct composition, and PubChem identity; return (construct,
+    native, cid, smiles)."""
     xml = (RAW / "PMC12028538-fullText.xml").read_text(encoding="utf-8")
     required_article_text = (
         DOI,
@@ -92,6 +109,8 @@ def validate_sources() -> tuple[str, str, int, str]:
 
 
 def run_mmseqs(query_path: Path) -> None:
+    """Easy-search and linclust ``query_path`` against the frozen reference; no-op if mmseqs is
+    absent (fail-closed downstream)."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     executable = shutil.which("mmseqs")
@@ -151,6 +170,8 @@ def run_mmseqs(query_path: Path) -> None:
 
 
 def write_outputs(*, acquire: bool = True) -> None:
+    """Validate sources, run the homology gate, and write the candidate/provenance/audit evidence
+    files."""
     if acquire:
         download_raw()
     construct, native, cid, smiles = validate_sources()

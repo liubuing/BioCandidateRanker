@@ -1,3 +1,8 @@
+"""Pins the collation contract: tokenizer padding/unknown handling, masked
+multitask labels, deterministic context bucketing, and the FBA/flux schema
+rules (versioned metadata, exact feature widths, leakage-free flux targets).
+"""
+
 import unittest
 import json
 from unittest.mock import patch

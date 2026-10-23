@@ -1,3 +1,11 @@
+"""Adapter for the EnzEngDB directed-evolution corpus (frozen Zenodo archive).
+
+Reads one fitness campaign per CSV file and rejects malformed rows with an
+explicit reason instead of failing the read. Supervision is derived either as
+average-tie percentile ``activity_rank`` targets over a campaign or as one
+consensus-nearest representative sequence per campaign. The ``ARCHIVE_SHA256``
+and size constants below are the frozen source identity of the dataset.
+"""
 from __future__ import annotations
 
 import csv
@@ -166,6 +174,7 @@ def select_primary_reactant(reaction_smiles: str) -> str:
 
 
 def _read_campaign(path: Path) -> tuple[list[EnzEngDBObservation], list[EnzEngDBRejectedRow], int]:
+    """Parse one campaign CSV; invalid rows are rejected with reasons, not fatal."""
     observations = []
     rejected = []
     total = 0
@@ -211,8 +220,10 @@ def _read_campaign(path: Path) -> tuple[list[EnzEngDBObservation], list[EnzEngDB
                     rejected.append(EnzEngDBRejectedRow(path.name, source_row, str(exc)))
                     continue
                 raw_id = _first(row, "id") or path.stem
+                # Campaign-scoped stable id: file stem, 1-based CSV row, source id.
                 candidate_id = f"{path.stem}:{source_row}:{raw_id}"
                 substitutions = _first(row, "amino_acid_substitutions")
+                # "#PARENT#" marks the wild-type ancestor row of a campaign.
                 enzyme_type = "parent" if substitutions == "#PARENT#" else "engineered_variant"
                 record = EnzymeSubstrateRecord(
                     sequence=sequence,
@@ -239,6 +250,7 @@ def _read_campaign(path: Path) -> tuple[list[EnzEngDBObservation], list[EnzEngDB
 
 
 def read_enzengdb_directory(path: PathLike) -> EnzEngDBReadResult:
+    """Read every campaign CSV under ``path`` into observations plus an audit report."""
     root = Path(path)
     if not root.is_dir():
         raise ValueError(f"EnzEngDB experiments path is not a directory: {root}")

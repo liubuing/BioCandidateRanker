@@ -1,4 +1,13 @@
-"""Compare cached GPU molecule features against pinned upstream CPU extraction."""
+"""Compare cached GPU molecule features against pinned upstream CPU extraction.
+
+Reads the first 32 training rows via ``run_catapro_mode_b`` helpers (train
+partition only, never test), recomputes MolT5 embeddings and MACCS keys with
+the pinned upstream CPU code for three fixed positions, and compares them to
+the cached GPU-extracted features. Writes ``molecule-equivalence-check.json``
+with the max absolute error and a pass/fail verdict at the recorded 1e-4
+tolerance; a failure raises and leaves the recorded verdict in place.
+Governance role: cache-equivalence gate for the CataPro Mode B pipeline.
+"""
 import json
 import numpy as np
 import run_catapro_mode_b as runner

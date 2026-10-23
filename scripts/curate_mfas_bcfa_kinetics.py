@@ -1,3 +1,16 @@
+"""Curate mouse fatty acid synthase (mFAS, P19096) apparent kcat rows from DOI 10.1002/pro.70229.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12267109:
+excluded_records.csv (the two Table 1 apparent kcat endpoints: integrated mFAS cycle and
+KS-MAT S581A didomain coupling assay), an empty candidate_records.csv, sequence-mapping.csv,
+saturation-audit.csv, construct_sequences.fasta, raw-file-hashes.json, blocker-evidence.json,
+homology-audit.json, and provenance.json.
+
+Exclusion-only fail-closed: fixed methylmalonyl-CoA/ACP and NADPH saturation plus MabA
+coupling capacity are undemonstrated, exact affinity-tag/termini sequences are undisclosed,
+and the native-coordinate queries face the frozen MMseqs2 development-homology gate and
+the exact-overlap audit against the 17,010-row corpus.
+"""
 from __future__ import annotations
 
 import argparse
@@ -32,8 +45,12 @@ REFERENCE = (
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
 MMSEQS_VERSION = "5d152c612b6ad2a56f657b7a02c127eceaea2a75"
 DEFAULT_MMSEQS = "mmseqs"
+# Pinpoints the exact frozen UniKP development corpus file (17,010 rows); the hash and byte
+# size together prove the overlap audit compares against the identical training data.
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
+# Machine-specific default; pass --development-corpus to point at the same frozen corpus
+# from another machine without editing this file.
 DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
@@ -59,6 +76,7 @@ COMPOUNDS = {
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -67,6 +85,8 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
+    """Fetch article/metadata/supplement/sequence/compound files and extract the SI PDF from the
+    zip."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -81,6 +101,7 @@ def download() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -89,6 +110,8 @@ def read_fasta(path: Path) -> str:
 
 
 def command(executable: str, *args: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -96,6 +119,7 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -103,6 +127,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(args: list[str]) -> str:
+    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit."""
     completed = subprocess.run(args, capture_output=True, text=True, check=False)
     if completed.returncode:
         raise RuntimeError(f"Command failed: {' '.join(args)}\n{completed.stderr}")
@@ -110,6 +135,7 @@ def run_checked(args: list[str]) -> str:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the union of row keys (first-seen order) as the header."""
     fieldnames = list(dict.fromkeys(key for row in rows for key in row))
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -118,6 +144,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def verify_raw() -> tuple[str, str, str]:
+    """Check article/SI markers, P19096 and 6ROP identities, and PubChem records; return (native,
+    KS-MAT0, SI text)."""
     required_files = (*URLS, "si_gusenda-ochs.pdf")
     missing = [name for name in required_files if not (RAW / name).is_file()]
     if missing:
@@ -168,6 +196,8 @@ def verify_raw() -> tuple[str, str, str]:
 
 
 def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[str, object]:
+    """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
+    corpus."""
     if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or changed")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -190,6 +220,7 @@ def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[s
 
 
 def write_fasta(path: Path, sequences: dict[str, str]) -> None:
+    """Write the 80-column-wrapped homology-query FASTA."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id, sequence in sequences.items():
             handle.write(f">{sequence_id}\n")
@@ -198,6 +229,8 @@ def write_fasta(path: Path, sequences: dict[str, str]) -> None:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Easy-search/easy-linclust ``fasta`` against the frozen reference; return (hits, clusters,
+    version)."""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -217,6 +250,8 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def excluded_records() -> list[dict[str, object]]:
+    """Build the two exclusion rows with full saturation/coupling/construct blocker detail per
+    endpoint family."""
     common = {
         "article_doi": DOI,
         "organism": "Mus musculus",
@@ -282,6 +317,8 @@ def excluded_records() -> list[dict[str, object]]:
 
 
 def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
+    """Verify evidence, run overlap and homology audits, and write the exclusion-only evidence
+    bundle."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     native, ks_mat0, _ = verify_raw()
     sequences = {
@@ -367,6 +404,8 @@ def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
 
 
 def main() -> None:
+    """Run the download/verify/audit pipeline for the mFAS source; no candidate labels are ever
+    created."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

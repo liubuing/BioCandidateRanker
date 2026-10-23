@@ -1,3 +1,9 @@
+"""Pins the prediction-path FBA metadata contract: optional FBA context is only
+accepted with a metadata payload whose width matches both the checkpoint's
+fba_context_dim and the per-row feature vectors, and invalid metadata fails
+closed before any context is used.
+"""
+
 import json
 
 import pytest

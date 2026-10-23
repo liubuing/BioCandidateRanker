@@ -1,4 +1,13 @@
-"""Download a pinned public dataset for input overlap audit only (no predictions)."""
+"""Download a pinned public dataset for input overlap audit only (no predictions).
+
+Fetches the CataPro kcat-data_0.4simi-10fold.csv blob named by
+artifacts/pcb-readiness/CataPro/tree.json, verifies its Git blob SHA1, and
+compares exact sequence / RDKit canonical SMILES pairs against every local
+partition recorded in artifacts/external/sota-homology-cold/data-manifest.json
+(each re-hashed before use). Writes artifacts/pcb-readiness/catapro-data-audit.json;
+the receipt records predictions_generated=false and its interpretation is
+deliberately scoped to input overlap, with no homology or license claim.
+"""
 from pathlib import Path
 from collections import Counter
 import base64,csv,hashlib,io,json,urllib.request

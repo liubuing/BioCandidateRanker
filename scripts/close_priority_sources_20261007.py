@@ -1,4 +1,12 @@
-"""Record source-level decisions without admitting records or running predictions."""
+"""Record source-level decisions without admitting records or running predictions.
+
+Closes the 2026-10-07 priority-source follow-up into
+priority-source-followup-20261007/closeout.json: an FtsQ/FLS reference
+homology screen (deposition-derived reference plus in-silico variants, not
+confirmed constructs) and a polymer-substrate scope exclusion. The frozen
+protocol hash is asserted at import time and every precomputed MMseqs hit line
+is re-checked against the pinned thresholds; accepted_additions stays 0.
+"""
 from pathlib import Path
 import hashlib
 import json
@@ -8,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/external/priority-source-followup-20261007'
 
 def sha(path):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 protocol = ROOT / 'configs/temporal_absolute_kinetics_protocol.json'

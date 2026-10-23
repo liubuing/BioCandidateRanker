@@ -1,4 +1,13 @@
-"""Evidence-backed campaign review; retains all original pool decisions."""
+"""Evidence-backed campaign review; retains all original pool decisions.
+
+Reads artifacts/research-scope-20261005/ranking-metadata-feasibility.json, the
+three reviewed PMC full-text XMLs, and the frozen temporal protocol, then
+writes campaign-source-evidence.json and closeout.json under
+artifacts/external/temporal-absolute-kinetics/campaign-audit-20261005. Every
+quoted evidence paragraph must come from the hash-verified source XML;
+dispositions never use response magnitudes, accepted_additions stays 0, and
+all 18 remaining buckets are queued unreviewed.
+"""
 import hashlib
 import json
 import xml.etree.ElementTree as ET
@@ -10,10 +19,12 @@ OUT = BASE / 'campaign-audit-20261005'
 
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
+    """Review three campaign groups against full-text evidence and write the closeout."""
     inventory = ROOT / 'artifacts/research-scope-20261005/ranking-metadata-feasibility.json'
     groups = [g for g in json.loads(inventory.read_text())['groups'] if g['distinct_sequence_signatures'] >= 3]
     reviews = {

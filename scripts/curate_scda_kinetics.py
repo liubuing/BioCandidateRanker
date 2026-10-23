@@ -1,3 +1,20 @@
+"""Curate Staphylococcus aureus ScdA nitrite-reductase kinetics (DOI 10.1021/jacs.5c05573).
+
+Reads the BioStudies deposit S-EPMC12412097 under
+``artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12412097/raw``
+(article XML, SI PDF, figure-table JPGs, PDB 9J47 mmCIF, Q2FK11/ABD21118.1
+FASTA, PubChem nitrite record) and writes ``construct_sequences.fasta``,
+``candidate_records.csv``, ``provenance.json``, plus ``homology-audit.json``
+when homology outputs already exist under SOURCE/homology.
+
+Accept/exclude logic: the four finite kcat rows (WT, S77E, C30A/C31A/C191A "CF",
+and CF-S77E from Figures 5C/6A) are emitted as candidate records with status
+``pending_homology``; ``apply_homology_status`` then re-marks each record as
+``excluded_homology`` when its exact sequence appears in the frozen-reference
+homology hits, or ``accepted_homology_cold_pool`` otherwise. Author-reported
+kcat (min-1) is normalized to s-1 by /60. Governance role: fail-closed cold-pool
+curation -- readiness gate stays False and no model predictions are generated.
+"""
 from __future__ import annotations
 
 import csv
@@ -54,6 +71,7 @@ def read_fasta(path: Path) -> str:
 
 
 def substitute(sequence: str, mutations: tuple[tuple[int, str, str], ...]) -> str:
+    """Apply position-verified point mutations; fail on any wild-type residue mismatch."""
     result = sequence
     for position, expected, replacement in mutations:
         if result[position - 1] != expected:
@@ -65,6 +83,7 @@ def substitute(sequence: str, mutations: tuple[tuple[int, str, str], ...]) -> st
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Cross-check the 224-aa WT accessions, derive variants, and pin 9J47 to the CF chain."""
     wt = read_fasta(RAW / "Q2FK11.fasta")
     if wt != read_fasta(RAW / "ABD21118.1.fasta"):
         raise ValueError("UniProt Q2FK11 and GenBank ABD21118.1 sequences differ")
@@ -88,6 +107,7 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def read_substrate() -> tuple[int, str]:
+    """Return the pinned PubChem nitrite CID and SMILES after identity checks."""
     payload = json.loads((RAW / "pubchem-nitrite.json").read_text(encoding="utf-8"))
     compound = payload["PropertyTable"]["Properties"][0]
     if compound["CID"] != 946 or compound["SMILES"] != "N(=O)[O-]":
@@ -96,6 +116,7 @@ def read_substrate() -> tuple[int, str]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Build the four variant records, normalizing kcat from min-1 to s-1."""
     cid, smiles = read_substrate()
     records = []
     for index, row in enumerate(ROWS, 1):
@@ -147,6 +168,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-mark records as excluded or cold-pool accepted based on homology hits."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -164,6 +186,7 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
+    """Validate raw evidence, then write the FASTA, candidate CSV, provenance, and audit."""
     missing = [name for name in RAW_FILES if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw source files: {', '.join(missing)}")

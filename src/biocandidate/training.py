@@ -1,3 +1,13 @@
+"""Training loops, campaign-aware samplers, and governed checkpointing.
+
+Epoch runners branch on the model's declared ``uncertainty_mode`` and normalize
+the loss by observed-label evidence weight, so masked tasks contribute nothing.
+Checkpoints embed the model config, RNG states, and the data-manifest
+identities; downstream commands verify those identities before reusing a
+checkpoint, so a checkpoint can only be evaluated or resumed against the exact
+data it was trained on.
+"""
+
 from __future__ import annotations
 
 import json
@@ -43,6 +53,8 @@ def create_lr_scheduler(
 
 
 class RecordDataset(Dataset):
+    """In-memory dataset of :class:`EnzymeSubstrateRecord` items."""
+
     def __init__(self, records: list[EnzymeSubstrateRecord] | tuple[EnzymeSubstrateRecord, ...]):
         self.records = tuple(records)
 
@@ -54,6 +66,12 @@ class RecordDataset(Dataset):
 
 
 class CampaignBatchSampler(Sampler[list[int]]):
+    """Fixed-size batches that never mix campaigns (ranking losses are within-campaign).
+
+    Shuffling is deterministic per epoch: the permutation is seeded with
+    ``seed + epoch``, so call :meth:`set_epoch` each epoch to vary it.
+    """
+
     def __init__(
         self,
         records: Sequence[EnzymeSubstrateRecord] | Dataset,
@@ -155,6 +173,12 @@ class RankingEpochMetrics:
 
 def run_epoch(model: BioCandidateRanker, loader: DataLoader, device: torch.device,
               optimizer: torch.optim.Optimizer | None = None) -> EpochMetrics:
+    """One pass over ``loader``; trains when ``optimizer`` is given, else evaluates.
+
+    The reported loss is the evidence-weighted numerator summed over all
+    observed labels divided by the summed denominator, matching the objective
+    the masked loss functions normalize internally per batch.
+    """
     training = optimizer is not None
     model.train(training)
     total_loss_numerator = 0.0
@@ -277,6 +301,11 @@ def run_ranking_epoch(
     optimizer: torch.optim.Optimizer | None = None,
     task_index: int = 0,
 ) -> RankingEpochMetrics:
+    """One pass of within-campaign pairwise logistic ranking loss on ``task_index``.
+
+    Trains when ``optimizer`` is given, else evaluates. The reported loss is the
+    pair-count-weighted mean over the epoch.
+    """
     training = optimizer is not None
     model.train(training)
     weighted_loss = 0.0
@@ -312,6 +341,12 @@ def save_checkpoint(path: str | Path, model: BioCandidateRanker,
                     optimizer: torch.optim.Optimizer, *, epoch: int,
                     data_manifest: dict, metrics: dict,
                     data_loader_generator_state: torch.Tensor | None = None) -> None:
+    """Atomically save model/optimizer state plus the identities needed for exact resume.
+
+    The payload records the model config, torch/CUDA/DataLoader RNG states, the
+    data manifest, and metrics; ``train --resume`` restores all of them and
+    refuses to continue when the embedded identities no longer match the run.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -338,6 +373,10 @@ def save_checkpoint(path: str | Path, model: BioCandidateRanker,
 
 
 def load_checkpoint(path: str | Path, device: torch.device) -> tuple[BioCandidateRanker, dict]:
+    """Load a checkpoint and rebuild the model from its embedded config.
+
+    Rejects payloads written by a different checkpoint format version.
+    """
     payload = torch.load(path, map_location=device, weights_only=True)
     if payload.get("format_version") != 1:
         raise ValueError("unsupported checkpoint format")

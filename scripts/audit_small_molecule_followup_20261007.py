@@ -1,4 +1,14 @@
-"""Reproducible sequence/provenance audit; no automatic admission or predictions."""
+"""Reproducible sequence/provenance audit; no automatic admission or predictions.
+
+Asserts the frozen SHA256 of the temporal protocol and two protected artifacts
+at import time, parses GenBank/PDB records to document the LcOE229
+native-versus-PDB sequence conflict, re-checks every precomputed MMseqs hit
+line against the pinned thresholds, and stages three PMC11312515 Table 1
+measurements as pending. Writes
+small-molecule-followup-20261007/staged-measurements.json and audit.json with
+accepted_additions=0; holds and deprioritizations are recorded without
+inferring mutations or reconciling source inconsistencies.
+"""
 from pathlib import Path
 from collections import defaultdict
 import hashlib
@@ -9,8 +19,10 @@ from Bio import SeqIO
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/external/small-molecule-followup-20261007'
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 def cds(name):
+    """Return the first CDS translation from a GenBank record in the output folder."""
     r = SeqIO.read(OUT / (name + '.gb'), 'genbank')
     return next(f.qualifiers['translation'][0] for f in r.features if f.type == 'CDS')
 

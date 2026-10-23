@@ -1,3 +1,12 @@
+"""Benchmark BioCandidateRanker forward-pass latency across sequence lengths.
+
+Builds deterministic synthetic batches (random tokens, fixed 24-atom linear
+graphs, zeroed FBA context) at lengths 256-2048, times median forward latency
+and peak CUDA memory for the configured device, and writes the results JSON to
+artifacts/scaling.json by default. Performance probe only: it touches no
+governed data and its outputs feed no evaluation claims.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -12,6 +21,7 @@ from biocandidate import BioCandidateRanker, ModelConfig
 
 
 def synthetic_batch(batch_size: int, length: int, device: torch.device) -> dict[str, torch.Tensor]:
+    """Build one synthetic model input dict of the given batch size and sequence length."""
     atoms_per_graph = 24
     atom_count = batch_size * atoms_per_graph
     graph_batch = torch.arange(batch_size).repeat_interleave(atoms_per_graph)
@@ -34,6 +44,7 @@ def synthetic_batch(batch_size: int, length: int, device: torch.device) -> dict[
 
 
 def main() -> None:
+    """Run the sequence-length sweep and write the timing report."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="artifacts/scaling.json")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")

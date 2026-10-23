@@ -1,4 +1,13 @@
-"""Fetch pinned upstream archive; extract only reviewed-scope code/config files."""
+"""Fetch pinned upstream archive; extract only reviewed-scope code/config files.
+
+Downloads the CatPred GitHub archive at a pinned commit into
+``artifacts/catpred-mode-b/upstream.zip`` and extracts only the reviewed file
+set (catpred/scripts Python and shell files plus the listed top-level files)
+into ``upstream/``, verifying every blob against the GitHub tree API SHA-1
+recorded in ``artifacts/pcb-readiness/CatPred/tree.json``. Writes
+``source-receipt.json`` with per-file SHA-256s. Governance role: pinned,
+hash-verified upstream acquisition; unsafe archive paths fail closed.
+"""
 from pathlib import Path,PurePosixPath
 import hashlib,json,urllib.request,zipfile
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'artifacts/catpred-mode-b';OUT.mkdir(exist_ok=True)

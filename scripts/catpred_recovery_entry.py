@@ -1,9 +1,16 @@
-"""Install bounded-memory inputs and atomic recovery without editing upstream."""
+"""Install bounded-memory inputs and atomic recovery without editing upstream.
+
+Patches catpred.train.run_training in memory (each source anchor must match
+exactly once, or the run refuses to start) to call the atomic restore/save
+hooks, then starts upstream training. Files on disk in the upstream tree are
+never modified.
+"""
 import importlib,inspect,textwrap
 from catpred_memory_entry import install_adapters
 import catpred_recovery
 
 def install_recovery():
+    """Rewrite run_training in memory to insert epoch-boundary recovery calls."""
     module=importlib.import_module('catpred.train.run_training')
     source=textwrap.dedent(inspect.getsource(module.run_training))
     old='        for epoch in trange(args.epochs):'

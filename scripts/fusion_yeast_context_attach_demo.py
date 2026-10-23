@@ -10,6 +10,11 @@ without flux labels, so the FBA input pathway is untrained. Attaching the
 context changes the output numbers only to prove the pipeline is connected; it
 is NOT a scientifically validated input. Raw (context-free) predictions are
 stored alongside for comparison.
+
+Reads the governed FBA context from ``biocandidate.fba_context`` and the task-1
+candidate list under ``artifacts/10h2da-yeast-prediction``; writes
+``artifacts/fusion-yeast-pilot/context_attached_prediction_demo.json`` with raw
+versus context-attached kcat values and their shifts.
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ TASK1 = ROOT / "artifacts/10h2da-yeast-prediction/task1_10h2da_pathway.json"
 
 
 def main() -> int:
+    """Run raw and FBA-attached predictions and record the demonstration artifact."""
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

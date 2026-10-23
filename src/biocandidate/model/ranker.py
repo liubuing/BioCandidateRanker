@@ -1,3 +1,10 @@
+"""The BioCandidateRanker architecture: multi-modal fusion and per-task heads.
+
+Protein, molecular graph, and context tokens are fused either by late
+concatenation or by task-query cross-attention. Each task owns an MLP head
+that emits a mean plus an optional heteroscedastic log variance; disabled
+modalities are zeroed out while keeping the graph structure intact.
+"""
 from __future__ import annotations
 
 import torch
@@ -73,6 +80,7 @@ class BioCandidateRanker(nn.Module):
         )
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        """Map a collator batch to per-task mean / log-variance predictions."""
         protein_tokens, protein_mask = self.protein(
             batch["sequence_tokens"], batch["sequence_mask"])
         batch_size = protein_tokens.shape[0]

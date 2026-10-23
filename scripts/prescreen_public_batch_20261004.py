@@ -1,4 +1,18 @@
-"""Stage published benign enzyme components; homology is a screen, not acceptance."""
+"""Stage published benign enzyme components; homology is a screen, not acceptance.
+
+Reads the staged article XMLs under
+``artifacts/external/temporal-absolute-kinetics/public-batch-20261004``, fetches
+the listed nucleotide accessions (and the UniProt Q9HJS7 reference), validates
+each GenBank CDS translation against its deposited protein, and stages the
+published catalytic components -- plus the documented LbXyn43B_T274A
+substitution -- into ``component-queries.fasta`` and
+``sequence-register.json``.
+
+Governance role: fail-closed staging only -- every entry carries scope
+"published catalytic component; full assayed construct unresolved"; length
+discrepancies are recorded, never repaired; fetch/validation failures are
+captured per row instead of aborting the batch; ``accepted_additions`` stays 0.
+"""
 import hashlib
 import json
 import urllib.request
@@ -18,6 +32,7 @@ SOURCES=[
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
+    """Fetch, validate, and stage each published component; write the register."""
     rows=[];seqs={}
     for name,accession,pmc,length in SOURCES:
         article=OUT/(pmc+'.xml'); assert accession in article.read_text(encoding='utf-8')

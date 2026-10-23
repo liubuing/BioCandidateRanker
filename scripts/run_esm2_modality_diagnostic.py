@@ -1,4 +1,15 @@
-"""Run the frozen post-hoc ESM-2 modality diagnostic sequentially on one GPU."""
+"""Run the frozen post-hoc ESM-2 modality diagnostic sequentially on one GPU.
+
+Reads configs/esm2_modality_diagnostic_protocol.json, which pins the source
+corpus and homology-split identities, the training hyperparameters, the seed
+set (7, 42, 123) and the two variants (esm2_protein_only, esm2_protein_molecule).
+For every variant x seed it launches ``biocandidate.cli train`` and then
+exactly one test-partition evaluation, writing checkpoints, logs and
+test_metrics.json under artifacts/esm2-modality-diagnostic/<variant>-seed<seed>/.
+Fail-closed: source and split files are hash-checked up front, and a checkpoint
+left by an interrupted run without its training-complete.json marker aborts the
+run instead of being silently reused.
+"""
 
 from __future__ import annotations
 
@@ -31,6 +42,7 @@ def identity(path: Path) -> dict[str, int | str]:
 
 
 def checked_identity(path: Path, expected: dict) -> None:
+    """Fail closed unless the file exists and matches the recorded size and SHA256."""
     if not path.is_file():
         raise FileNotFoundError(path)
     actual = identity(path)
@@ -40,6 +52,7 @@ def checked_identity(path: Path, expected: dict) -> None:
 
 
 def call_logged(arguments: list[str], logfile: Path) -> None:
+    """Run one biocandidate.cli subcommand with output captured to the given log file."""
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(ROOT / "src")
     with logfile.open("w", encoding="utf-8") as output:
@@ -73,6 +86,9 @@ def main() -> None:
                 continue
             checkpoint = directory / "best.pt"
             completion_marker = directory / "training-complete.json"
+            # The marker, not the checkpoint, is the completion proof: a
+            # checkpoint without it means an interrupted run that must be
+            # inspected, never resumed blind.
             if not completion_marker.is_file():
                 if checkpoint.is_file():
                     raise RuntimeError(

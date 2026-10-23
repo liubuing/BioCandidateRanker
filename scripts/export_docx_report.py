@@ -4,6 +4,10 @@ Delegates to the converter in scripts/export_manuscript_docx.py so report
 exports keep the same heading, table, list, blockquote and inline-emphasis
 handling as the manuscript exports; that converter is not duplicated here.
 
+Reads a UTF-8 Markdown source and writes a .docx next to it (or at --target).
+Governance role: presentation-only export wrapper; it never mutates the
+source report or any artifact consumed by evaluations.
+
 Usage:
     python scripts/export_docx_report.py --source docs/PROJECT_STATUS_REPORT_20261012_CN.md
     python scripts/export_docx_report.py --source a.md --target b.docx
@@ -20,6 +24,7 @@ CONVERTER = ROOT / "scripts/export_manuscript_docx.py"
 
 
 def load_converter():
+    """Load scripts/export_manuscript_docx.py as a module by file path."""
     spec = importlib.util.spec_from_file_location("manuscript_docx_export", CONVERTER)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

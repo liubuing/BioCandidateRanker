@@ -1,3 +1,16 @@
+"""Curate human ENPP1-Fc construct 770 kcat rows from DOI 10.1016/j.jbc.2026.113078.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC13223937:
+the two Table 2 rows (2'3'-cGAMP and pApG) land in candidate_records.csv or
+excluded_records.csv depending on the frozen homology gate, alongside
+construct_sequences.fasta (exact 1078-aa precursor / 1057-aa mature fusion rebuilt from
+the SI DOCX), sequence_mapping.csv, raw-file-hashes.json, provenance.json,
+blocker-evidence.json, and homology-audit.json.
+
+Acceptance requires the exact SI-derived construct, direct Briggs-Haldane saturation fits,
+and no MMseqs2 hit for either the mature chain or its ENPP1(99-925) catalytic component;
+the component rule blocks Fc-coverage dilution from escaping the development-homology gate.
+"""
 from __future__ import annotations
 
 import argparse
@@ -23,8 +36,12 @@ REFERENCE = ROOT / "artifacts" / "homology-final" / "unique_proteins.fasta"
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
 MMSEQS_VERSION = "5d152c612b6ad2a56f657b7a02c127eceaea2a75"
 DEFAULT_MMSEQS = "mmseqs"
+# Pinpoints the exact frozen UniKP development corpus file (17,010 rows); the hash and byte
+# size together prove the overlap audit compares against the identical training data.
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
+# Machine-specific default; pass --development-corpus to point at the same frozen corpus
+# from another machine without editing this file.
 DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
@@ -63,6 +80,7 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -71,6 +89,8 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
+    """Fetch article/supplement/sequence/compound/product files and unpack docx/pdf supplement
+    members."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -90,16 +110,20 @@ def download_raw() -> None:
 
 
 def fasta_sequence(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(line.strip() for line in path.read_text(encoding="ascii").splitlines() if line and not line.startswith(">"))
 
 
 def docx_text(path: Path) -> str:
+    """Return the space-joined text of a .docx document body."""
     with zipfile.ZipFile(path) as archive:
         root = ET.fromstring(archive.read("word/document.xml"))
     return " ".join(text.strip() for text in root.itertext() if text.strip())
 
 
 def exact_construct() -> tuple[str, str, str]:
+    """Rebuild construct 770 from the SI DOCX and verify it maps to ENPP7(1-21)/ENPP1(99-925)+Fc;
+    return (precursor, mature, component)."""
     enpp1 = fasta_sequence(RAW / "P22413.fasta")
     enpp7 = fasta_sequence(RAW / "Q6UWV6.fasta")
     if len(enpp1) != 925 or len(enpp7) != 458:
@@ -125,6 +149,8 @@ def exact_construct() -> tuple[str, str, str]:
 
 
 def validate_evidence() -> tuple[str, str, str]:
+    """Check article, comparator, and PubChem markers against the frozen values, then return
+    exact_construct()."""
     xml = (RAW / "PMC13223937-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI, "creativecommons.org/licenses/by/4.0", "construct 770", "Glycosylated human ENPP1",
@@ -151,6 +177,8 @@ def validate_evidence() -> tuple[str, str, str]:
 
 
 def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
+    """Count exact sequence and per-substrate SMILES overlaps against the hash-pinned 17,010-row
+    corpus."""
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE or sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("Frozen development corpus is absent or changed")
     rows = json.loads(development_corpus.read_text(encoding="utf-8"))
@@ -172,6 +200,8 @@ def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
 
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, binary = executable.split(":", 2)
@@ -179,6 +209,7 @@ def mmseqs_command(executable: str, *arguments: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -186,6 +217,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(command: list[str]) -> str:
+    """Run ``command`` and return its output, raising RuntimeError on a non-zero exit."""
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"Command failed: {' '.join(command)}\n{result.stderr}")
@@ -193,6 +225,8 @@ def run_checked(command: list[str]) -> str:
 
 
 def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Easy-search/easy-linclust ``query`` against the frozen reference; return (hits, clusters,
+    version)."""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs2 {version!r} differs from frozen version")
@@ -210,6 +244,7 @@ def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the first row's key order as the header."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
@@ -217,6 +252,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def curate(acquire: bool, mmseqs: str, threads: int, development_corpus: Path) -> None:
+    """Run the full pipeline: verify, audit overlap and homology, then write the row set and all
+    audits."""
     if acquire:
         download_raw()
     precursor, mature, component = validate_evidence()

@@ -1,3 +1,12 @@
+"""Public data-layer facade for BioCandidateRanker.
+
+Re-exports the governed dataset adapters (UniKP, Lunzer, EnzEngDB, normalized
+kinetics JSONL), the canonical record schema, homology/cold-split tooling, and
+SHA256 manifest verification. Source assets are bound to frozen SHA256
+identities and adapters emit explicit accept/reject audits, so callers never
+silently train on unverified or unexplained data.
+"""
+
 from ._rdkit import RDKitUnavailableError
 from .collate import AminoAcidTokenizer, EnzymeSubstrateCollator, MolecularGraph, smiles_to_sparse_graph
 from .manifest import FileManifest, ManifestVerificationError, build_manifest, verify_manifest

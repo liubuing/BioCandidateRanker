@@ -1,3 +1,18 @@
+"""Curate the Ruminiclostridium cellulolyticum kinase panel (XK/PGK/PK/AK) from DOI
+10.1038/s42003-025-07971-7.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC11955521:
+candidate_records.csv, exclusions.csv, direct-kcat-rows.csv, saturation-audit.csv,
+family-admission-audit.json, construct_sequences.fasta (exact NcoI/XhoI pET28a products),
+raw-file-hashes.json, provenance.json, homology-audit.json, and per-family
+homology/<family>/homology_hits.tsv.
+
+Rows are admitted only when the source declares the fixed cosubstrate saturating (PGK
+coupled forward rows and every pyruvate kinase row fail: unknown in-situ 1,3-BPG
+concentration and unresolved construct, respectively); qualified rows then face the
+frozen family-wise MMseqs2 gate and the exact-overlap audit against the 17,010-row
+development corpus.
+"""
 from __future__ import annotations
 
 import argparse
@@ -19,10 +34,14 @@ RAW = SOURCE / "raw"
 HOMOLOGY = SOURCE / "homology"
 REFERENCE = ROOT / "artifacts" / "homology-final" / "unique_proteins.fasta"
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
+# Machine-specific default; pass --development-corpus to point at the same frozen corpus
+# from another machine without editing this file.
 DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
 )
+# Pinpoints the exact frozen UniKP development corpus file (17,010 rows); the hash and byte
+# size together prove the overlap audit compares against the identical training data.
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
 MMSEQS = "mmseqs"
@@ -68,6 +87,7 @@ URLS.update({
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -76,6 +96,8 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
+    """Fetch every raw metadata/article/supplement/sequence/compound file into RAW, skipping
+    existing files."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -87,6 +109,7 @@ def download() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if line and not line.startswith(">")
@@ -94,6 +117,8 @@ def read_fasta(path: Path) -> str:
 
 
 def constructs() -> dict[str, str]:
+    """Rebuild the exact pET28a constructs (NcoI MA junction, native ORF, LE-His6 tail); return id
+    -> sequence."""
     result = {}
     for key, (_, _, _, protein_id) in PROTEINS.items():
         native = read_fasta(RAW / f"{protein_id}.fasta")
@@ -106,6 +131,8 @@ def constructs() -> dict[str, str]:
 
 
 def validate_raw() -> dict[str, str]:
+    """Check raw files, BioStudies accession, article markers, and PubChem identities; return the
+    construct sequences."""
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"missing raw evidence: {missing}; run with --download")
@@ -134,16 +161,19 @@ def validate_raw() -> dict[str, str]:
 
 
 def wsl_path(path: Path) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive.rstrip(':').lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
 
 def run_checked(arguments: list[str]) -> str:
+    """Run ``arguments`` and return its output, raising RuntimeError on a non-zero exit."""
     completed = subprocess.run(arguments, check=False, capture_output=True, text=True)
     if completed.returncode:
         raise RuntimeError(f"command failed: {' '.join(arguments)}\n{completed.stderr}")
@@ -151,11 +181,15 @@ def run_checked(arguments: list[str]) -> str:
 
 
 def reset_wsl(path: Path) -> None:
+    """Delete ``path`` from inside the WSL distribution (Windows rmtree cannot cross the
+    boundary)."""
     if path.exists():
         run_checked(["wsl", "-d", MMSEQS.split(":", 2)[1], "rm", "-rf", "--", wsl_path(path)])
 
 
 def run_homology(query: Path, threads: int) -> str:
+    """Easy-search each family query against the frozen reference and cluster all constructs;
+    return the version."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("frozen development reference is absent or changed")
     version = run_checked(mmseqs_command("version")).strip().splitlines()[-1]
@@ -191,6 +225,7 @@ def run_homology(query: Path, threads: int) -> str:
 
 
 def read_fasta_entries(path: Path) -> dict[str, str]:
+    """Parse a multi-record FASTA into a header-id -> sequence mapping."""
     result: dict[str, str] = {}
     identifier = ""
     for line in path.read_text(encoding="ascii").splitlines():
@@ -203,6 +238,8 @@ def read_fasta_entries(path: Path) -> dict[str, str]:
 
 
 def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[str, int | str]:
+    """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
+    corpus."""
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise ValueError("frozen development corpus size changed")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -222,6 +259,8 @@ def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[s
 
 
 def specifications() -> list[dict[str, object]]:
+    """Return the frozen Table 1 row specifications with per-family saturation/construct
+    dispositions."""
     rows: list[dict[str, object]] = []
 
     def add(family: str, varied: str, fixed: str, fixed_mm: float | str, kcat: float,
@@ -277,6 +316,7 @@ def specifications() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the first row's key order as the header."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
@@ -284,6 +324,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def curate(*, acquire: bool, homology: bool, threads: int, development_corpus: Path) -> None:
+    """Run the full pipeline: verify, audit, gate on saturation/homology, and write every evidence
+    artifact."""
     if acquire:
         download()
     sequences = validate_raw()
@@ -436,6 +478,7 @@ def curate(*, acquire: bool, homology: bool, threads: int, development_corpus: P
 
 
 def main() -> None:
+    """Parse flags and dispatch to curate(); homology only reruns under --run-homology."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--run-homology", action="store_true")

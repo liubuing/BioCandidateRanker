@@ -1,4 +1,18 @@
-"""Post-hoc paired cluster bootstrap, with fixed seeds averaged within each draw."""
+"""Post-hoc paired family-level bootstrap of internal-test metrics.
+
+Recomputes RMSE/MAE/Pearson for the reference model, CataPro Mode B and UniKP
+Mode B on the frozen internal test partition, resampling whole sequence
+families (cluster bootstrap via the homology split manifest) and averaging the
+three seed-specific prediction vectors within each draw. Reads
+configs/paired_family_analysis_protocol.json (5000 replicates, fixed
+bootstrap_seed 20260918, frozen-file hashes, seeds 7/42/123), optionally
+tightened by configs/current_code_paired_analysis_protocol.json via
+--current-code. Writes paired-bootstrap.json under
+artifacts/paired-family-analysis/ and refuses to overwrite an existing report.
+Governance: strictly post-hoc -- aggregate test metrics were already observed,
+so this analysis performs no model selection, applies no multiplicity
+adjustment, and treats a CI crossing zero as non-evidence of equivalence.
+"""
 from pathlib import Path
 import csv
 import hashlib
@@ -17,6 +31,7 @@ def rows(path):
         return list(csv.DictReader(stream))
 
 def aligned(path, ids, labels, prediction_key, label_key):
+    """Return predictions re-ordered to the canonical IDs, verifying labels and finiteness."""
     data = rows(path)
     mapping = {r['pair_id']: r for r in data}
     if len(mapping) != len(data) or set(mapping) != set(ids):
@@ -75,11 +90,14 @@ def main():
             if r['sequence_id'] in mapping:
                 assert mapping[r['sequence_id']] == r['cluster']
             mapping[r['sequence_id']] = r['cluster']
+    # Split-manifest sequence IDs are 'seq_' + the first 24 hex chars of the
+    # sequence SHA256; this re-derives that key to map rows to families.
     families = [mapping['seq_'+hashlib.sha256(r['sequence'].encode('ascii')).hexdigest()[:24]] for r in data]
     unique, groups = np.unique(families, return_inverse=True)
     g = len(unique)
     rng = np.random.default_rng(protocol['bootstrap_seed'])
     weights = rng.multinomial(g, np.full(g, 1/g), size=protocol['bootstrap_replicates'])
+    # Row 0 (all ones) yields the point estimate; the remaining rows are draws.
     all_weights = np.vstack([np.ones(g), weights])
     metrics = {}; inputs = []
     for model in ['reference', 'CataPro', 'UniKP']:
@@ -114,6 +132,7 @@ def main():
     if args.current_code:
         report['amendment_sha256'] = sha(amendment_path)
     target = OUT/'paired-bootstrap.json'
+    # Single-shot discipline: a completed analysis is never regenerated or overwritten.
     if target.exists():
         raise FileExistsError('Do not overwrite a completed analysis')
     target.write_text(json.dumps(report, indent=2), encoding='utf-8')

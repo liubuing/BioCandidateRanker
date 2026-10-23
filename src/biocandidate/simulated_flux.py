@@ -1,3 +1,14 @@
+"""Governed simulated-flux smoke pipeline: frozen FBA grid, dataset, CPU training.
+
+Solves the yeast model at twelve fixed glucose levels against the biomass
+objective, writes ``simulated_flux.jsonl`` plus split and manifest with
+hash-identified model/solver/objective/medium identities, then trains a tiny
+context-only ranker on CPU. Labels are simulated FBA fluxes, never
+experimental measurements (see CLAIM_BOUNDARY). Any failure deletes partial
+outputs and leaves ``blocker.json`` as the only artifact: the pipeline is
+fail-closed.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -26,9 +37,12 @@ from .training import RecordDataset, run_epoch, save_checkpoint
 
 
 FORMAT_VERSION = 1
-TARGET_REACTION_ID = "r_2111"
+TARGET_REACTION_ID = "r_2111"  # biomass (growth) reaction of the yeast model
 FEATURE_IDS = ("medium_lower_bound:r_1714", "medium_lower_bound:r_1992")
 GLUCOSE_LEVELS = tuple(round(0.15 + 0.075 * index, 3) for index in range(12))
+# Split assignment is the fixed, label-independent condition order (method
+# "fixed_label_independent_condition_order_v1" in split.json); it is never
+# derived from the solved flux values.
 SPLITS = ("train",) * 8 + ("validation",) * 2 + ("test",) * 2
 CLAIM_BOUNDARY = (
     "Targets are simulated FBA biomass fluxes under declared model assumptions. "
@@ -134,6 +148,7 @@ def _record(row: dict) -> EnzymeSubstrateRecord:
 
 
 def read_simulated_flux_jsonl(path: str | Path) -> tuple[EnzymeSubstrateRecord, ...]:
+    """Read rows back into records, rejecting unsupported format versions and empty files."""
     records = []
     with Path(path).open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, 1):
@@ -149,6 +164,12 @@ def read_simulated_flux_jsonl(path: str | Path) -> tuple[EnzymeSubstrateRecord, 
 
 
 def generate_dataset(model_path: str | Path, output_dir: str | Path) -> dict:
+    """Solve the frozen medium grid and write the dataset, split, and manifest.
+
+    Every condition must solve optimally with a positive target flux, and the
+    source model is re-hashed afterwards: any mutation of the model file or a
+    non-optimal condition aborts before anything is written.
+    """
     source = Path(model_path).resolve()
     if not source.is_file():
         raise RuntimeError(f"Yeast-MetaTwin model asset is not a file: {source}")
@@ -258,6 +279,7 @@ def generate_dataset(model_path: str | Path, output_dir: str | Path) -> dict:
 
 
 def train_cpu_smoke(output_dir: str | Path, *, seed: int = 7) -> dict:
+    """Run one seeded CPU epoch over the generated dataset and freeze the smoke checkpoint."""
     output = Path(output_dir)
     records = read_simulated_flux_jsonl(output / "simulated_flux.jsonl")
     partitions = {name: [record for record in records if record.split == name]
@@ -328,6 +350,12 @@ def train_cpu_smoke(output_dir: str | Path, *, seed: int = 7) -> dict:
 
 
 def run_pipeline(model_path: str | Path, output_dir: str | Path, *, seed: int = 7) -> dict:
+    """Run generation plus the smoke train; on any failure leave only ``blocker.json``.
+
+    Fail-closed: partial outputs are deleted and a blocker describing the
+    failure is written before the error is re-raised, so a failed run can never
+    leave a half-valid dataset or checkpoint behind.
+    """
     output = Path(output_dir)
     _clear_pipeline_outputs(output)
     try:

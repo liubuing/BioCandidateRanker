@@ -1,4 +1,16 @@
-"""Frozen outer-family evaluation of two validation checkpoint selectors."""
+"""Frozen outer-family evaluation of two validation checkpoint selectors.
+
+Reads the outer-evaluation freeze, the nested-family-selection protocol, the
+266-family split manifest, and the checkpoints selected by NLL versus RMSE on
+validation; evaluates both selector rules per seed on the 2,127-row outer
+family holdout and writes per-(seed, rule) prediction CSVs with receipts plus
+``summary.json`` under ``artifacts/nested-family-selection/outer-evaluation/``.
+Cluster-level statistics are compared with a 5,000-replicate family bootstrap
+(seed 20260928). Governance role: fail-closed, single-holdout comparison --
+all pins are re-verified, existing receipts are revalidated, a pre-existing
+``summary.json`` aborts the run, and the scope stays explicitly "not pristine
+external confirmation".
+"""
 from pathlib import Path
 import csv,json,hashlib,os,sys
 ROOT=Path(__file__).resolve().parents[1];BASE=ROOT/'artifacts/nested-family-selection';OUT=BASE/'outer-evaluation'
@@ -16,6 +28,7 @@ def write(p,d):
     tmp=p.with_suffix('.tmp');tmp.write_text(json.dumps(d,indent=2)+'\n',encoding='utf-8');os.replace(tmp,p)
 
 def draws(p,y,s,groups,w):
+    """Aggregate per-row statistics into bootstrap-weighted cluster-level metrics."""
     e=p-y
     row=np.column_stack([np.ones(len(y)),e**2,abs(e),p,y,p*p,y*y,p*y,.5*(e/s)**2+np.log(s)+.5*np.log(2*np.pi),abs(e)<=s,abs(e)<=2*s])
     stats=np.zeros((w.shape[1],row.shape[1]));np.add.at(stats,groups,row)
@@ -23,6 +36,7 @@ def draws(p,y,s,groups,w):
     return np.column_stack([np.sqrt(sq/n),ae/n,(xz-x*z/n)/np.sqrt(np.maximum(0,xx-x*x/n)*np.maximum(0,zz-z*z/n)),nll/n,c1/n,c2/n])
 
 def main():
+    """Evaluate both selector rules on the outer holdout and write the bootstrap summary."""
     freeze=BASE/'outer-evaluation-freeze.json';f=read(freeze)
     for e in f['files']:assert sha(ROOT/e['path'])==e['sha256'],e['path']
     protocol=read(ROOT/'configs/nested_family_selection_protocol.json')

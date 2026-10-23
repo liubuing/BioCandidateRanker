@@ -1,3 +1,11 @@
+"""Training losses with missing-label masks, evidence weighting, and ranking.
+
+The regression losses normalize by the number of supervised entries (overall
+or per task) rather than by batch size, and accept an evidence-weight vector
+that scales each row's contribution. The ranking loss is restricted to
+same-campaign pairs with unequal labels so only comparable candidates are
+contrasted.
+"""
 from __future__ import annotations
 
 import torch

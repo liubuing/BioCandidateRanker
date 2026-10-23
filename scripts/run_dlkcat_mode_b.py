@@ -2,7 +2,8 @@
 
 Imports the model classes verbatim from the pinned upstream run_model.py and injects
 the published hyperparameters as module globals; the upstream 80/10/10 random split is
-replaced by the frozen homology-cold partitions. Per seed: torch/np seeds set, 50
+replaced by the frozen homology-cold partitions. Per seed (default set 7, 42, 123):
+torch/np seeds set, 50
 upstream iterations with lr decay every 10, and exactly one test evaluation at the end
 through the shared evaluator. Governed by
 configs/sota_homology_cold_comparison_protocol.json.
@@ -42,6 +43,7 @@ def sha256(path: Path) -> str:
 
 
 def load_upstream_run_model() -> object:
+    """Import the pinned upstream run_model.py as a standalone module."""
     spec = importlib.util.spec_from_file_location("dlkcat_upstream_run_model", UPSTREAM / "run_model.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -49,6 +51,7 @@ def load_upstream_run_model() -> object:
 
 
 def load_partition(input_dir: Path, split: str, device: torch.device) -> list[tuple]:
+    """Load one encoded partition as upstream (compound, adjacency, protein, target) tuples."""
     def load_tensor(name: str, dtype) -> list:
         return [dtype(d).to(device)
                 for d in np.load(input_dir / split / f"{name}.npy", allow_pickle=True)]

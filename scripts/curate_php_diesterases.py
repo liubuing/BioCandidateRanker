@@ -1,3 +1,15 @@
+"""Curate phosphodiesterase (No-PDE/Sb-PDE, PHP esterase family) kcat rows from DOI
+10.1021/acs.biochem.4c00350.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC11656708:
+candidate_records.csv (39 finite Michaelis-Menten rows from Table 1 and SI Tables S2-S4),
+provenance.json, construct_sequences.fasta (exact synthetic full precursors plus No-PDE
+point mutants), family_reference_sequences.fasta, and homology-audit.json.
+
+Records start as pending_homology and are re-statused fail-closed by the frozen MMseqs2
+result, then a per-MMseqs-family cap of 20 applies; efficiency-only, censored, and
+relative-selectivity endpoints are excluded from candidacy entirely.
+"""
 from __future__ import annotations
 
 import csv
@@ -146,10 +158,12 @@ ROWS = (
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(accession: str) -> str:
+    """Read raw/<accession>.fasta, failing unless the header and exact expected length match."""
     path = RAW / f"{accession}.fasta"
     lines = path.read_text(encoding="ascii").splitlines()
     expected_length = ACCESSIONS[accession][0]
@@ -162,6 +176,8 @@ def read_fasta(accession: str) -> str:
 
 
 def substitute(sequence: str, mutations: tuple[tuple[int, str, str], ...]) -> str:
+    """Apply 1-based (position, expected, replacement) mutations, failing on a wrong wild-type
+    residue."""
     result = sequence
     for position, expected, replacement in mutations:
         if result[position - 1] != expected:
@@ -173,11 +189,13 @@ def substitute(sequence: str, mutations: tuple[tuple[int, str, str], ...]) -> st
 
 
 def sequence_id(enzyme: str, variant: str) -> str:
+    """Return the lowercased "<enzyme-prefix>-<variant>" construct identifier."""
     prefix = "no-pde" if enzyme == "No-PDE" else "sb-pde"
     return f"{prefix}-{variant.lower()}"
 
 
 def build_sequences() -> tuple[dict[str, tuple[str, str]], dict[str, str]]:
+    """Build exact WT and mutant precursors; return (constructs, accession -> native sequence)."""
     native = {accession: read_fasta(accession) for accession in ACCESSIONS}
     no_pde = native["QCI95559.1"]
     constructs = {
@@ -194,6 +212,8 @@ def build_sequences() -> tuple[dict[str, tuple[str, str]], dict[str, str]]:
 
 
 def verify_raw_evidence() -> dict[int, tuple[int, str]]:
+    """Check article/license/Table 1, SI phrases, supplement archive, and PubChem identities;
+    return cid/SMILES per compound."""
     article = ET.parse(RAW / "PMC11656708-fullText.xml").getroot()
     if article.findtext(".//article-id[@pub-id-type='doi']") != DOI:
         raise ValueError("Unexpected article DOI")
@@ -236,6 +256,8 @@ def verify_raw_evidence() -> dict[int, tuple[int, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen ROWS table into pending_homology candidate records with full assay
+    metadata."""
     records = []
     for index, row in enumerate(ROWS, 1):
         enzyme, variant, compound, kcat, kcat_error, km, km_error, enzyme_nm, high, low = row
@@ -290,6 +312,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def read_hits(path: Path) -> set[str]:
+    """Return the distinct query ids in a homology hits TSV (empty set when the file is absent)."""
     if not path.exists():
         return set()
     return {
@@ -300,6 +323,8 @@ def read_hits(path: Path) -> set[str]:
 
 
 def apply_selection(records: list[dict[str, object]]) -> None:
+    """Re-status records fail-closed: homology hits exclude, then a per-MMseqs-family cap of
+    FAMILY_CAP applies."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.exists() or not cluster_path.exists():
@@ -326,6 +351,7 @@ def apply_selection(records: list[dict[str, object]]) -> None:
 
 
 def write_fasta(path: Path, entries: dict[str, tuple[str, str]]) -> None:
+    """Write 80-column-wrapped FASTA records from an id -> (description, sequence) mapping."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for identifier, (description, sequence) in entries.items():
             handle.write(f">{identifier} {description}\n")
@@ -334,6 +360,8 @@ def write_fasta(path: Path, entries: dict[str, tuple[str, str]]) -> None:
 
 
 def write_outputs() -> None:
+    """Verify evidence, apply homology/family-cap selection, and write the
+    candidate/FASTA/provenance/audit bundle."""
     verify_raw_evidence()
     constructs, native = build_sequences()
     records = build_records()
@@ -466,6 +494,8 @@ def verify_outputs(
     constructs: dict[str, tuple[str, str]],
     native: dict[str, str],
 ) -> None:
+    """Fail closed on cardinality, finiteness, the frozen homology admission count, and required
+    artifact presence."""
     if len(records) != 39 or len(constructs) != 15 or len(native) != 4:
         raise ValueError("Unexpected curation cardinality")
     if set(native) != set(ACCESSIONS):

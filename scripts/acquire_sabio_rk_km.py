@@ -1,3 +1,16 @@
+"""Acquire evidence from the SABIO-RK public API and emit a fail-closed blocker record.
+
+Probes the live SABIO-RK endpoints (Km query counts, sample kinetic-law entry
+39181, UniProt entity Q9UNW1, and the bundled terms-of-use JS asset) plus the
+legacy export endpoints for disposition evidence, then writes
+artifacts/external/governed-km-sabio-rk/blocker.json with status
+blocked_skip_training: the non-commercial, non-transferable terms and the
+absence of exact assayed sequences block governed row-level Km training. Any
+pre-existing prohibited outputs (normalized kinetics, manifests, family split,
+checkpoint) are deleted first, so the artifact directory can only ever contain
+the blocker.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -29,6 +42,8 @@ PROHIBITED_OUTPUTS = (
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Surfaces redirects as responses so 404-shaped hops are recorded, not followed."""
+
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         return None
 
@@ -46,6 +61,7 @@ def request(url: str, *, allow_redirects: bool = True) -> tuple[int, dict[str, s
 
 
 def json_request(path: str, params: dict[str, str] | None = None) -> tuple[int, Any]:
+    """GET a SABIO-RK path and parse the body as JSON (None for an empty body)."""
     url = BASE + path
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -54,6 +70,7 @@ def json_request(path: str, params: dict[str, str] | None = None) -> tuple[int, 
 
 
 def acquire_evidence() -> dict[str, Any]:
+    """Probe endpoints and the terms bundle; return the raw evidence for the blocker."""
     attempts = []
     for path in LEGACY_ENDPOINTS:
         status, headers, _ = request(BASE + path, allow_redirects=False)
@@ -112,6 +129,7 @@ def acquire_evidence() -> dict[str, Any]:
 
 
 def build_blocker(evidence: dict[str, Any]) -> dict[str, Any]:
+    """Assemble the fail-closed blocker record from the acquired evidence."""
     api = evidence["current_api"]
     sample = api.get("sample_entry") or {}
     km = [
@@ -187,6 +205,7 @@ def build_blocker(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
+    """Delete prohibited outputs and write blocker.json into the output directory."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=OUTPUT)
     args = parser.parse_args()

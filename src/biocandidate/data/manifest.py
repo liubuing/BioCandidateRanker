@@ -1,3 +1,11 @@
+"""SHA256 source-identity manifests for frozen data assets.
+
+Every governed dataset is bound to a (sha256, size_bytes, row_count) triple.
+:func:`build_manifest` records the identity of an asset; :func:`verify_manifest`
+recomputes it byte by byte and fails closed with
+:class:`ManifestVerificationError` on any digest, size, or row-count drift, so
+no run can silently consume mutated source data.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -14,11 +22,13 @@ PathLike = Union[str, Path]
 
 
 class ManifestVerificationError(RuntimeError):
-    pass
+    """Raised when a source asset does not match its recorded manifest."""
 
 
 @dataclass(frozen=True, slots=True)
 class FileManifest:
+    """Frozen (sha256, size_bytes, row_count) identity triple for one source asset."""
+
     sha256: str
     size_bytes: int
     row_count: int
@@ -97,6 +107,7 @@ def _row_count(path: Path) -> int:
 
 
 def verify_manifest(path: PathLike, manifest: FileManifest) -> None:
+    """Recompute the asset identity; raise unless digest, size, and row count all match."""
     source = Path(path)
     if not source.is_file():
         raise ManifestVerificationError(f"source is not a regular file: {source}")

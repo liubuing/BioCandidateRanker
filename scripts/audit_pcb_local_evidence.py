@@ -1,4 +1,13 @@
-"""Read-only dataset audit; never predicts or opens temporal-pool labels."""
+"""Read-only dataset audit; never predicts or opens temporal-pool labels.
+
+Verifies the local UniKP corpus against configs/unikp_source_manifest.json,
+re-hashes the frozen split manifest and every partition from the sota-homology
+data manifest, and reports field coverage, raw unit counts, pair metadata
+conflicts, exact partition overlaps, runtime and GPU state. Writes
+artifacts/pcb-readiness/local-evidence-audit.json and endpoint-register.csv.
+Strictly read-only over the corpus: temporal-pool labels are never opened and
+predictions_generated stays false.
+"""
 from pathlib import Path
 from collections import Counter
 from datetime import datetime, timezone
@@ -15,12 +24,15 @@ OUT = ROOT/'artifacts/pcb-readiness'
 CORPUS = Path(r'C:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json')
 
 def digest(path):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def read(path):
+    """Load a repo-relative UTF-8 JSON file."""
     return json.loads((ROOT/path).read_text(encoding='utf-8'))
 
 def main():
+    """Collect corpus, split and runtime evidence and write the local audit receipt."""
     OUT.mkdir(parents=True, exist_ok=True)
     source_manifest=read('configs/unikp_source_manifest.json')
     assert digest(CORPUS)==source_manifest['identity']['sha256'], 'source identity changed'

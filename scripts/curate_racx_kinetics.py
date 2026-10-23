@@ -1,3 +1,14 @@
+"""Curate RacX lysine racemase kinetics from DOI 10.1128/aem.02015-25 (Halocola ammonii DA487T).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12838360:
+candidate_records.csv (23 rows: 15 Table 1 WT substrate rows plus 8 Table 3 variant rows),
+provenance.json, construct_sequences.fasta (SI-derived WT sequence plus six point mutants),
+and homology-audit.json.
+
+After frozen MMseqs2 homology exclusion, the first FAMILY_CAP records in source-table and
+source-row order are accepted (a rule that never inspects kinetic values); narrative-vs-table
+kcat/Km discrepancies are retained and flagged, never silently corrected.
+"""
 from __future__ import annotations
 
 import csv
@@ -31,6 +42,7 @@ SUBSTRATES = {
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -39,12 +51,15 @@ def read_fasta(path: Path) -> str:
 
 
 def substitute(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(f"Expected {expected}{position}, found {sequence[position - 1]}{position}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Build WT and mutant sequences from the SI-derived reference; return id -> (construct label,
+    sequence)."""
     wt = read_fasta(SOURCE / "reference_sequence.fasta")
     variants = {
         "racx-wt": ("WT", wt),
@@ -59,6 +74,8 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Expand the frozen Table 1/Table 3 rows into pending_homology records, flagging
+    narrative/table anomalies."""
     table_1 = [
         ("L-Lys", 1.6, 0.5, 241.8, 12.4, 151.2),
         ("L-Trp", 0.3, 0.2, 44.2, 1.0, 140.6),
@@ -133,6 +150,8 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_selection_status(records: list[dict[str, object]]) -> None:
+    """Re-status records fail-closed: homology hits exclude, then the first FAMILY_CAP non-hit rows
+    in source order are kept."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -153,12 +172,15 @@ def apply_selection_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     digest = hashlib.sha256()
     digest.update(path.read_bytes())
     return digest.hexdigest()
 
 
 def write_outputs() -> None:
+    """Build sequences and records, apply selection status, and write the
+    CSV/FASTA/provenance/audit bundle."""
     sequences = build_sequences()
     records = build_records()
     apply_selection_status(records)

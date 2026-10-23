@@ -1,12 +1,23 @@
-"""Close second source-screen batch; keep screening separate from accepted additions."""
+"""Close second source-screen batch; keep screening separate from accepted additions.
+
+Reads public-batch2-20261004/batch-register.json plus the reference queries and
+precomputed development homology hits, assigns a per-source hold or review
+status to the 20 new fulltexts, and re-verifies the previous batch receipts and
+both global audits. The only 3 accepted additions originate from the already
+pending AaCSE1 source, not the new batch (new_batch_source_acceptances=0).
+Writes public-batch2-20261004/batch-closeout.json; no predictions are run.
+"""
 import hashlib,json
 from pathlib import Path
 from Bio import SeqIO
 ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/'artifacts/external/temporal-absolute-kinetics'
 OUT=BASE/'public-batch2-20261004'
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def sha(p):
+    """Return the SHA256 hex digest of a file."""
+    return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
+    """Record batch-two source reviews and write the batch closeout."""
     batch=json.loads((OUT/'batch-register.json').read_text(encoding='utf-8'))
     seqs={r.id:str(r.seq) for r in SeqIO.parse(OUT/'reference-queries.fasta','fasta')}
     hits={k:[] for k in seqs}

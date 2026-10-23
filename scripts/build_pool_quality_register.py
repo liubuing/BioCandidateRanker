@@ -18,14 +18,17 @@ OUT = ROOT / 'artifacts/external/pool-quality-register-20261005'
 
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def read(p):
+    """Load a UTF-8 (optionally BOM-prefixed) JSON file."""
     return json.loads(p.read_text(encoding='utf-8-sig'))
 
 
 def coverage(rows):
+    """Count records, sources, families, substrates and unique sequence signatures."""
     return dict(records=len(rows), sources=len({r['source_id'] for r in rows}),
                 families=len({r['global_family_id'] for r in rows}),
                 substrates=len({r['substrate_id'] for r in rows}),
@@ -33,6 +36,7 @@ def coverage(rows):
 
 
 def main():
+    """Re-verify every input hash and write the 209-record quality register."""
     OUT.mkdir(parents=True, exist_ok=True)
     protocol_path = ROOT / 'configs/temporal_absolute_kinetics_protocol.json'
     protocol = read(protocol_path)

@@ -1,4 +1,12 @@
-"""Continue the frozen modality diagnostic after the first interactive run exits."""
+"""Continue the frozen modality diagnostic after the first interactive run exits.
+
+Waits on a training PID passed via --pid, fails closed if it exited nonzero,
+either checkpoint is missing, or the run stopped before the earliest plausible
+patience stop (epoch >= 5); otherwise records ``training-complete.json`` with
+checkpoint identity and re-invokes ``run_esm2_modality_diagnostic.py`` to run
+the remaining variants. Governance role: supervised continuation helper only --
+no training parameters are read or changed here.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +26,7 @@ FIRST = ROOT / "artifacts" / "esm2-modality-diagnostic" / "protein-only-seed7"
 
 
 def identity(path: Path) -> dict[str, int | str]:
+    """Return size and SHA-256 identity for a produced checkpoint file."""
     digest = hashlib.sha256()
     with path.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
@@ -26,6 +35,7 @@ def identity(path: Path) -> dict[str, int | str]:
 
 
 def main() -> None:
+    """Wait for the first run, validate its outcome, then continue the diagnostic."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--pid", type=int, required=True)
     arguments = parser.parse_args()

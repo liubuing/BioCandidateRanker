@@ -1,4 +1,8 @@
-"""Storage governance tests use synthetic files and never modify scientific evidence."""
+"""Pins data-pool storage governance: incremental evidence snapshots with
+reused hashes, immutable frozen snapshots, budget-gated and full verification,
+review-queue bookkeeping, and layer assignment that quarantines unregistered
+sources.
+"""
 
 import os
 from pathlib import Path

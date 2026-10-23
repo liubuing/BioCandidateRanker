@@ -1,4 +1,19 @@
-"""Metadata/source screening only; no training or candidate scoring."""
+"""Metadata/source screening only; no training or candidate scoring.
+
+Writes the EstSIT01 closeout (superseding the measurement-consistency hold),
+runs two pinned Europe PMC search queries, screens the returned metadata
+against prior local material, downloads and license-screens four selected full
+texts (one becomes ``priority_sequence_prescreen``, non-eligible licenses are
+recorded as such), and writes ``discovery-register.json`` plus per-article
+table extracts under ``artifacts/external/temporal-absolute-kinetics/
+evidence-sprint-20261003``.
+
+Governance role: discovery bookkeeping -- every record stays
+``metadata_only_not_qualified`` unless explicitly dispositioned;
+``accepted_additions`` stays 0, batch leads with incompatible licenses are
+excluded from direct import, and protected config/audit hashes are re-verified
+before the register is written.
+"""
 import hashlib
 import json
 import urllib.parse
@@ -12,11 +27,13 @@ OUT=BASE/'evidence-sprint-20261003'
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def fetch(url,path):
+    """Return cached bytes for a URL, downloading to path on first use."""
     if not path.exists():
         path.write_bytes(urllib.request.urlopen(url,timeout=30).read())
     return path.read_bytes()
 
 def main():
+    """Write the closeout, run pinned searches, screen full texts, and register results."""
     OUT.mkdir(exist_ok=True)
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in protected}

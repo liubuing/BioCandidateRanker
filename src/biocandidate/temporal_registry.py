@@ -395,6 +395,7 @@ def build_registry(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Build the registry report; exit 0 only if the readiness gate passes."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root",

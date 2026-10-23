@@ -1,3 +1,22 @@
+"""Curate the S. noursei SnFDHal tryptophan halogenase (DOI 10.1007/s12010-025-05449-0).
+
+Downloads and validates the Europe PMC PMC12894115 full text, its supplement
+archive (SI Table 1 516-aa ORF), the NCBI PNE38568.1 FASTA, and PubChem
+tryptophan-structure records into
+``artifacts/external/temporal-absolute-kinetics/europepmc-PMC12894115/raw``,
+then writes ``disclosed_orf_sequence.fasta``, ``candidate_records.csv``,
+``exclusions.csv``, ``raw-file-hashes.json``, ``blocker-evidence.json``,
+``provenance.json``, and ``homology-audit.json``.
+
+Accept/exclude logic: all three Table 1 kcat rows (L-tryptophan, 6- and
+7-chloro-L-tryptophan) are excluded -- the assay is a 30-min quenched endpoint
+whose reported kcat values are mass-balance-incompatible with the stated
+enzyme/substrate amounts, the His6-tagged assay construct cannot be
+reconstructed (NdeI/XhoI methods vs. EcoRI SI primer), and Fre/FAD/NADH/
+chloride/O2 saturation is never demonstrated. Governance role: fail-closed --
+zero candidate labels, a six-gate blocker record is emitted, and no model
+predictions are generated.
+"""
 from __future__ import annotations
 
 import argparse
@@ -56,6 +75,7 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
+    """Fetch the article XML, supplement archive, protein FASTA, and PubChem records."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -83,6 +103,7 @@ def download_raw() -> None:
 
 
 def validate_raw() -> None:
+    """Check article, supplement, and PubChem markers against pinned expectations."""
     xml = (RAW / "PMC12894115-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI, "creativecommons.org/licenses/by/4.0/", "9.6 mM NADH", "100 µM FAD",
@@ -106,22 +127,26 @@ def validate_raw() -> None:
 
 
 def wsl_path(path: Path) -> str:
+    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations."""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive[0].lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
+    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec."""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
 
 def reset_wsl_workspace(path: Path) -> None:
+    """Delete a managed MMseqs scratch directory inside WSL before a rerun."""
     if path.exists():
         _, distribution, _ = MMSEQS.split(":", 2)
         subprocess.run(["wsl", "-d", distribution, "rm", "-rf", "--", wsl_path(path)], check=True)
 
 
 def run_mmseqs(query: Path) -> str:
+    """Search the disclosed ORF against the frozen reference with the pinned mmseqs."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -152,6 +177,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
+    """Acquire, validate, screen homology, and write the fully blocked curation bundle."""
     if acquire:
         download_raw()
     validate_raw()

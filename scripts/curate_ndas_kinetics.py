@@ -1,3 +1,15 @@
+"""Curate NdasCDO cyclo dipeptide oxidase (A2B2 complex) kcat rows from DOI
+10.1038/s41467-025-56127-y.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC11760959:
+candidate_records.csv (eight Supplementary Table 3 rows), construct_sequences.fasta
+(exact tagged NdasCDO-A chains and native NdasCDO-B), homology/homology_queries.fasta
+(native-coordinate chains searched separately so tags cannot dilute coverage),
+provenance.json, and homology-audit.json.
+
+The heteromeric-complex rule excludes a record when either required component chain hits
+the frozen development reference; otherwise the row joins the homology-cold pool.
+"""
 from __future__ import annotations
 
 import csv
@@ -39,10 +51,12 @@ KINETICS = [
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
+    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
     sequence = "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -54,6 +68,7 @@ def read_fasta(path: Path) -> str:
 
 
 def mutate(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(
             f"Expected {expected}{position}, found {sequence[position - 1]}{position}"
@@ -62,6 +77,8 @@ def mutate(sequence: str, position: int, expected: str, replacement: str) -> str
 
 
 def build_sequences() -> tuple[dict[str, str], dict[str, str]]:
+    """Build exact expressed constructs and their native-coordinate homology queries; return
+    (constructs, queries)."""
     native_a = read_fasta(SOURCE / "raw" / "D7B1W6.fasta")
     native_b = read_fasta(SOURCE / "raw" / "D7B1W7.fasta")
     if len(native_a) != 157 or len(native_b) != 105:
@@ -87,6 +104,7 @@ def build_sequences() -> tuple[dict[str, str], dict[str, str]]:
 
 
 def pubchem_structure(code: str) -> tuple[int, str, str]:
+    """Load and verify the PubChem record for a substrate code; return (cid, smiles, title)."""
     payload = json.loads((SOURCE / "raw" / f"pubchem-{code}.json").read_text(encoding="utf-8"))
     properties = payload["PropertyTable"]["Properties"]
     if len(properties) != 1:
@@ -99,11 +117,14 @@ def pubchem_structure(code: str) -> tuple[int, str, str]:
 
 
 def component_ids(complex_id: str) -> tuple[str, str]:
+    """Map a complex variant onto its (chain A, chain B) sequence ids."""
     chain_a = "ndascdo-s58a-a" if complex_id == "ndascdo-s58a" else "ndascdo-wt-a"
     return chain_a, "ndascdo-b"
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen KINETICS table into pending_homology records for the A2B2 complex
+    variants."""
     records = []
     for index, (complex_id, code, kcat, kcat_error, km, km_error) in enumerate(KINETICS, 1):
         substrate_name, _ = SUBSTRATES[code]
@@ -146,6 +167,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def read_hit_ids() -> set[str] | None:
+    """Return the homology hit query ids, or None when the frozen hits file is absent."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return None
@@ -157,6 +179,8 @@ def read_hit_ids() -> set[str] | None:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-status each complex record from its component chains' hits (either chain hit excludes the
+    complex)."""
     hit_ids = read_hit_ids()
     if hit_ids is None:
         return
@@ -170,6 +194,7 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def write_fasta(path: Path, records: dict[str, str], descriptions: dict[str, str]) -> None:
+    """Write 80-column-wrapped FASTA records with per-id descriptions."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id, sequence in records.items():
             handle.write(f">{sequence_id} {descriptions[sequence_id]}\n")
@@ -178,6 +203,8 @@ def write_fasta(path: Path, records: dict[str, str], descriptions: dict[str, str
 
 
 def write_outputs() -> None:
+    """Build constructs and records, apply homology status, and write the
+    CSV/FASTA/provenance/audit bundle."""
     constructs, homology_queries = build_sequences()
     records = build_records()
     apply_homology_status(records)

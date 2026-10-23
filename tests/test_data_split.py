@@ -1,3 +1,8 @@
+"""Pins leakage-free splitting: protein-cold splits are deterministic and keep
+each protein in one partition, double-cold splits keep connected
+protein-scaffold components together, and the manifest audits zero overlap.
+"""
+
 import unittest
 
 from biocandidate.data import (

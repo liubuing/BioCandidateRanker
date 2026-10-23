@@ -1,3 +1,8 @@
+"""Pins the Lunzer kinetic-landscape adapter: the reader requires the complete
+frozen 512-genotype panel, reference positions match the declared wildtype, and
+the audit/evaluation CLI commands are registered.
+"""
+
 import tempfile
 import unittest
 from pathlib import Path

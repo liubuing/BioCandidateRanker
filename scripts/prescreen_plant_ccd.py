@@ -1,4 +1,21 @@
-"""Component-level development homology screen for the plant CCD source."""
+"""Component-level development homology screen for the plant CCD source.
+
+Reads the staged PMC12292525 article XML and OeCCD1/InCCD1 FASTAs under
+``artifacts/external/temporal-absolute-kinetics/ccd-prescreen-20261003``,
+screens the catalytic components of the reported GST fusions against the
+SHA-256-pinned development reference with frozen MMseqs2, and parses Table 2
+kinetics into ``source-records.csv`` plus a ``unit-consistency.json`` audit and
+``homology-audit.json`` receipt.
+
+Accept/exclude logic: either component with a qualifying development hit
+(>=30% identity, >=80% query and target coverage) is
+``excluded_component_development_homology`` (a GST fusion must not hide
+development homology by diluting whole-chain coverage); hit-free rows are
+further ``held_unit_definition_conflict`` because the published nmol/min unit
+definition and Table 2 kcat cannot both follow the stated conversion -- values
+are audited, never corrected. Governance role: fail-closed prescreen with
+``accepted_additions`` 0 and no predictions.
+"""
 import csv
 import hashlib
 import json
@@ -17,6 +34,7 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
+    """Screen CCD components, audit unit consistency, and write the homology audit."""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'

@@ -1,4 +1,12 @@
-"""Snapshot upstream metadata and small source files without executing upstream code."""
+"""Snapshot upstream metadata and small source files without executing upstream code.
+
+Records the default-branch commit and full Git tree for maranasgroup/CatPred
+and zchwang/CataPro, downloads only allow-listed text files up to 150 KB
+(README/license/requirements, entry points, CataPro *.py), and stores them
+under artifacts/pcb-readiness with every URL and SHA256 in
+source-receipt.json. Upstream code is never executed; errors are recorded
+per file instead of aborting the snapshot.
+"""
 from pathlib import Path
 from datetime import datetime, timezone
 import hashlib
@@ -10,11 +18,13 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/pcb-readiness'
 
 def fetch(url):
+    """Fetch a URL with the audit user agent and return the raw response bytes."""
     req = urllib.request.Request(url, headers={'User-Agent': 'BioCandidateRanker-source-audit'})
     with urllib.request.urlopen(req, timeout=10) as response:
         return response.read()
 
 def main():
+    """Snapshot both upstream repositories and incrementally write source-receipt.json."""
     OUT.mkdir(parents=True, exist_ok=True)
     receipt = {'retrieved_at': datetime.now(timezone.utc).isoformat(), 'repositories': []}
     for repo, branch in [('maranasgroup/CatPred', 'main'), ('zchwang/CataPro', 'master')]:

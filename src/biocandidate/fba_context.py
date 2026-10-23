@@ -291,6 +291,7 @@ def _require_model(model_id: str) -> None:
 
 
 def verify_model_file(model_path: Path, expected: dict[str, Any]) -> None:
+    """Raise unless the model file's SHA256 and size match the tracked config."""
     digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
     if digest != expected["sha256"]:
         raise ValueError(

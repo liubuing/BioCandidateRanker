@@ -39,6 +39,7 @@ def verify_archive(
     archive_path: Path,
     release_manifest_path: Path | None,
 ) -> list[str]:
+    """Verify one archive against its embedded manifest; the returned list is empty iff valid."""
     issues: list[str] = []
 
     if not archive_path.is_file():
@@ -130,6 +131,7 @@ def verify_archive(
 
 
 def main() -> int:
+    """Verify the archive and exit nonzero when any recorded check fails."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
     parser.add_argument("--root", type=Path, default=Path("."))

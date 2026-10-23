@@ -1,3 +1,16 @@
+"""Audit Zenodo 10517668 (kynureninase Fig. 2b) and emit a fail-closed blocker.
+
+Verifies the three raw files (workbook, training FASTA, metadata) against the
+pinned EXPECTED_SHA256, refits the workbook replicates three ways purely as a
+fit-sensitivity diagnostic, and maps only Pf-K to its deposited sequence. The
+K1/K2/K3/K31 discovery labels have no sequence mapping and the author's fit
+method is underdeclared, so the record is scientifically blocked. Writes
+zenodo-10517668/{provenance.json, blocker.json} (status
+scientifically_blocked_no_curated_records; zero candidate records) and
+homology-audit.json plus homology/pf-k.fasta when a Pf-K homology run exists.
+Diagnostic fit values are never emitted as curated labels.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -39,10 +52,12 @@ REPLICATE_START_ROWS = (22, 27, 32, 37, 42, 47)
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> list[tuple[str, str]]:
+    """Parse a simple multi-record FASTA file into (header, sequence) tuples."""
     records: list[tuple[str, str]] = []
     header = ""
     sequence: list[str] = []
@@ -60,10 +75,12 @@ def read_fasta(path: Path) -> list[tuple[str, str]]:
 
 
 def michaelis_menten(substrate: np.ndarray, kcat: float, km: float) -> np.ndarray:
+    """Standard Michaelis-Menten saturation curve used for the diagnostic refits."""
     return kcat * substrate / (km + substrate)
 
 
 def fit(substrate: np.ndarray, rates: np.ndarray, sigma: np.ndarray | None = None) -> dict[str, float]:
+    """Fit kcat and km by bounded least squares, optionally inverse-sigma weighted."""
     parameters, _ = curve_fit(
         michaelis_menten,
         substrate,
@@ -78,6 +95,7 @@ def fit(substrate: np.ndarray, rates: np.ndarray, sigma: np.ndarray | None = Non
 
 
 def workbook_audit() -> tuple[dict[str, object], dict[str, list[list[float]]]]:
+    """Extract Fig. 2b replicates and run the three diagnostic fit variants per enzyme."""
     formulas = load_workbook(WORKBOOK, data_only=False, read_only=False)["Fig. 2b"]
     values = load_workbook(WORKBOOK, data_only=True, read_only=False)["Fig. 2b"]
     results: dict[str, object] = {}
@@ -111,6 +129,7 @@ def workbook_audit() -> tuple[dict[str, object], dict[str, list[list[float]]]]:
 
 
 def main() -> None:
+    """Verify source hashes, assemble the blocker and provenance records, write all outputs."""
     observed_hashes = {name: sha256(RAW / name) for name in EXPECTED_SHA256}
     if observed_hashes != EXPECTED_SHA256:
         raise ValueError(f"Source hash mismatch: {observed_hashes}")

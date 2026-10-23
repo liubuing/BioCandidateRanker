@@ -42,6 +42,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def family_table(audit: dict[str, Any], cap: int) -> list[dict[str, Any]]:
+    """Build the per-family saturation rows against the per-family cap."""
     counts = audit.get("family_record_counts_before_cap", {})
     rows = []
     for family, records in sorted(counts.items()):
@@ -226,6 +227,7 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    """Evaluate the readiness gates and emit the JSON (and optional Markdown) report."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--audit", type=Path, default=DEFAULT_AUDIT)

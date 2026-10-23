@@ -1,3 +1,8 @@
+"""Pins the record schema and file-manifest contract: canonicalized immutable
+records, bounded campaign fields, and SHA256 manifests that verify JSON, CSV,
+and zipped experiment containers without mutating the source.
+"""
+
 import hashlib
 import json
 import tempfile

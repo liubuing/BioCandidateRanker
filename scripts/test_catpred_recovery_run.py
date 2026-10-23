@@ -1,9 +1,19 @@
-"""Actual upstream CPU training: uninterrupted vs epoch-0 interruption/restart."""
+"""Actual upstream CPU training: uninterrupted vs epoch-0 interruption/restart.
+
+Runs the pinned upstream CatPred entry point three times on the smoke data
+(continuous, interrupted after epoch 0, and resumed) under
+``artifacts/catpred-mode-b/recovery-test-v3``, then compares the recovery
+states bitwise (model tensors, sampler RNG, torch RNG, iteration, best score).
+Writes ``result.json`` on success. Governance role: integration test of
+crash-resume determinism only -- CPU scope, with CUDA nondeterminism explicitly
+excluded from the claim.
+"""
 from pathlib import Path
 import os,subprocess,sys,json
 ROOT=Path(__file__).resolve().parents[1];BASE=ROOT/'artifacts/catpred-mode-b'
 
 def main():
+    """Run the interrupt/resume scenarios and assert bitwise-equal recovery states."""
     import torch
     out=BASE/'recovery-test-v3';out.mkdir(exist_ok=True)
     env=os.environ.copy();env.update(CATPRED_RECOVERY_ID='recovery-test-v1',CATPRED_CACHE_PATH=str(BASE/'cache'),OMP_NUM_THREADS='1',MKL_NUM_THREADS='1')

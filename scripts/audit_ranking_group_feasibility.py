@@ -1,4 +1,13 @@
-"""Metadata-only inventory; no labels, predictions, or ranking selection."""
+"""Metadata-only inventory; no labels, predictions, or ranking selection.
+
+Re-hashes the global accepted mapping, whitelists only the four metadata
+fields (assay_pH, assay_temperature_C, condition_id, reaction_direction) from
+each source's candidate_records.csv, and buckets retained records by source,
+substrate and reported conditions. Writes
+artifacts/research-scope-20261005-v2/ranking-metadata-feasibility.json.
+Numeric response columns are never read; the three-signature threshold is an
+inventory display threshold, not a frozen evaluation gate.
+"""
 import csv
 import hashlib
 import json
@@ -12,14 +21,17 @@ OUT = ROOT / 'artifacts/research-scope-20261005-v2'
 
 
 def missing_condition(value):
+    """Return True when a reported condition is blank or an explicit unknown marker."""
     return value.strip().casefold() in {'', 'not reported', 'not specified', 'unknown', 'na', 'n/a', 'none', 'null'}
 
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
+    """Build the feasibility inventory and write ranking-metadata-feasibility.json."""
     OUT.mkdir(exist_ok=True)
     audit = json.loads((AUDIT / 'readiness-audit.json').read_text())
     mapping = AUDIT / 'global-accepted-mapping.csv'

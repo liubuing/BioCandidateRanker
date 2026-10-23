@@ -27,6 +27,7 @@ OBTAIN_STATES = {
 
 
 def group_corpora(report: dict[str, Any]) -> tuple[list[dict], list[dict], list[dict]]:
+    """Split audited corpora into ships-in-release, obtain-elsewhere, and unresolved."""
     ships, obtain, unresolved = [], [], []
     for corpus in report.get("corpora", []):
         state = corpus.get("redistribution")
@@ -49,6 +50,7 @@ def group_corpora(report: dict[str, Any]) -> tuple[list[dict], list[dict], list[
 
 
 def build_statement(report: dict[str, Any], release_id: str, archive_note: str | None) -> dict[str, Any]:
+    """Draft the statement text and review checklist from the grouped audit."""
     ships, obtain, unresolved = group_corpora(report)
     valid = report.get("valid", False)
 
@@ -112,6 +114,7 @@ def build_statement(report: dict[str, Any], release_id: str, archive_note: str |
 
 
 def main() -> int:
+    """Load the license audit, draft the statement, and optionally write it out."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument(

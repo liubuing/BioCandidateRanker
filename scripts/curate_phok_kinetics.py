@@ -1,3 +1,14 @@
+"""Curate nine sphingomonad acid phosphatases (PhoK) kcat rows from DOI 10.1021/acsomega.5c05616.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12444516:
+candidate_records.csv (18 Supplementary Table S2 rows: nine enzymes x two substrates),
+provenance.json, construct_sequences.fasta (Figure S2 native/core sequences recovered
+from the SI PDF with exact length checks), and homology-audit.json.
+
+Rows start as pending_homology and are re-statused by the frozen MMseqs2 result; source
+anomalies (a "0.13 Nm" typo and an oversized kcat/Km error) are retained verbatim and
+flagged, never corrected.
+"""
 from __future__ import annotations
 
 import csv
@@ -47,6 +58,8 @@ ORGANISMS = {
 
 
 def extract_sequences() -> dict[str, str]:
+    """Recover the nine ungapped Figure S2 sequences from the SI PDF, enforcing exact per-enzyme
+    lengths."""
     text = fitz.open(PDF)[3].get_text()
     sequences = {sequence_id: "" for sequence_id in ALIASES.values()}
     names = "|".join(re.escape(name) for name in ALIASES)
@@ -73,6 +86,8 @@ def extract_sequences() -> dict[str, str]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen Table S2 rows into pending_homology candidate records with construct
+    caveats."""
     rows = [
         ("sb-phok", "4-nitrophenyl phosphate", 416, 3, 69, 2, 6.1e6, 0.2e6, 0.165, 2.75, 8.6, ""),
         ("sb-phok", "phenyl phosphate", 460, 10, 650, 30, 7.1e5, 0.4e5, 3.3, 2.32, 7.25, ""),
@@ -134,6 +149,8 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-status records from the frozen homology hits; leave pending_homology untouched when the
+    hits file is absent."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -151,10 +168,13 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
+    """Extract sequences, build records, apply homology status, and write the
+    CSV/FASTA/provenance/audit bundle."""
     sequences = extract_sequences()
     records = build_records()
     apply_homology_status(records)

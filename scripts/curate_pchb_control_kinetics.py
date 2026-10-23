@@ -1,3 +1,15 @@
+"""Curate the chorismate mutase control rows of the PchB paper (DOI 10.1021/acs.biochem.5c00157).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12329711:
+candidate_records.csv (seven finite Table 4 CM kcat rows), construct-resolution.json
+(terminal unresolved-construct audit), control-row-resolution.csv, construct_sequences.fasta
+(authoritative catalytic polypeptides only), exclusions.csv, provenance.json, and
+homology-audit.json.
+
+Fail-closed on constructs: an accession-derived catalytic sequence is never substituted
+for the exact assayed His6-tagged chain, so the four unreconstructible rows are terminally
+excluded; rows with an exact chain face the frozen MMseqs2 development-homology gate.
+"""
 from __future__ import annotations
 
 import csv
@@ -26,6 +38,7 @@ UNRESOLVED_IDS = {
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -34,6 +47,7 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
+    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
     sequence = "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if line and not line.startswith(">")
@@ -44,12 +58,15 @@ def read_fasta(path: Path) -> str:
 
 
 def mutate(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(f"Expected {expected}{position}, found {sequence[position - 1]}{position}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def sequences() -> dict[str, dict[str, str]]:
+    """Load the authoritative catalytic-domain polypeptides (never substituted for assay chains);
+    return id -> {sequence, source}."""
     ec = read_fasta(RAW / "P0A9J8.fasta")
     mj = read_fasta(RAW / "Q57696.fasta")
     mt = read_fasta(RAW / "P9WIB9.fasta")
@@ -104,6 +121,8 @@ ROWS = (
 
 
 def records() -> list[dict[str, object]]:
+    """Turn the frozen Table 4 rows into candidate records with construct-unresolved or
+    pending_homology status."""
     output = []
     for index, row in enumerate(ROWS, 1):
         enzyme, organism, sequence_id, accession, kcat, kcat_sd, km, km_sd, temperature, buffer = row
@@ -140,6 +159,7 @@ def records() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the first row's key order as the header."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -147,6 +167,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def verify_sources() -> None:
+    """Fail closed unless the article Table 4, PubChem chorismate, and the frozen reference all
+    corroborate."""
     root = ET.parse(RAW / "PMC12329711-fullText.xml").getroot()
     if root.findtext(".//article-id[@pub-id-type='doi']") != DOI:
         raise ValueError("Article DOI mismatch")
@@ -163,6 +185,8 @@ def verify_sources() -> None:
 
 
 def write_outputs() -> None:
+    """Verify sources, resolve construct/homology status per row, and write the full evidence
+    bundle."""
     verify_sources()
     sequence_map = sequences()
     candidate_rows = records()

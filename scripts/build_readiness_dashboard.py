@@ -52,12 +52,14 @@ REDACTION = "<redacted-local-path>"
 
 
 def load_json(path: Path) -> dict[str, Any] | None:
+    """Load a JSON file, returning None when it does not exist."""
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def check_declared_deliverables(root: Path) -> list[dict[str, Any]]:
+    """Check manuscript/ for each declared deliverable's file-name globs."""
     results = []
     for item in DECLARED_DELIVERABLES:
         found: list[str] = []
@@ -75,6 +77,7 @@ def check_declared_deliverables(root: Path) -> list[dict[str, Any]]:
 
 
 def find_placeholders(root: Path) -> list[dict[str, Any]]:
+    """Scan manuscript Markdown for unfilled bracketed submission placeholders."""
     findings: list[dict[str, Any]] = []
     for path in sorted((root / MANUSCRIPT_DIR).glob("*.md")):
         text = path.read_text(encoding="utf-8")
@@ -212,6 +215,7 @@ def collect_blockers(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def build_payload(root: Path, redact_paths: bool) -> dict[str, Any]:
+    """Load every source artifact and derive the blocker list for the dashboard."""
     data: dict[str, Any] = {
         "sources_present": {},
     }
@@ -260,6 +264,7 @@ def build_payload(root: Path, redact_paths: bool) -> dict[str, Any]:
 
 
 def render(payload: dict[str, Any]) -> str:
+    """Render the self-contained single-file HTML dashboard around the JSON payload."""
     embedded = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     # A closing script tag inside the payload would terminate the block early.
     embedded = embedded.replace("</", "<\\/")
@@ -618,6 +623,7 @@ paint();
 
 
 def main() -> int:
+    """Assemble the payload and write the standalone dashboard HTML."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

@@ -1,3 +1,14 @@
+"""Fail-closed audit of the external anaerobic yeast flux table (yeast-GEM v9.1.0).
+
+Fetches the two pinned upstream release files, records their byte identities,
+and audits the headerless flux table against the local Yeast-MetaTwin model.
+The source carries no header, no units, and no condition/strain metadata, so
+the audit always concludes ``status: blocked`` and enumerates the missing
+provenance fields; no experimental-flux dataset, split, manifest, or checkpoint
+is ever produced. The written report is the fail-closed artifact that must
+exist before any experimental-flux work can be attempted.
+"""
+
 from __future__ import annotations
 
 import csv
@@ -15,6 +26,10 @@ REPOSITORY_URL = "https://github.com/SysBioChalmers/yeast-GEM"
 API_ROOT = "https://api.github.com/repos/SysBioChalmers/yeast-GEM"
 FLUX_PATH = "data/physiology/flux_data_anaerobic.tsv"
 LICENSE_PATH = "LICENSE.md"
+# Upstream git blob SHA-1 values of the pinned release files, recorded verbatim
+# in the report next to the fetched bytes' own SHA256; a change upstream
+# invalidates the recorded provenance even though this audit never re-derives
+# the blob hashes itself.
 EXPECTED_BLOBS = {
     FLUX_PATH: "ba9166c4a2e0319cf2001e82218d282a1d337b0e",
     LICENSE_PATH: "d7244c0d623e30a760d098e4ed829f4fc37ac262",
@@ -56,6 +71,12 @@ def _model_reaction_ids(model_path: Path) -> set[str]:
 
 
 def inspect_flux_table(payload: bytes, model_reaction_ids: set[str]) -> dict:
+    """Structural audit of the headerless TSV.
+
+    Measures row widths, dataset label counts, coverage of explicit ``r_*``
+    reaction mappings against the model, and numeric columns whose semantics
+    (units, normalization) the source never declares.
+    """
     text = payload.decode("utf-8-sig")
     rows = list(csv.reader(text.splitlines(), delimiter="\t"))
     if not rows:
@@ -90,6 +111,12 @@ def _is_positive_number(value: str) -> bool:
 
 
 def audit(model_path: str | Path, output_path: str | Path) -> dict:
+    """Fetch the pinned files, audit the table, and write the fail-closed report.
+
+    ``status: blocked`` is unconditional: the source cannot supply the required
+    provenance fields, so the written report is the audit's only artifact and no
+    dataset, split, or checkpoint is ever produced.
+    """
     model = Path(model_path).resolve()
     if not model.is_file():
         raise RuntimeError(f"Yeast-MetaTwin model asset is not a file: {model}")

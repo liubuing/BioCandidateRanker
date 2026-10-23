@@ -1,3 +1,11 @@
+"""Regression, uncertainty, and campaign-ranking metrics plus run summaries.
+
+Pure metric computations over tensors or plain dicts: no data loading and no
+model code. Campaign-ranking metrics derive their pairwise-sampling seed from
+the caller (the CLI passes a hash of the campaign identity), so repeated
+evaluations of one campaign are deterministic.
+"""
+
 from __future__ import annotations
 
 import math
@@ -24,6 +32,7 @@ def _pearson(predictions: torch.Tensor, labels: torch.Tensor) -> float | None:
 
 def regression_metrics(predictions: torch.Tensor, labels: torch.Tensor,
                        standard_deviation: torch.Tensor | None = None) -> dict:
+    """Point metrics (count, MAE, RMSE, Pearson) plus Gaussian coverage when deviations given."""
     if predictions.numel() == 0:
         return {"count": 0}
     error = predictions - labels
@@ -43,6 +52,7 @@ def regression_metrics(predictions: torch.Tensor, labels: torch.Tensor,
 def scalar_uncertainty_scale(
     predictions: torch.Tensor, standard_deviation: torch.Tensor, labels: torch.Tensor,
 ) -> float:
+    """RMS z-score of the residuals; fit on validation, then applied to test by callers."""
     if predictions.shape != labels.shape or standard_deviation.shape != labels.shape:
         raise ValueError("predictions, deviations, and labels must have identical shapes")
     if predictions.numel() == 0:
@@ -58,6 +68,7 @@ def scalar_uncertainty_scale(
 def uncertainty_metrics(
     predictions: torch.Tensor, standard_deviation: torch.Tensor, labels: torch.Tensor,
 ) -> dict:
+    """Gaussian coverage at one and two sigmas plus the mean Gaussian NLL."""
     if predictions.shape != labels.shape or standard_deviation.shape != labels.shape:
         raise ValueError("predictions, deviations, and labels must have identical shapes")
     error = predictions - labels
@@ -109,6 +120,14 @@ def _fractional_top_membership(values: list[float], count: int) -> list[float]:
 
 def campaign_ranking_metrics(predictions: list[float], observations: list[float], *,
                              seed: int = 42, max_pairs: int = 100_000) -> dict:
+    """Within-campaign ranking metrics over one candidate list.
+
+    Reports Spearman's rho on average ranks (ties split), the overlap with the
+    true top 10 percent using fractional membership for ties, and pairwise
+    accuracy over exactly comparable pairs. When the full pair set exceeds
+    ``max_pairs`` it is subsampled with ``random.Random(seed)``, so a fixed seed
+    makes the metric reproducible.
+    """
     if len(predictions) != len(observations):
         raise ValueError("predictions and observations must have equal length")
     if not predictions:
@@ -158,6 +177,12 @@ def campaign_ranking_metrics(predictions: list[float], observations: list[float]
 
 def summarize_campaign_runs(runs: list[dict], *, bootstrap_samples: int = 10_000,
                             seed: int = 42) -> dict:
+    """Aggregate campaign-ranking runs across seeds with a campaign-level bootstrap CI.
+
+    All runs must share one frozen selection identity and the same campaign set;
+    the bootstrap resamples campaigns (not rows) so the interval reflects
+    campaign sampling uncertainty.
+    """
     if not runs:
         raise ValueError("at least one campaign evaluation run is required")
     if bootstrap_samples < 1:
@@ -232,6 +257,11 @@ def summarize_paired_regression_runs(
     right_name: str = "late_concat",
     difference_key: str = "late_minus_task_by_seed",
 ) -> dict:
+    """Per-seed summaries plus paired per-seed differences between two modes.
+
+    Both modes must be evaluated on the same seed set; differences are computed
+    seed-wise so the comparison is paired, not pooled.
+    """
     seeds = sorted(task_query)
     if not seeds or seeds != sorted(late_concat):
         raise ValueError("fusion runs must contain the same non-empty seed set")
@@ -265,6 +295,7 @@ def summarize_paired_regression_runs(
 
 
 def summarize_regression_seed_runs(runs: dict[str, dict[int, dict]]) -> dict:
+    """Per-seed mean/stddev of regression metrics for each baseline, enforcing one seed set."""
     if not runs:
         raise ValueError("at least one regression baseline is required")
     metric_names = ("rmse", "mae", "pearson")
@@ -294,6 +325,7 @@ def summarize_regression_seed_runs(runs: dict[str, dict[int, dict]]) -> dict:
 @torch.no_grad()
 def evaluate_model(model, loader: DataLoader, device: torch.device,
                    config: ModelConfig) -> dict:
+    """Run the model over a loader and return per-task metrics on observed labels only."""
     model.eval()
     predictions = []
     deviations = []
@@ -322,6 +354,7 @@ def evaluate_model(model, loader: DataLoader, device: torch.device,
 
 def mean_baseline_metrics(train_records, evaluation_records,
                           task_names: tuple[str, ...]) -> dict:
+    """Metrics of predicting each task's train-set mean; the reference line for model scores."""
     output = {}
     for task in task_names:
         train_values = [getattr(record, task) for record in train_records

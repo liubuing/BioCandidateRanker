@@ -1,3 +1,15 @@
+"""Curate Pseudomonas aeruginosa NQO (Q9I4V0) WT/P78G kcat rows from DOI
+10.1021/acs.biochem.5c00559.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12781114:
+candidate_records.csv (two Table 1 global ping-pong kcat rows), exclusions.csv, provenance.json,
+construct_sequences.fasta (Q9I4V0(1-328)+His6 products corroborated by PDB 6E2A),
+raw-file-hashes.json, homology/homology_hits.tsv, and homology-audit.json.
+
+Each exact construct is gated by the frozen MMseqs2 result and the exact-overlap audit
+against the hash-pinned 17,010-row development corpus; author-called incorrect Km values,
+half-reaction endpoints, and simulations are excluded.
+"""
 from __future__ import annotations
 
 import argparse
@@ -19,10 +31,14 @@ HOMOLOGY = SOURCE / "homology"
 DOI = "10.1021/acs.biochem.5c00559"
 REFERENCE = ROOT / "artifacts" / "homology-final" / "unique_proteins.fasta"
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
+# Machine-specific default; pass --development-corpus to point at the same frozen corpus
+# from another machine without editing this file.
 DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
 )
+# Pinpoints the exact frozen UniKP development corpus file (17,010 rows); the hash and byte
+# size together prove the overlap audit compares against the identical training data.
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
 MMSEQS = "mmseqs"
@@ -45,10 +61,12 @@ STRUCTURES = {
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
+    """Fetch raw evidence files and extract the SI PDF from the supplement archive if needed."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -66,6 +84,7 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -74,6 +93,8 @@ def read_fasta(path: Path) -> str:
 
 
 def validate_raw() -> tuple[dict[str, str], dict[str, tuple[int, str]]]:
+    """Check metadata/article/PDF/UniProt/PDB/PubChem evidence; return (construct sequences,
+    substrate structures)."""
     metadata = json.loads((RAW / "biostudies-metadata.json").read_text(encoding="utf-8"))
     if metadata.get("accno") != "S-EPMC12781114":
         raise ValueError("Unexpected BioStudies accession")
@@ -122,6 +143,8 @@ def validate_raw() -> tuple[dict[str, str], dict[str, tuple[int, str]]]:
 def exact_overlap(
     constructs: dict[str, str], structures: dict[str, tuple[int, str]], development_corpus: Path
 ) -> dict[str, object]:
+    """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
+    corpus."""
     if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or changed size")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -144,21 +167,27 @@ def exact_overlap(
 
 
 def wsl_path(path: Path) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive.rstrip(':').lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
 
 def reset_wsl(path: Path) -> None:
+    """Delete ``path`` from inside the WSL distribution (Windows rmtree cannot cross the
+    boundary)."""
     if path.exists():
         subprocess.run(["wsl", "-d", MMSEQS.split(":", 2)[1], "rm", "-rf", "--", wsl_path(path)], check=True)
 
 
 def run_mmseqs(query: Path) -> str:
+    """Easy-search/easy-linclust ``query`` against the frozen reference inside WSL; return the
+    verified version."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is absent or changed")
     version = subprocess.run(mmseqs_command("version"), check=True, capture_output=True, text=True).stdout.strip()
@@ -182,6 +211,7 @@ def run_mmseqs(query: Path) -> str:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the first row's key order as the header."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
@@ -189,6 +219,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def curate(*, acquire: bool, run_homology: bool, development_corpus: Path) -> None:
+    """Verify evidence, run overlap/homology audits, and write the candidate/exclusion/audit
+    bundle."""
     if acquire:
         download_raw()
     constructs, structures = validate_raw()

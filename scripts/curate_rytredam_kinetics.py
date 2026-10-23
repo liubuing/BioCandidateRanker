@@ -1,3 +1,20 @@
+"""Curate RytRedAm imine reductase kinetics (DOI 10.1021/acscatal.4c04935, CC-BY-4.0).
+
+Reads the BioStudies deposit S-EPMC11705230 under
+``artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC11705230/raw``
+(article XML, SI PDF, PDB 9FM8/9FM7 mmCIF, PubChem structure records) plus the
+SHA-256-pinned UniKP development FASTA, and writes the standard curation bundle
+under the same SOURCE directory: ``construct_sequences.fasta``,
+``candidate_records.csv``, ``exclusions.csv``, ``raw-file-hashes.json``,
+``provenance.json``, and ``homology-audit.json`` when homology outputs exist.
+
+Accept/exclude logic: both Main Table 2 cofactor rows (NADPH, NADH) carry
+finite kcat values, but the fixed cosubstrates (10 mM hexanal, 100 mM
+allylamine) have no reported matching Km, so the frozen >=5x saturation gate
+cannot be demonstrated. Every row is therefore written to ``exclusions.csv``
+and ``candidate_records.csv`` stays schema-only. Governance role: fail-closed
+curation -- no accepted labels, no model predictions, readiness gate False.
+"""
 from __future__ import annotations
 
 import csv
@@ -109,6 +126,7 @@ def sha256(path: Path) -> str:
 
 
 def pdb_sequence(path: Path) -> str:
+    """Extract the canonical polymer sequence and enforce pinned construct metadata."""
     text = path.read_text(encoding="utf-8")
     match = re.search(
         r"_entity_poly\.pdbx_seq_one_letter_code_can\s+;([^;]+);", text, re.DOTALL
@@ -129,6 +147,7 @@ def pdb_sequence(path: Path) -> str:
 
 
 def validate_sources() -> str:
+    """Validate every deposited raw marker and return the exact 291-aa RytRedAm sequence."""
     metadata = json.loads((RAW / "metadata.json").read_text(encoding="utf-8"))
     if metadata["accno"] != "S-EPMC11705230":
         raise ValueError("Unexpected BioStudies accession")
@@ -176,6 +195,7 @@ def validate_sources() -> str:
 
 
 def build_rows() -> list[dict[str, object]]:
+    """Build the two Main Table 2 cofactor rows, each pre-flagged for exclusion."""
     hexanal_cid, hexanal_smiles, _ = STRUCTURES["hexanal"]
     allylamine_cid, allylamine_smiles, _ = STRUCTURES["allylamine"]
     rows = []
@@ -239,6 +259,7 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
+    """Verify the pinned target, then write every curation artifact under SOURCE."""
     if sha256(TARGET) != TARGET_SHA256:
         raise ValueError("Frozen UniKP development target identity mismatch")
     sequence = validate_sources()
@@ -354,6 +375,7 @@ def write_outputs() -> None:
 
 
 def verify_outputs(rows: list[dict[str, object]], sequence: str) -> None:
+    """Re-check the written bundle: cardinality, finite values, strict exclusion, files."""
     if len(rows) != 2 or len(sequence) != 291:
         raise ValueError("Unexpected RytRedAm curation cardinality")
     if {row["variable_substrate"] for row in rows} != {"NADPH", "NADH"}:

@@ -1,3 +1,14 @@
+"""Curate Acinetobacter baumannii ATP phosphoribosyltransferase kinetics from DOI
+10.1021/acs.biochem.3c00551.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC10795190:
+candidate_records.csv (nine tabulated kcat rows for HisGS and the HisGS4:HisZ4 ATPPRT
+holoenzyme), provenance.json, construct_sequences.fasta, and homology-audit.json.
+
+A row is admitted only when at least one saturation curve held its fixed cosubstrate at
+>=5x its fitted Km; surviving rows must then be homology-cold against the frozen
+development reference and stay within the per-family cap of 20 records.
+"""
 from __future__ import annotations
 
 import csv
@@ -55,10 +66,13 @@ ROWS = [
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path, expected_accession: str, expected_length: int) -> str:
+    """Read a FASTA, failing unless the header carries ``expected_accession`` and the sequence has
+    the exact length."""
     lines = path.read_text(encoding="ascii").splitlines()
     if not lines or expected_accession not in lines[0]:
         raise ValueError(f"Expected {expected_accession} in {path.name} header")
@@ -69,6 +83,8 @@ def read_fasta(path: Path, expected_accession: str, expected_length: int) -> str
 
 
 def load_sequences() -> dict[str, tuple[str, str]]:
+    """Load and validate the exact native RefSeq chains; return sequence_id -> (accession,
+    sequence)."""
     sequences = {}
     for sequence_id, (accession, relative_path, length) in SEQUENCE_SOURCES.items():
         sequences[sequence_id] = (
@@ -79,6 +95,8 @@ def load_sequences() -> dict[str, tuple[str, str]]:
 
 
 def verify_raw_evidence() -> None:
+    """Fail closed unless the article XML, supplement PDF, archive, and PubChem records carry the
+    tabulated values."""
     raw = SOURCE / "raw"
     article_root = ET.parse(raw / "PMC10795190-fullText.xml").getroot()
     doi = article_root.findtext(".//article-id[@pub-id-type='doi']")
@@ -114,12 +132,16 @@ def verify_raw_evidence() -> None:
 
 
 def assay_limits(state: str) -> tuple[float, float]:
+    """Return the fixed cosubstrate concentrations (mM) used by the paper for (PRPP, nucleotide)
+    curves."""
     if state == "ATPPRT":
         return 1.6, 1.6
     return 3.2, 6.4
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen ROWS table into candidate records, flagging saturation-qualifying curves per
+    row."""
     records = []
     for index, row in enumerate(ROWS, 1):
         (
@@ -210,6 +232,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def component_hits(path: Path) -> set[str]:
+    """Return the distinct query names (first TSV column) with a frozen-development homology hit."""
     if not path.exists():
         return set()
     return {
@@ -220,6 +243,8 @@ def component_hits(path: Path) -> set[str]:
 
 
 def apply_selection(records: list[dict[str, object]]) -> None:
+    """Re-status accepted rows fail-closed: homology hits exclude, then a per-catalytic-family cap
+    of FAMILY_CAP applies."""
     hits = component_hits(SOURCE / "homology" / "homology_hits.tsv")
     family_counts: dict[str, int] = {}
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
@@ -247,6 +272,8 @@ def apply_selection(records: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
+    """Verify raw evidence, build and select records, then write the CSV/FASTA/provenance/audit
+    evidence bundle."""
     verify_raw_evidence()
     sequences = load_sequences()
     records = build_records()
@@ -365,6 +392,8 @@ def write_outputs() -> None:
 def verify_outputs(
     records: list[dict[str, object]], sequences: dict[str, tuple[str, str]]
 ) -> None:
+    """Fail closed on cardinality, finite parameters, the 8-accepted/1-excluded split, and required
+    output files."""
     if len(records) != 9 or len(sequences) != 2:
         raise ValueError("Unexpected curation cardinality")
     for record in records:

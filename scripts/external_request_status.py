@@ -8,6 +8,11 @@ The project has three records of its outreach and they drifted apart:
 
 This script reports the union and flags any draft that no queue entry tracks,
 any queue entry whose draft is missing, and any disagreement about send status.
+
+Read-only over the three records; writes nothing unless --markdown or --json-out
+is given (then a Markdown table and/or the JSON report). Governance role:
+outreach bookkeeping audit -- draft text is never treated as evidence of
+contact and no reply is treated as data.
 """
 
 from __future__ import annotations
@@ -56,6 +61,7 @@ def draft_recipient(path: Path) -> str | None:
 
 
 def placeholder_recipient(value: str | None) -> bool:
+    """True when a recipient is missing or still carries an unfilled marker."""
     if not value:
         return True
     return any(marker in value for marker in UNFILLED_MARKERS)
@@ -69,6 +75,7 @@ def states_agree(left: str | None, right: str | None) -> bool:
 
 
 def reconcile(root: Path) -> dict[str, Any]:
+    """Cross-check queue, tracker, and drafts; return the report with all issues."""
     issues: list[str] = []
     queue_path = root / DEFAULT_QUEUE
     tracker_path = root / DEFAULT_TRACKER
@@ -175,6 +182,7 @@ def reconcile(root: Path) -> dict[str, Any]:
 
 
 def render_markdown(report: dict[str, Any]) -> str:
+    """Render the reconciliation report as a Markdown table plus issue list."""
     lines = ["# External request status", ""]
     lines.append(report["headline"])
     lines.append("")
@@ -203,6 +211,7 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    """Reconcile the outreach records and optionally emit Markdown/JSON reports."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--markdown", type=Path, default=None)

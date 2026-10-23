@@ -1,4 +1,16 @@
-"""Export only frozen training/validation data for CatPred and a length stress pilot."""
+"""Export only frozen training/validation data for CatPred and a length stress pilot.
+
+Reads the frozen homology-cold ``train`` and ``validation`` CSVs under
+``artifacts/external/sota-homology-cold/data`` and writes two bundles under
+``artifacts/catpred-mode-b``: ``development-data`` (all rows) and
+``length-pilot-data`` (the 32 longest training and 16 longest validation
+sequences, deterministic tie-break by pair_id), each with partition CSVs,
+``protein_records.json.gz``, and a ``receipt.json`` recording source and output
+hashes plus ESM cache-size estimates.
+
+Governance role: fail-closed preparation -- the test partition is never read
+or exported, and an existing receipt aborts a rerun.
+"""
 from pathlib import Path
 import csv, gzip, hashlib, json
 
@@ -8,6 +20,7 @@ BASE=ROOT/'artifacts/catpred-mode-b'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    """Export the development and length-pilot bundles with hash receipts."""
     source_rows={}
     for partition in ['train','validation']:
         source=ROOT/f'artifacts/external/sota-homology-cold/data/{partition}.csv'

@@ -1,4 +1,15 @@
-"""Three AaCSE1 pairs, with documented-vector reconstruction and explicit caveats."""
+"""Curate three directly measured AaCSE1 kcat rows from DOI 10.1007/s00425-025-04915-7
+(PMC12774947).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12774947:
+candidate_records.csv (3 accepted rows), provenance.json (caveats and withheld fits),
+homology-audit.json, and the reconstructed construct_sequences.fasta.
+
+Acceptance requires a documented vector reconstruction (deposited PV962689.1 CDS, exact
+primer-end matches, Novagen pET-15b leader) and a homology-cold pool: MMseqs2 easy-search
+against the frozen development reference must return zero hits. The alternative ECB fit of
+the same shikimate measurements is withheld as non-independent evidence.
+"""
 import csv, hashlib, json, shutil, subprocess, sys
 from pathlib import Path
 from Bio import SeqIO
@@ -14,8 +25,14 @@ SOURCE=BASE/'europepmc-PMC12774947';RAW=SOURCE/'raw'
 REF=ROOT/'artifacts/homology-final/unique_proteins.fasta'
 DOI='10.1007/s00425-025-04915-7'
 VERSION='5d152c612b6ad2a56f657b7a02c127eceaea2a75'
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def sha(p):
+    """Return the SHA-256 hex digest of the file at ``p``."""
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
 def main():
+    """Reconstruct the AaCSE1 construct, audit homology, and write the evidence bundle
+    fail-closed."""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit-20261004/readiness-audit.json']
     before={str(p):sha(p) for p in protected}
     RAW.mkdir(parents=True,exist_ok=True)
@@ -41,6 +58,8 @@ def main():
     assert core not in refseq and construct not in refseq
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
     fasta=SOURCE/'construct_sequences.fasta';fasta.write_text('>aacse1-pet15b-reconstructed\n'+construct+'\n')
+    # Frozen WSL mmseqs binary: verify the pinned version, then hand the homology helpers a
+    # "wsl:<distro>:<path>" handle so they translate Windows artifact paths to /mnt/... form.
     version=subprocess.check_output(['wsl','-d','Ubuntu-24.04-D','--','/home/liubuing/.local/bin/mmseqs','version']).decode().strip();assert version==VERSION
     exe='wsl:Ubuntu-24.04-D:/home/liubuing/.local/bin/mmseqs'
     hits=run_mmseqs_easy_search(exe,fasta,REF,SOURCE/'homology',threads=4)

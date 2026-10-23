@@ -1,4 +1,17 @@
-"""Reproduce a pending-only literature extraction; never add accepted records."""
+"""Reproduce a pending-only literature extraction; never add accepted records.
+
+Reads the two recorded glycosidase sources (AnGH3, BgaP) and the protected
+global-audit counters, writes six directly reported kcat/Km measurements to
+``candidate-measurements.csv`` under
+``artifacts/external/temporal-absolute-kinetics/discovery-20260929`` (all with
+status ``pending_not_accepted``), fetches the XED97098.1 reference-only FASTA
+with pinned length, and records ``curation-receipt.json`` with the pending
+gates, protected-file hashes, and artifact hashes.
+
+Governance role: fail-closed staging -- no accepted additions, no predictions,
+mature-construct and substrate-structure gates explicitly unresolved, and
+protected config/audit hashes re-verified before writing the receipt.
+"""
 import csv
 import hashlib
 import json
@@ -14,6 +27,7 @@ def digest(path):
 
 
 def main():
+    """Stage pending measurements and the reference FASTA; write the receipt."""
     protected = [ROOT / 'configs/temporal_absolute_kinetics_protocol.json',
                  ROOT / 'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before = {str(p.relative_to(ROOT)): digest(p) for p in protected}

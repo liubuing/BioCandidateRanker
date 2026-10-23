@@ -19,10 +19,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> None:
+    """Quantify exact sequence/pair overlap and write the overlap-audit receipt."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", type=Path, required=True,
                         help="UniKP/DLKcat published training corpus (raw JSON)")

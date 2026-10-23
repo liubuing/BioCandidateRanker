@@ -1,3 +1,8 @@
+"""Pins the RmlA kinetics curation verdict: internally inconsistent reported
+kcat values yield zero admitted records and a fail-closed unresolved construct,
+while the homology audit evidence is still fully recorded.
+"""
+
 import csv
 import json
 from pathlib import Path

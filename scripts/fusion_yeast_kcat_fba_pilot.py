@@ -80,6 +80,7 @@ def sha256(path: Path) -> str:
 
 
 def load_kcat_predictions() -> dict[str, float]:
+    """Load stored log10(kcat) predictions and return them as s^-1 values."""
     payload = json.loads(PREDICTIONS.read_text(encoding="utf-8"))
     kcat: dict[str, float] = {}
     for row in payload["predictions"]:
@@ -91,6 +92,7 @@ def load_kcat_predictions() -> dict[str, float]:
 
 
 def load_sequence_lengths() -> dict[str, int]:
+    """Count residues per candidate FASTA for enzyme mass estimates."""
     lengths = {}
     for fasta in sorted(SEQUENCES.glob("*.fasta")):
         lines = fasta.read_text().splitlines()
@@ -134,6 +136,7 @@ def solve_target(model) -> dict[str, float | str]:
 
 def solve_kcat_constrained(model, kcat: dict[str, float], constraint_map: dict[str, dict],
                            enzyme_level: float, blocked: tuple[str, ...] = ()) -> dict:
+    """Re-solve the target with GECKO-form capacity bounds at one enzyme level."""
     work = model.copy()
     for reaction_id in blocked:
         work.reactions.get_by_id(reaction_id).bounds = (0.0, 0.0)
@@ -154,6 +157,7 @@ def solve_kcat_constrained(model, kcat: dict[str, float], constraint_map: dict[s
 
 
 def main() -> int:
+    """Run the anchor solve, enzyme-cost scan, and constrained scenarios; write results."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", default="artifacts/fusion-yeast-pilot")
     args = parser.parse_args()

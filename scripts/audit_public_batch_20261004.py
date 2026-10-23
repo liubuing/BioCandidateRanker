@@ -1,4 +1,13 @@
-"""Record manually checked source cells and component-screen dispositions."""
+"""Record manually checked source cells and component-screen dispositions.
+
+Re-verifies the protected hashes recorded in batch-register.json, screens
+component queries against the development reference, stages the manually
+checked source kcat cells (exact table values only; no curve-read estimates
+and no computed labels) into staged-measurements.csv, and classifies each
+fulltext source. Writes public-batch-20261004/curation-audit.json with
+accepted_additions=0: ECB-method fits are marked non-independent, apparent
+parameters are held for review, and no-hit components stay pending.
+"""
 import csv
 import hashlib
 import json
@@ -8,9 +17,14 @@ from Bio import SeqIO
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/external/temporal-absolute-kinetics/public-batch-20261004'
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
-def read(name):return json.loads((OUT/name).read_text(encoding='utf-8'))
+def sha(p):
+    """Return the SHA256 hex digest of a file."""
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+def read(name):
+    """Load a JSON file from the batch output folder."""
+    return json.loads((OUT/name).read_text(encoding='utf-8'))
 def main():
+    """Stage source cells, classify sources, and write the curation audit receipt."""
     batch=read('batch-register.json')
     for rel,h in batch['protected_hashes'].items():assert sha(ROOT/rel)==h
     ref=ROOT/'artifacts/homology-final/unique_proteins.fasta'

@@ -1,3 +1,15 @@
+"""Gate the human Cdc14 kinetics source (DOI 10.1016/j.jbc.2024.107644; dataset DOI
+10.4231/429k-qe94).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/purdue-429k-qe94:
+acquisition-attempts.json, and (depending on the Purdue repository outcome) either
+blocker-evidence.json or provenance.json/candidate-artifact.json, plus homology-audit.json.
+
+The script is fail-closed on acquisition: when the Purdue repository payload cannot be
+retrieved it writes zero candidates and machine-readable blocker evidence instead of
+inferring rows. S. cerevisiae rows are excluded up front for known exact UniKP development
+overlap; homology stays not-run until exact human construct sequences exist.
+"""
 from __future__ import annotations
 
 import argparse
@@ -62,10 +74,12 @@ PURR_ENDPOINTS = (
 
 
 def utc_now() -> str:
+    """Return the current UTC time as a second-resolution ISO-8601 string."""
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -74,6 +88,8 @@ def sha256(path: Path) -> str:
 
 
 def request(url: str, timeout: int = 180) -> tuple[bytes | None, dict[str, object]]:
+    """Fetch ``url`` and return (payload or None, structured attempt record) without raising on
+    transport errors."""
     started = utc_now()
     req = urllib.request.Request(
         url,
@@ -124,6 +140,8 @@ def request(url: str, timeout: int = 180) -> tuple[bytes | None, dict[str, objec
 
 
 def acquire() -> list[dict[str, object]]:
+    """Download open article/metadata files, probe the Purdue endpoints, and journal every attempt;
+    return the attempt records."""
     RAW.mkdir(parents=True, exist_ok=True)
     attempts: list[dict[str, object]] = []
     for name, url in DOWNLOADS.items():
@@ -174,6 +192,8 @@ def acquire() -> list[dict[str, object]]:
 
 
 def verify_open_metadata() -> dict[str, object]:
+    """Fail closed unless DataCite identity/CC0 and Europe PMC DOI/CC-BY evidence check out; return
+    the metadata summary."""
     metadata_path = RAW / "datacite-metadata.json"
     xml_path = RAW / "PMC11407943-fullText.xml"
     supplement_path = RAW / "PMC11407943-supplementaryFiles.zip"
@@ -208,6 +228,7 @@ def verify_open_metadata() -> dict[str, object]:
 
 
 def repository_payload_available(attempts: list[dict[str, object]]) -> bool:
+    """Return True only if some Purdue endpoint attempt succeeded with a non-trivial payload."""
     return any(
         attempt.get("requested_url") in PURR_ENDPOINTS
         and attempt.get("outcome") == "success"
@@ -219,6 +240,8 @@ def repository_payload_available(attempts: list[dict[str, object]]) -> bool:
 def write_blocker(
     attempts: list[dict[str, object]], metadata: dict[str, object]
 ) -> None:
+    """Record the repository transport failure and zero-curation consequence in
+    blocker-evidence.json."""
     failed = [
         {
             "url": attempt["requested_url"],
@@ -271,6 +294,8 @@ def write_blocker(
 
 
 def write_provenance(metadata: dict[str, object], blocked: bool) -> None:
+    """Write provenance.json stating source identity, licenses, raw hashes, and the blocked/pending
+    status."""
     raw_files = sorted(path for path in RAW.iterdir() if path.is_file())
     provenance = {
         "source_id": SOURCE_ID,
@@ -302,6 +327,8 @@ def write_provenance(metadata: dict[str, object], blocked: bool) -> None:
 
 
 def write_candidate_artifact(blocked: bool) -> None:
+    """Write candidate-artifact.json with zero candidates and the yeast group's known-overlap
+    exclusion."""
     artifact = {
         "schema_version": 1,
         "source_id": SOURCE_ID,
@@ -332,9 +359,13 @@ def write_candidate_artifact(blocked: bool) -> None:
 
 
 def run_frozen_wsl_mmseqs(blocked: bool) -> None:
+    """Probe the WSL Debian mmseqs against the frozen version and record a no-run
+    homology-audit.json status."""
     if sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen UniKP reference hash changed")
     query = SOURCE / "construct_sequences.fasta"
+    # Placeholders stand in for the /mnt/... WSL-side paths; they are only substituted when
+    # exact candidate constructs finally exist and a real search is enabled.
     command = [
         "wsl.exe",
         "-d",
@@ -403,6 +434,8 @@ def run_frozen_wsl_mmseqs(blocked: bool) -> None:
 
 
 def main() -> None:
+    """Acquire, verify, and gate the source; write blocker/provenance/candidate/homology evidence
+    without any candidates."""
     parser = argparse.ArgumentParser(description="Acquire and gate the Cdc14 kinetics source")
     parser.add_argument("--no-download", action="store_true", help="Only validate local raw files")
     args = parser.parse_args()

@@ -1,4 +1,18 @@
-"""CataPro kcat head on frozen train/validation data; no test evaluation command."""
+"""CataPro Mode B: retrain CataPro's kcat head on the frozen homology-cold split.
+
+Reads the frozen protocol configs/catapro_mode_b_protocol.json, the data
+manifest and train/validation partitions it pins by SHA256, the commit-pinned
+upstream CataPro source under artifacts/pcb-readiness/, the released UniKP
+ProtT5-XL embedding cache, and the local ProtT5/MolT5 encoder weights. Writes
+cached 1959-dim feature matrices (ProtT5 mean1024 + MolT5 mean768 + MACCS167),
+feature manifests, per-seed checkpoints and receipts under
+artifacts/catapro-mode-b/. Governance: every input is hash-checked against the
+protocol and the run fails closed on any mismatch; the ProtT5 reuse gate and
+the upstream molecule-equivalence check must pass before full training; the
+seed set comes from the protocol (single seed 7 for --mode smoke); there is
+deliberately no test-evaluation action and every artifact records
+test_accessed=false.
+"""
 from __future__ import annotations
 import argparse
 import csv
@@ -39,6 +53,7 @@ def save_json(path,value):
 def json_hash(value):return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
 
 def load_partitions(limit=0):
+    """Return the frozen train/validation rows after re-verifying every recorded hash."""
     protocol=read_json(PROTOCOL)
     manifest=read_json(ROOT/protocol['data_manifest'])
     if sha(ROOT/protocol['data_manifest'])!=protocol['data_manifest_sha256']:
@@ -53,14 +68,18 @@ def load_partitions(limit=0):
     return partitions
 
 def sequence_text(sequence):
+    # UniKP ProtT5 preprocessing: sequences over 1000 residues keep the first
+    # and last 500; U/Z/O/B are masked to X as unknown residues.
     sequence=sequence if len(sequence)<=1000 else sequence[:500]+sequence[-500:]
     return re.sub('[UZOB]','X',' '.join(sequence))
 
 def model_identity(path):
+    """Return a SHA256 map of the model files that pin this encoder's identity."""
     names=['config.json','pytorch_model.bin','spiece.model','tokenizer_config.json','special_tokens_map.json','tokenizer.json']
     return {n:sha(path/n) for n in names if (path/n).is_file()}
 
 def source_module(relative):
+    """Import one pinned upstream CataPro module after checking its commit and file hash."""
     receipt=read_json(ROOT/'artifacts/pcb-readiness/source-receipt.json')
     repo=next(r for r in receipt['repositories'] if r['repository']=='zchwang/CataPro')
     if repo['commit']!=read_json(PROTOCOL)['upstream_commit']:raise ValueError('Upstream commit changed')
@@ -72,6 +91,7 @@ def source_module(relative):
     return module
 
 def cache_features(limit=0,device='cuda'):
+    """Cache (or reuse) the 1959-dim train/validation features and write the feature manifest."""
     from transformers import T5EncoderModel,T5Tokenizer
     started=time.perf_counter();rows=load_partitions(limit)
     mode='smoke' if limit else 'full';dest=OUT/mode;dest.mkdir(parents=True,exist_ok=True)
@@ -89,6 +109,8 @@ def cache_features(limit=0,device='cuda'):
     lookup={k:i for i,k in enumerate(keys)}
     selected=sorted({r['sequence'] for part in rows.values() for r in part})
     if any(k not in lookup for k in selected):raise ValueError('Missing cached protein')
+    # Probe sequences always come from the full training partition (limit is
+    # ignored here) so the gate identity stays stable across smoke/full modes.
     train_keys=sorted({r['sequence'] for r in load_partitions(0)['train']},key=lambda x:(len(x),x))
     probes=list(dict.fromkeys([train_keys[0],train_keys[len(train_keys)//2],train_keys[-1]]))
     check_identity={'prot_files':prot_identity,'keys_sha256':sha(key_path),'vectors_sha256':sha(vec_path),
@@ -155,6 +177,7 @@ def cache_features(limit=0,device='cuda'):
     print(json.dumps({'status':'cached','mode':mode,'sizes':{k:len(v) for k,v in rows.items()},'seconds':manifest['seconds']}),flush=True)
 
 def load_feature_data(mode):
+    """Load cached features and labels, re-verifying protocol, ordering, hashes, shapes."""
     manifest=read_json(OUT/mode/'feature-manifest.json')
     if manifest['identity']['protocol_sha256']!=sha(PROTOCOL):raise ValueError('Protocol changed')
     rows=load_partitions(manifest['limit']);result={}
@@ -170,6 +193,7 @@ def load_feature_data(mode):
     return result,manifest
 
 def train(mode,device):
+    """Train one protocol seed at a time; writes checkpoints/receipts; never evaluates test."""
     protocol=read_json(PROTOCOL);cfg=protocol['training'];data,feature_manifest=load_feature_data(mode)
     if mode=='full':
         check=read_json(OUT/'molecule-equivalence-check.json')
@@ -187,7 +211,9 @@ def train(mode,device):
             print(f'Seed {seed} already complete',flush=True);continue
         random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
         if torch.cuda.is_available():torch.cuda.manual_seed_all(seed)
+        # cuDNN autotune disabled: its algorithm choice is not reproducible across runs.
         torch.backends.cudnn.benchmark=False
+        # Upstream CataPro names its dropout-probability constructor argument 'rate'.
         model=module.KcatModel(rate=cfg['dropout'],device=device)
         optimizer=torch.optim.Adam(model.parameters(),lr=cfg['learning_rate'],betas=(.9,.999),weight_decay=cfg['weight_decay'])
         tensors={k:(torch.from_numpy(x).to(device),torch.from_numpy(y).to(device)) for k,(x,y) in data.items()}
@@ -196,6 +222,8 @@ def train(mode,device):
         for epoch in range(max_epochs):
             model.train();x,y=tensors['train'];order=torch.randperm(len(y),device=device)
             batches=list(order.split(cfg['batch_size']))
+            # BatchNorm cannot normalise a single row: fold a lone trailing
+            # batch into the previous one instead of dropping the sample.
             if len(batches[-1])==1:
                 if len(batches)<2:raise ValueError('BatchNorm requires at least two training rows')
                 batches[-2]=torch.cat([batches[-2],batches[-1]]);batches.pop()

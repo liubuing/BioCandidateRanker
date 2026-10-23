@@ -1,7 +1,14 @@
-"""Read verified CPU ESM cache tensors through mmap; preserve model numerics."""
+"""Read verified CPU ESM cache tensors through mmap; preserve model numerics.
+
+Installs two runtime adapters before upstream training: the noncanonical
+residue tokenizer adapter and an mmap + weights_only loader that only accepts
+ESM cache entries resolved under the verified cache root. The upstream source
+tree is never edited; behavior differs only in how tensors are loaded.
+"""
 import catpred_noncanonical_entry
 
 def install_memory_adapter():
+    """Patch catpred's torch loader for mmap CPU loads scoped to the ESM cache root."""
     import torch
     import catpred.data.cache_utils as cache
     from catpred.security.deserialization import ensure_trusted_path
@@ -18,6 +25,7 @@ def install_memory_adapter():
     cache.load_torch_artifact=load
 
 def install_adapters():
+    """Install both the noncanonical-tokenizer and bounded-memory adapters."""
     catpred_noncanonical_entry.install_adapter()
     install_memory_adapter()
 

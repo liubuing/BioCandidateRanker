@@ -1,3 +1,15 @@
+"""Curate gut sulfoglycosidase (WG/YG/F3-ORF26) kcat rows from DOI 10.1021/acsbiomedchemau.4c00088.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC11659886:
+candidate_records.csv (all 24 direct Table 1 saturation kcat rows: WT plus point mutants
+on 4MU-6S-GlcNAc/4MU-GlcNAc), exclusions.csv, construct_sequences.fasta (21 SI-exact
+tagged constructs rebuilt from archived UniProt/GenBank sequences),
+family_reference_sequences.fasta, provenance.json, and homology-audit.json.
+
+Records start as pending_homology and are re-statused by the frozen MMseqs2 result, then a
+per-MMseqs-family cap of 20 applies; Table 1 values are cross-checked against the article
+XML before anything is written.
+"""
 from __future__ import annotations
 
 import csv
@@ -128,6 +140,7 @@ ROWS = (
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -136,6 +149,7 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -144,6 +158,8 @@ def read_fasta(path: Path) -> str:
 
 
 def read_latest_unisave_sequence(path: Path, accession: str) -> str:
+    """Recover the archived version-1 sequence from a UniSave text record, failing unless the
+    accession matches."""
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or f"AC   {accession};" not in lines:
         raise ValueError(f"UniSave record does not identify {accession}")
@@ -161,6 +177,8 @@ def read_latest_unisave_sequence(path: Path, accession: str) -> str:
 
 
 def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...], accession: str) -> str:
+    """Apply 1-based point mutations on accession coordinates, failing on a wrong wild-type
+    residue."""
     residues = list(sequence)
     for position, expected, replacement in changes:
         if residues[position - 1] != expected:
@@ -172,6 +190,8 @@ def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...], accession: 
 
 
 def make_construct(enzyme: str, native: str) -> str:
+    """Assemble the SI-exact tagged construct (initiator Met, mature window, vector tail) for an
+    enzyme."""
     if enzyme == "WG":
         return "M" + native[21:] + "LEHHHHHH"
     if enzyme == "YG":
@@ -183,11 +203,14 @@ def make_construct(enzyme: str, native: str) -> str:
 
 
 def sequence_id(enzyme: str, variant: str) -> str:
+    """Return the lowercased "<enzyme-prefix>-<variant>" construct identifier."""
     prefix = {"WG": "wg", "YG": "yg", "F3-ORF26": "f3-orf26"}[enzyme]
     return f"{prefix}-{variant.lower()}"
 
 
 def build_sequences() -> tuple[dict[str, tuple[str, str, str]], dict[str, str]]:
+    """Build all variant constructs and load native sequences; return (constructs, accession ->
+    native)."""
     native = {
         str(data["uniprot"]): read_latest_unisave_sequence(
             RAW / f"{data['uniprot']}.unisave.txt", str(data["uniprot"])
@@ -215,6 +238,7 @@ def build_sequences() -> tuple[dict[str, tuple[str, str, str]], dict[str, str]]:
 
 
 def parse_measurement(text: str) -> tuple[float, float]:
+    """Split a "value +/- uncertainty" cell into floats, failing on any other format."""
     parts = re.split(r"\s*±\s*", text.replace("\xa0", " ").strip())
     if len(parts) != 2:
         raise ValueError(f"Expected value +/- uncertainty, found {text!r}")
@@ -222,6 +246,7 @@ def parse_measurement(text: str) -> tuple[float, float]:
 
 
 def table_measurements(article: ET.Element) -> dict[tuple[str, str], tuple[float, ...]]:
+    """Extract (protein, row label) -> (Km, Km error, kcat, kcat error) from article Table 1 XML."""
     table = article.find(".//table-wrap[@id='tbl1']")
     if table is None:
         raise ValueError("Article Table 1 is missing")
@@ -242,6 +267,8 @@ def table_measurements(article: ET.Element) -> dict[tuple[str, str], tuple[float
 
 
 def verify_raw(constructs: dict[str, tuple[str, str, str]]) -> None:
+    """Fail closed unless raw files, Table 1 values, SI construct sequences, and PubChem identities
+    all corroborate."""
     required = (
         "PMC11659886-fullText.xml",
         "PMC11659886-supplementaryFiles.zip",
@@ -303,6 +330,8 @@ def verify_raw(constructs: dict[str, tuple[str, str, str]]) -> None:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen ROWS table into pending_homology candidate records with full assay
+    metadata."""
     records = []
     for index, row in enumerate(ROWS, 1):
         (
@@ -363,6 +392,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def read_hits(path: Path) -> set[str]:
+    """Return the distinct query ids in a homology hits TSV (empty set when the file is absent)."""
     if not path.is_file():
         return set()
     return {
@@ -373,6 +403,8 @@ def read_hits(path: Path) -> set[str]:
 
 
 def apply_selection(records: list[dict[str, object]]) -> None:
+    """Re-status records fail-closed: homology hits exclude, then a per-MMseqs-family cap of
+    FAMILY_CAP applies."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.is_file() or not cluster_path.is_file():
@@ -398,6 +430,7 @@ def apply_selection(records: list[dict[str, object]]) -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fieldnames = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -406,6 +439,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_fasta(path: Path, entries: dict[str, tuple[str, str]]) -> None:
+    """Write 80-column-wrapped FASTA records from an id -> (description, sequence) mapping."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for identifier, (description, sequence) in entries.items():
             handle.write(f">{identifier} {description}\n")
@@ -414,6 +448,8 @@ def write_fasta(path: Path, entries: dict[str, tuple[str, str]]) -> None:
 
 
 def exclusion_records() -> list[dict[str, object]]:
+    """Summarize the comparator rows, pH profiles, and insoluble constructs that are not candidate
+    kcat evidence."""
     return [
         {
             "source_rows": "Table 1 Bt4394 WT (two substrates), Q431W/I432G (two substrates), and Q431Y/I432G (two substrates)",
@@ -437,6 +473,8 @@ def exclusion_records() -> list[dict[str, object]]:
 
 
 def write_outputs() -> None:
+    """Build and verify everything, then write candidate/exclusion CSVs, both FASTAs, provenance,
+    and the homology audit."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     constructs, native = build_sequences()
     verify_raw(constructs)
@@ -549,6 +587,8 @@ def write_homology_audit(
     construct_path: Path,
     reference_path: Path,
 ) -> None:
+    """Write homology-audit.json (no-op if MMseqs outputs are absent), hash-binding the FASTAs,
+    hits, and clusters."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.is_file() or not cluster_path.is_file():
@@ -601,6 +641,8 @@ def write_homology_audit(
 def verify_outputs(
     records: list[dict[str, object]], constructs: dict[str, tuple[str, str, str]]
 ) -> None:
+    """Fail closed on cardinality, finiteness, exclusion leakage, and completeness of the
+    homology-gated artifacts."""
     if len(records) != 24 or len(constructs) != 21:
         raise ValueError("Unexpected curation cardinality")
     if len({sequence for _, _, sequence in constructs.values()}) != 21:

@@ -1,3 +1,8 @@
+"""Pins the ranker model contract: masked multitask Gaussian/MSE losses with
+uncertainty heads, protein chunking, encoder and fusion-mode variants, config
+validation, pairwise ranking loss behavior, and classical feature baselines.
+"""
+
 import unittest
 
 import torch

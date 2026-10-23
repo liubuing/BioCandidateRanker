@@ -12,6 +12,13 @@ predictions, records their identity, and writes a manifest that fixes the
 predicted ordering now, so a later comparison cannot be adjusted after the fact.
 
 Output: configs/f1a_prospective_freeze.json
+
+Reads the stored task-2 prediction JSON, its input spec, and candidate sequence
+files under ``artifacts/10h2da-yeast-prediction``; writes the freeze manifest
+with SHA-256 identity for every input, the pre-registered decision rule, and a
+discriminating-power check. Governance role: pre-registration only -- nothing
+is predicted here and the manifest exists so the comparison cannot be adjusted
+after measurements are seen.
 """
 
 from __future__ import annotations
@@ -70,6 +77,7 @@ def sha256(path: Path) -> str:
 
 
 def build_freeze() -> dict[str, Any]:
+    """Assemble the freeze manifest with predictions, ranks, and decision rule."""
     if not PREDICTIONS.is_file():
         raise SystemExit(f"missing stored predictions: {PREDICTIONS}")
 
@@ -168,6 +176,7 @@ def build_freeze() -> dict[str, Any]:
 
 
 def main() -> int:
+    """Write the freeze manifest and print the recorded ordering summary."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()

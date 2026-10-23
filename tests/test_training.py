@@ -1,3 +1,9 @@
+"""Pins the training loop contract: safe checkpoint round trips, campaign-aware
+batch samplers, batch-partition-invariant evaluation loss, gradient
+accumulation that matches the single-batch objective, and ranking epochs that
+count every comparable pair.
+"""
+
 import tempfile
 import unittest
 from pathlib import Path

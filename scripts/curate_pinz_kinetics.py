@@ -1,3 +1,15 @@
+"""Curate bacterial pinoresinol/lariciresinol reductase (PinZ) rows from DOI 10.1002/pro.70436.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12817470:
+an empty candidate_records.csv, exclusions.csv (all eight Table 1 apparent kcat rows),
+provenance.json, construct_sequences.fasta (exact 308-aa NrPinZ DATA S1 sequence,
+cross-checked against the Boltz coordinate PDB), raw-file-hashes.json, SOURCE-LICENSE.txt,
+homology-commands.txt, blocker.json, and homology-audit.json.
+
+Exclusion-only fail-closed: fixed 1.6 mM NADPH saturation is never demonstrated, and
+NaPinZ/SlPinZ sequences or accessions are unavailable (nearest homologs are recorded as
+audit leads only, never substituted).
+"""
 from __future__ import annotations
 
 import csv
@@ -68,10 +80,12 @@ AA3 = {
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -80,6 +94,7 @@ def read_fasta(path: Path) -> str:
 
 
 def pdb_sequence(path: Path) -> str:
+    """Extract chain A's one-letter sequence from CA atoms in a PDB coordinate file."""
     residues: dict[int, str] = {}
     for line in path.read_text(encoding="ascii").splitlines():
         if line.startswith("ATOM") and line[12:16].strip() == "CA" and line[21] == "A":
@@ -88,12 +103,15 @@ def pdb_sequence(path: Path) -> str:
 
 
 def supplement_text() -> str:
+    """Return the space-joined text of the supplement DOCX body."""
     with zipfile.ZipFile(RAW / "Supplementary File 1.docx") as archive:
         root = ET.fromstring(archive.read("word/document.xml"))
     return " ".join(text.strip() for text in root.itertext() if text.strip())
 
 
 def pubchem_pair(stem: str) -> tuple[str, str, str]:
+    """Load the (+)/(-) enantiomer PubChem records for a lignan stem; return (cids, smiles, shared
+    connectivity)."""
     plus = json.loads((RAW / f"pubchem-{stem}.json").read_text(encoding="utf-8"))
     minus = json.loads((RAW / f"pubchem-minus-{stem}.json").read_text(encoding="utf-8"))
     plus_rows = plus["PropertyTable"]["Properties"]
@@ -110,6 +128,8 @@ def pubchem_pair(stem: str) -> tuple[str, str, str]:
 
 
 def validate_sources() -> None:
+    """Fail closed unless raw files, article markers, and the exact DATA S1/coordinate sequence all
+    corroborate."""
     required = (
         "PMC12817470-fullText.xml",
         "PRO-35-e70436-s001.zip",
@@ -154,6 +174,8 @@ def validate_sources() -> None:
 
 
 def build_exclusions() -> list[dict[str, object]]:
+    """Build one exclusion row per Table 1 measurement with full substrate, saturation, and
+    sequence-mapping status."""
     structures = {
         name: pubchem_pair(name)
         for name in ("pinoresinol", "medioresinol", "syringaresinol")
@@ -212,6 +234,7 @@ def build_exclusions() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fieldnames = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
@@ -220,6 +243,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def raw_hashes() -> dict[str, dict[str, object]]:
+    """Hash every file under RAW (recursively), keyed by RAW-relative POSIX path."""
     return {
         path.relative_to(RAW).as_posix(): {
             "size_bytes": path.stat().st_size,
@@ -231,6 +255,8 @@ def raw_hashes() -> dict[str, dict[str, object]]:
 
 
 def write_outputs() -> None:
+    """Validate sources, write the exclusion-only artifacts, and produce the homology audit from
+    the pinned MMseqs outputs."""
     validate_sources()
     exclusions = build_exclusions()
 
@@ -370,6 +396,8 @@ def write_outputs() -> None:
 
 
 def verify_outputs(exclusions: list[dict[str, object]]) -> None:
+    """Fail closed on cardinality, finiteness, zero-label invariant, and required artifact
+    presence."""
     if len(exclusions) != 8 or len(NRPINZ) != 308:
         raise ValueError("Unexpected PinZ curation cardinality")
     for row in exclusions:

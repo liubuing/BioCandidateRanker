@@ -1,4 +1,13 @@
-"""Close public-source follow-up without promoting unresolved measurements."""
+"""Close public-source follow-up without promoting unresolved measurements.
+
+Compares deposited 9QEV/9QEZ/5JGY construct sequences against the CaCA
+reference, re-checks the precomputed homology hits, and records per-source
+holds (mutant loop discrepancy, mature N-terminus boundary) plus evidence
+paragraphs from the source XMLs. Writes
+targeted-followup-20261004/source-evidence.json and closeout.json with
+new_accepted_records=0; the frozen protocol and prior global audit hashes are
+re-verified and no recluster or predictions are run.
+"""
 import hashlib
 import json
 import xml.etree.ElementTree as ET
@@ -11,10 +20,12 @@ OUT = BASE / 'targeted-followup-20261004'
 
 
 def sha(path):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
+    """Verify constructs, record source dispositions, and write the closeout."""
     refs = json.loads((BASE / 'public-batch2-20261004/sequence-register.json').read_text())
     native = next(r['sequence'] for r in refs if r['name'] == 'CaCA')
     sequences = {}

@@ -110,8 +110,9 @@ implementation has advanced through maintenance releases:
 - `software-implementation-v9` (2026-10-19): pinned `ruff==0.15.22`, which is the version
   validated locally; the unpinned range resolved to a newer release whose default rules
   flagged 467 findings the pinned gate does not. Frozen file scope unchanged from v8.
+- `software-implementation-v10` (2026-10-23): documentation pass; English module docstrings and targeted comments across src/, scripts/ and tests/ with zero behavior change (AST-verified), frozen scope inherited from v9.
 
-The closed baseline is `configs/software_implementation_release_v9.json`; v1 through v8
+The closed baseline is `configs/software_implementation_release_v10.json`; v1 through v9
 remain as historical records.
 
 Calibration coverage is partial: `artifacts/uncertainty-calibration-v2/grouped-cv.json`

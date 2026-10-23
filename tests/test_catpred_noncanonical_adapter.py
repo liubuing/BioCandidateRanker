@@ -1,3 +1,6 @@
+"""Pins the CatPred noncanonical-entry tokenizer patch: canonical sequences are
+tokenized identically to the unpatched source, unknown residues map to the
+overflow index, and unrecognized source code fails closed."""
 from pathlib import Path
 import importlib.util
 import unittest

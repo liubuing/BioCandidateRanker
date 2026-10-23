@@ -1,4 +1,17 @@
-"""Review 26 metadata groups / 106 rows; preserve the historical pool and gates."""
+"""Review 26 metadata groups / 106 rows; preserve the historical pool and gates.
+
+Reads the frozen pool-quality register (``pool-quality-register-20261005``),
+re-verifies every recorded evidence hash and the protocol hash, groups the 106
+pending-campaign rows into 26 metadata groups, and applies the hand-recorded
+per-source dispositions (hold_* or conditions_supported_candidate) with evidence
+locators and unresolved gaps. Writes ``review.json`` and ``record-overlay.json``
+under ``artifacts/external/ranking-campaign-review-20261006``.
+
+Governance role: overlay-only review -- no numeric response or model score
+enters the dispositions, ``final_evaluation_ready_groups`` and
+``accepted_additions`` stay 0, absolute record statuses and labels are
+unchanged, and no predictions are generated.
+"""
 import hashlib
 import json
 from collections import defaultdict
@@ -19,6 +32,7 @@ def read(p):
 
 
 def main():
+    """Verify the frozen register, apply per-source dispositions, and write the overlay."""
     previous = read(PREVIOUS / 'summary.json')
     for file, digest in previous['evidence_sha256'].items():
         assert sha(ROOT / file) == digest, file

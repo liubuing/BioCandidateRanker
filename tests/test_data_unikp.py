@@ -1,3 +1,8 @@
+"""Pins the UniKP JSON adapter: track-row filtering with a full audit trail,
+log10 conversion, duplicate/conflict detection, mean aggregation of replicate
+pair measurements, and read-only access to the source file.
+"""
+
 import json
 import math
 import tempfile

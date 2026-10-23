@@ -1,3 +1,8 @@
+"""Pins evaluation aggregation: deterministic campaign seed summaries with
+bootstrap CIs and None-safe undefined metrics, paired fusion differences,
+regression baseline summaries, and standardized-RMSE uncertainty calibration.
+"""
+
 import unittest
 
 import torch

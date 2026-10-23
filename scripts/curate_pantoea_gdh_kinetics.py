@@ -1,3 +1,16 @@
+"""Curate Pantoea ananatis glutamate dehydrogenase (GdhPa) kcat rows from DOI
+10.1371/journal.pone.0328289.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12364357:
+candidate_records.csv (the single saturation-qualified Table 2 row: oxidative
+NADP+-varied deamination), exclusions.csv (the other nine rows with per-cosubstrate
+failure detail), construct_sequences.fasta (TEV-cleaved G+native pET-15-TEV construct
+from identical BAK13910.1/WP_013027799.1), raw-file-hashes.json, provenance.json, and
+homology-audit.json.
+
+A Table 2 row qualifies only when every fixed cosubstrate is >=5x its measured Km in the
+matching cofactor/direction assay; survivors face the frozen MMseqs2 gate.
+"""
 from __future__ import annotations
 
 import csv
@@ -64,6 +77,7 @@ KM = {
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -72,6 +86,7 @@ def read_fasta(path: Path) -> str:
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -80,6 +95,8 @@ def sha256(path: Path) -> str:
 
 
 def fixed_cosubstrates(direction: str, cofactor: str, variable: str) -> list[dict[str, object]]:
+    """Return per-cosubstrate saturation evidence (fixed concentration / measured Km) for one assay
+    direction."""
     if direction == "reductive amination":
         fixed = [("2-oxoglutarate", 5.0), ("ammonium chloride", 50.0), (cofactor, 0.2)]
     else:
@@ -101,6 +118,8 @@ def fixed_cosubstrates(direction: str, cofactor: str, variable: str) -> list[dic
 
 
 def source_rows() -> list[dict[str, object]]:
+    """Expand the frozen Table 2 rows, re-deriving kcat and flagging cosubstrate saturation per
+    row."""
     rows = []
     for index, row in enumerate(ROWS, 1):
         direction, cofactor, variable, km, km_sem, vmax, vmax_sem, reported_kcat = row
@@ -163,6 +182,7 @@ def source_rows() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fieldnames`` or the first row's key order as the header."""
     names = fieldnames or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=names)
@@ -171,6 +191,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str] |
 
 
 def homology_hit_ids() -> set[str]:
+    """Return the homology hit query ids (empty set when the frozen hits file is absent)."""
     path = SOURCE / "homology" / "homology_hits.tsv"
     if not path.exists():
         return set()
@@ -182,6 +203,8 @@ def homology_hit_ids() -> set[str]:
 
 
 def write_outputs() -> None:
+    """Verify the deposit, gate on saturation, and write the
+    candidate/exclusion/FASTA/provenance/audit bundle."""
     metadata = json.loads((RAW / "metadata.json").read_text(encoding="utf-8"))
     deposited_files = metadata["section"]["files"]
     for deposited in deposited_files:

@@ -1,3 +1,8 @@
+"""Pins the calibration contract: closed-form Gaussian scores, conformal
+interval construction (including tie and infinite-radius policies),
+deterministic grouped model selection, and tamper-evident artifact round trips.
+"""
+
 import json
 import math
 

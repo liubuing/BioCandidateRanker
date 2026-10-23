@@ -1,3 +1,8 @@
+"""Pins the ACS Omega 3c02835 curation verdict: all eleven reported rows are
+retained as evidence yet fail closed (zero admitted records), with per-family
+construct and homology decisions recorded row by row.
+"""
+
 import csv
 import json
 from pathlib import Path

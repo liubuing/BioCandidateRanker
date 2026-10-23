@@ -28,10 +28,12 @@ LOG10_OF_2 = math.log10(2)
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_upstream_preprocess() -> object:
+    """Load the pinned upstream DLKcat preprocessing module by file path."""
     spec = importlib.util.spec_from_file_location(
         "dlkcat_upstream_preprocess", UPSTREAM / "preprocess_all.py"
     )
@@ -41,6 +43,7 @@ def load_upstream_preprocess() -> object:
 
 
 def main() -> None:
+    """Encode all frozen partitions and write npy/pickle inputs plus a manifest."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path,
                         default=ROOT / "artifacts/external/sota-homology-cold/data")
@@ -87,6 +90,7 @@ def main() -> None:
         elif split == "test":
             start = index["train"] + index["validation"]
         def save_ragged(name, values):
+            """Save a ragged list as an object-dtype npy array."""
             np.save(split_dir / name, np.asarray(values, dtype=object))
 
         save_ragged("compounds", compounds[start:start + index[split]])

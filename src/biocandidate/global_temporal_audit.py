@@ -1,4 +1,13 @@
-"""Build the label-independent global temporal family readiness audit."""
+"""Build the label-independent global temporal family readiness audit.
+
+Run with ``python -m biocandidate.global_temporal_audit``. Finalized accepted
+source rows are mapped to explicit construct FASTA IDs, all component
+sequences are clustered globally with a version-frozen MMseqs2, global
+families are assigned and capped per the frozen protocol, and the FASTA,
+mapping manifest, and ``readiness-audit.json`` are written. Any source that
+cannot be mapped exactly becomes a blocker: the audit is fail-closed and
+produces readiness artifacts only, never scores or labels.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +26,8 @@ from biocandidate.data.homology import read_mmseqs_clusters, run_mmseqs_easy_clu
 from biocandidate.temporal_registry import finalized_accepted_sources
 
 
+# Frozen upstream version string: ``mmseqs version`` must print exactly this,
+# otherwise the audit aborts rather than cluster with an unverified tool.
 MMSEQS_VERSION = "5d152c612b6ad2a56f657b7a02c127eceaea2a75"
 DEFAULT_MMSEQS = "mmseqs"
 
@@ -172,6 +183,7 @@ def _reset_mmseqs_workspace(path: Path, executable: str) -> None:
 
 
 def _record_families(records: list[dict[str, Any]], clusters: dict[str, str]) -> dict[int, str]:
+    """Union-find over records sharing any MMseqs representative (multicomponent rule)."""
     parents = list(range(len(records)))
 
     def find(index: int) -> int:
@@ -437,6 +449,7 @@ def build_global_audit(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the audit from CLI arguments; exit 0 only when the readiness gate passes."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("artifacts/external/temporal-absolute-kinetics"))
     parser.add_argument("--protocol", type=Path, default=Path("configs/temporal_absolute_kinetics_protocol.json"))

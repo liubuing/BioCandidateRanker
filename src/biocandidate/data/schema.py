@@ -1,3 +1,11 @@
+"""Canonical record schema and label metadata contracts shared by all adapters.
+
+:class:`EnzymeSubstrateRecord` is the single governed row type flowing into the
+model: adapters normalize their sources into it and validation invariants run
+in ``__post_init__``. ``TASK_NAMES`` fixes the task column order shared by the
+collator, losses, and output heads; the metadata classes keep per-label
+canonical units and provenance so predictions stay traceable to evidence.
+"""
 from __future__ import annotations
 
 import math
@@ -8,6 +16,8 @@ from typing import Optional, Tuple
 
 
 class EvidenceTier(str, Enum):
+    """Label provenance tiers, from direct measurement down to unknown."""
+
     DIRECT = "direct"
     CURATED = "curated"
     INFERRED = "inferred"
@@ -47,6 +57,8 @@ class FBAFeatureMetadata:
 
 
 class FluxLabelType(str, Enum):
+    """Origin of a flux label: simulated (FBA) or experimental."""
+
     SIMULATED = "simulated"
     EXPERIMENTAL = "experimental"
 
@@ -87,6 +99,8 @@ class FluxLabelMetadata:
 
 @dataclass(frozen=True, slots=True)
 class KineticLabelMetadata:
+    """Canonical unit, evidence tier, and provenance attached to one kinetic label."""
+
     task: str
     canonical_unit: str
     evidence_tier: EvidenceTier
@@ -117,6 +131,13 @@ class KineticLabelMetadata:
 
 @dataclass(frozen=True, slots=True)
 class EnzymeSubstrateRecord:
+    """One governed enzyme-substrate candidate row with sparse multi-task labels.
+
+    ``None`` labels mean "not measured" and are masked out by the collator.
+    Optional FBA context and flux/kinetic metadata each carry their own
+    validation invariants enforced below.
+    """
+
     sequence: str
     substrate_smiles: str
     organism: str
@@ -213,6 +234,8 @@ class EnzymeSubstrateRecord:
             raise ValueError("FluxLabelMetadata requires a log10_flux value")
 
 
+# Canonical task order; fixes the label column layout shared by the collator,
+# the multitask losses, and the per-task output heads. Do not reorder.
 TASK_NAMES = (
     "log10_kcat",
     "log10_km",

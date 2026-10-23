@@ -1,4 +1,13 @@
-"""Exercise reviewed, pinned CataPro head on synthetic tensors only."""
+"""Exercise reviewed, pinned CataPro head on synthetic tensors only.
+
+Reads the reviewed source receipt under ``artifacts/pcb-readiness``, verifies
+``training/kcat/model.py`` against its pinned SHA-256, loads that exact file,
+and runs one forward/backward/step plus an eval pass on random tensors. Writes
+``catapro-head-smoke.json`` with parameter count, timing, and GPU peak memory.
+
+Governance role: plumbing smoke test only -- synthetic inputs, no dataset, no
+checkpoint, and no real predictions; the limitation is recorded in the output.
+"""
 from pathlib import Path
 import hashlib
 import importlib.util

@@ -1,4 +1,13 @@
-"""Classify all remaining metadata buckets without scoring or changing the pool."""
+"""Classify all remaining metadata buckets without scoring or changing the pool.
+
+Closes the 18 remaining campaign buckets with a fixed per-source disposition
+table grounded in published experimental-design metadata only (never response
+magnitudes), re-reading each source's candidate rows against recorded SHA256s
+and asserting the exact disposition counts. Writes
+campaign-audit-complete-20261005/closeout.json; the pool stays unchanged,
+evaluation_ready stays false everywhere, and the frozen protocol and prior
+pool hashes are re-verified.
+"""
 import csv
 import hashlib
 import json
@@ -11,10 +20,12 @@ OUT = BASE / 'campaign-audit-complete-20261005'
 
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
+    """Apply the disposition table to every queued bucket and write the closeout."""
     initial = json.loads((BASE / 'campaign-audit-20261005/closeout.json').read_text())
     inventory = json.loads((ROOT / 'artifacts/research-scope-20261005-v2/ranking-metadata-feasibility.json').read_text())
     groups = {(g['source_id'], g['substrate_id']): g for g in inventory['groups'] if g['distinct_sequence_signatures'] >= 3}

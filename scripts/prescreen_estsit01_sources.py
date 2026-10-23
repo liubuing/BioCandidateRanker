@@ -1,4 +1,19 @@
-"""Reference/core-only prescreen. These outputs must not enter accepted data."""
+"""Reference/core-only prescreen. These outputs must not enter accepted data.
+
+Reads the staged EstSit01 evidence under
+``artifacts/external/temporal-absolute-kinetics/esterase-prescreen-20261003``
+(two article XMLs, ANG84115.1/WP_053548180.1 FASTAs), builds the four
+reference-core variant sequences (WT, E301P, E301P/G215A, +G293A), screens
+them against the SHA-256-pinned development reference with frozen MMseqs2, and
+parses the primary kinetic table into ``candidate-measurements.csv`` plus
+``prescreen-receipt.json``.
+
+Governance role: fail-closed prescreen -- every measurement is staged with
+status ``pending_construct_and_substrate_audit`` and ``accepted_additions``
+stays 0 (reference cores are not the assayed fusion proteins; cross-paper WT
+duplication is unresolved); protected config/audit hashes are re-verified at
+the end, and no predictions are generated.
+"""
 import csv
 import hashlib
 import json
@@ -18,9 +33,11 @@ def seq(p):
     return ''.join(p.read_text().splitlines()[1:])
 
 def linux(p):
+    """Map a Windows path to its /mnt/d WSL equivalent."""
     return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
+    """Screen reference cores, stage pending measurements, and write the receipt."""
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in protected}

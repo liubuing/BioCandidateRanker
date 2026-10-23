@@ -1,3 +1,15 @@
+"""Curate dPTE2 phosphotriesterase pH-resolved kcat rows from DOI 10.1021/acs.biochem.5c00768.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12961738:
+candidate_records.csv (108 finite H2O log10(kcat) cells for substrates II-V across pH and
+H55/H55piMH x Zn/Co variants), exclusions.csv, substrate-mapping-audit.csv,
+construct_sequences.fasta (exact 342-residue post-SuperTEV product), expressed fusion
+FASTA, provenance.json, and homology-audit.json.
+
+Candidates keep author-reported log10(kcat) as the label; substrate I fails closed on a
+CID-0 PubChem identity lookup, and finalization requires pinned MMseqs2 output
+(pending_homology rows are rejected). --prepare-only stops before homology finalization.
+"""
 from __future__ import annotations
 
 import argparse
@@ -113,6 +125,7 @@ TABLES = {
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -121,6 +134,8 @@ def sha256(path: Path) -> str:
 
 
 def parse_table(text: str) -> list[tuple[float, str, float, float]]:
+    """Parse one SI table into (pH, variant, log10 kcat, SD) tuples, skipping "-" no-measurement
+    cells."""
     rows = []
     for line in text.strip().splitlines():
         cells = line.split()
@@ -133,10 +148,12 @@ def parse_table(text: str) -> list[tuple[float, str, float, float]]:
 
 
 def sequence_id(variant: str) -> str:
+    """Map a table column variant onto its exact backbone sequence id (H55 vs H55piMH)."""
     return "dpte2-h55-pimh" if "piMH" in variant else "dpte2-h55"
 
 
 def write_fasta(path: Path) -> None:
+    """Write the exact post-cleavage assay backbones (H at construct position 32 for both)."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for identifier, description in (
             ("dpte2-h55", "SI-exact post-SuperTEV chain; native H55; 342 aa"),
@@ -148,6 +165,8 @@ def write_fasta(path: Path) -> None:
 
 
 def write_fusion_fasta(path: Path) -> None:
+    """Write the full StrepTagII-SUMO-TEV expressed fusion sequences (pre-cleavage) for
+    provenance."""
     sequence = FUSION_PREFIX + CLEAVED_D_PTE2
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for identifier, description in (
@@ -160,6 +179,8 @@ def write_fusion_fasta(path: Path) -> None:
 
 
 def verify_raw() -> None:
+    """Fail closed unless the article, SI pages, exact SI sequence, PubChem records, and frozen
+    reference check out."""
     required = (
         "PMC12961738-fullText.xml",
         "PMC12961738-supplementaryFiles.zip",
@@ -213,6 +234,8 @@ def verify_raw() -> None:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Expand the SI tables into one pending_homology record per finite pH x variant x substrate
+    cell."""
     records = []
     for roman, table in TABLES.items():
         substrate = SUBSTRATES[roman]
@@ -263,6 +286,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def exclusions() -> list[dict[str, object]]:
+    """Summarize every SI measurement family that is not an admissible H2O direct kcat candidate."""
     return [
         {
             "source_rows": "Supporting Table 1, all 34 finite substrate-I H2O kcat cells",
@@ -304,12 +328,15 @@ def exclusions() -> list[dict[str, object]]:
 
 
 def read_hit_ids(path: Path) -> set[str]:
+    """Return the distinct query ids in a homology hits TSV (empty set when the file is absent)."""
     if not path.is_file():
         return set()
     return {line.split("\t", 1)[0] for line in path.read_text(encoding="utf-8").splitlines() if line}
 
 
 def apply_homology(records: list[dict[str, object]]) -> None:
+    """Re-status every record from the pinned homology hits; a missing hits file leaves pending
+    rows that fail finalization."""
     hits = read_hit_ids(SOURCE / "homology" / "homology_hits.tsv")
     if not (SOURCE / "homology" / "homology_hits.tsv").is_file():
         return
@@ -318,6 +345,7 @@ def apply_homology(records: list[dict[str, object]]) -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV with the first row's key order as the header."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -325,6 +353,8 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def substrate_mapping_rows() -> list[dict[str, object]]:
+    """Return one audit row per SI substrate, recording the PubChem identity outcome (including
+    substrate I's CID 0)."""
     rows = []
     for roman, data in (("I", SUBSTRATE_I), *SUBSTRATES.items()):
         rows.append(
@@ -343,6 +373,8 @@ def substrate_mapping_rows() -> list[dict[str, object]]:
 
 
 def write_outputs(*, prepare_only: bool) -> None:
+    """Verify raw evidence and write artifacts; finalize audits only when the pinned homology
+    output exists."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     verify_raw()
     records = build_records()
@@ -364,6 +396,8 @@ def write_outputs(*, prepare_only: bool) -> None:
 
 
 def write_audits(records: list[dict[str, object]], construct_path: Path, fusion_path: Path) -> None:
+    """Write provenance.json and homology-audit.json, hash-binding raw files and derived
+    artifacts."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     hits = [line for line in hit_path.read_text(encoding="utf-8").splitlines() if line]
     accepted = [row for row in records if row["status_at_normalization"] == "accepted_homology_cold_pool"]
@@ -431,6 +465,8 @@ def write_audits(records: list[dict[str, object]], construct_path: Path, fusion_
 
 
 def verify_outputs(records: list[dict[str, object]]) -> None:
+    """Fail closed on cardinality, the log10<->linear kcat consistency, and required artifact
+    presence."""
     if len(records) != 108 or len(parse_table(TABLES["II"])) != 34 or len(parse_table(TABLES["III"])) != 34:
         raise ValueError("Unexpected candidate cardinality")
     for row in records:

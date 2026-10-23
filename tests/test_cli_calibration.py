@@ -1,3 +1,9 @@
+"""Pins the calibration CLI contract: fitting reads only validation rows,
+prediction applies the calibrator to the matching task while emitting raw
+standard deviations and conformal intervals, and calibration artifacts are
+bound to their checkpoint identity (with grouped CV never touching test rows).
+"""
+
 import json
 from argparse import Namespace
 from types import SimpleNamespace

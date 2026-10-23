@@ -1,3 +1,21 @@
+"""Curate Streptomyces scabrisporus L-asparaginase kinetics (DOI 10.1371/journal.pone.0336433).
+
+Downloads and validates the Europe PMC full text, the NCBI OPC79493.1 protein
+sequence, and the PubChem L-asparagine record into
+``artifacts/external/temporal-absolute-kinetics/europepmc-PMC12594388/raw``,
+then writes the standard curation bundle under SOURCE:
+``native_sequences.fasta``, ``candidate_records.csv``, ``exclusions.csv``,
+``provenance.json``, and ``homology-audit.json`` when MMseqs2 outputs exist.
+
+Accept/exclude logic: the single reported kcat/Km measurement (Figure 2B and
+Table 1, pH 10, 37 C) is excluded as ``excluded_exact_construct_unresolved``
+because the paper never reports the complete pET-28a(+) His-tag/linker residues
+or whether the tag was removed. OPC79493.1 is used only as an explicitly
+non-construct homology query. Governance role: fail-closed curation --
+``candidate_records.csv`` is always schema-only, the optional MMseqs2 search
+runs only against the SHA-256-pinned development reference with the frozen
+mmseqs version, and no model predictions are produced.
+"""
 from __future__ import annotations
 
 import argparse
@@ -64,6 +82,7 @@ def read_fasta(path: Path) -> str:
 
 
 def validate_raw() -> tuple[str, int, str]:
+    """Validate downloaded evidence; return the sequence plus PubChem CID and SMILES."""
     xml = (RAW / "PMC12594388-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI,
@@ -92,6 +111,7 @@ def validate_raw() -> tuple[str, int, str]:
 
 
 def wsl_path(path: Path) -> str:
+    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations."""
     resolved = path.resolve()
     drive = resolved.drive.rstrip(":").lower()
     if not drive:
@@ -100,11 +120,13 @@ def wsl_path(path: Path) -> str:
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
+    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec."""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
 
 def reset_wsl_workspace(path: Path) -> None:
+    """Delete a managed MMseqs scratch directory inside WSL and confirm it is gone."""
     if not path.exists():
         return
     _, distribution, _ = MMSEQS.split(":", 2)
@@ -114,6 +136,7 @@ def reset_wsl_workspace(path: Path) -> None:
 
 
 def run_mmseqs(query: Path) -> None:
+    """Run the pinned easy-search and linclust pipeline against the frozen reference."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -165,6 +188,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
+    """Run the full curation flow: acquire, validate, optional homology, outputs."""
     if acquire:
         download_raw()
     sequence, cid, smiles = validate_raw()

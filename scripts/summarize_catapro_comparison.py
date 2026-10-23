@@ -1,4 +1,15 @@
-"""Audit saved predictions and append CataPro to a new, non-overwriting comparison."""
+"""Audit saved predictions and append CataPro to a new, non-overwriting comparison.
+
+Reads the CataPro internal-test summary and its freeze, re-verifies every hash,
+recomputes metrics from each saved seed prediction CSV against the reference
+test labels (row order and labels must match exactly), and writes
+``internal-test/comparison.json`` (appending to the historical SOTA summary
+without modifying it) plus the Chinese report
+``docs/CATAPRO_INTERNAL_COMPARISON_CN.md``. Governance role: verification-only
+reporting -- no inference is performed, existing artifacts are never
+overwritten, and the report states explicitly that the project has not been
+shown to beat the modern baseline and that this is not external validation.
+"""
 from pathlib import Path
 import csv,json,hashlib,sys
 import torch
@@ -10,6 +21,7 @@ def read(p):return json.loads(p.read_text(encoding='utf-8'))
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    """Verify saved CataPro predictions and write the comparison bundle and report."""
     out=ROOT/'artifacts/catapro-mode-b/internal-test'
     result=read(out/'summary.json')
     freeze=read(ROOT/'configs/catapro_internal_test_freeze.json')

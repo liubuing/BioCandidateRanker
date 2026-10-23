@@ -1,4 +1,14 @@
-"""Verify and summarize the frozen ESM-2 modality diagnostic results."""
+"""Verify and summarize the frozen ESM-2 modality diagnostic results.
+
+Reads each variant/seed ``test_metrics.json`` (protein-only and
+protein-molecule variants under ``artifacts/esm2-modality-diagnostic``; full
+models under their per-seed artifact directories), verifies source/split
+identities against the diagnostic protocol plus the 1,646-row test partition,
+and writes ``summary.json`` with per-variant means, SDs, and paired
+variant-to-variant differences. Governance role: fail-closed verification and
+aggregation only -- any identity or partition mismatch aborts before the
+summary is written, and no model is re-run.
+"""
 
 from __future__ import annotations
 
@@ -17,12 +27,14 @@ VARIANTS = ("protein-only", "protein-molecule", "full")
 
 
 def metric_path(variant: str, seed: int) -> Path:
+    """Locate the frozen test-metrics file for one variant/seed pair."""
     if variant == "full":
         return ROOT / "artifacts" / f"esm2-t6-opt-seed{seed}" / "test_metrics.json"
     return OUTPUT / f"{variant}-seed{seed}" / "test_metrics.json"
 
 
 def main() -> None:
+    """Verify identities, aggregate metrics, and write the modality summary."""
     values: dict[str, dict[int, dict[str, float]]] = {}
     for variant in VARIANTS:
         values[variant] = {}

@@ -20,6 +20,8 @@ from biocandidate.data.unikp import aggregate_pair_measurements, read_unikp_json
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = ROOT / "artifacts" / "external" / "sota-homology-cold"
+# Identity of the frozen external corpus; a changed file must never be
+# silently re-exported into the SOTA comparison inputs.
 EXPECTED = {
     "sha256": "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719",
     "size_bytes": 12132719,
@@ -51,6 +53,7 @@ def main() -> None:
         raise ValueError("corpus identity does not match the frozen protocol")
 
     read = read_unikp_json(corpus, source_rows=None)
+    # The accepted-record count is part of the frozen corpus contract.
     if len(read.records) != 16838:
         raise ValueError(f"unexpected accepted row count {len(read.records)}")
     source_identity = {
@@ -79,6 +82,8 @@ def main() -> None:
                 ["pair_id", "sequence", "smiles", "log10_kcat", "n_measurements"]
             )
             for index, record in enumerate(rows):
+                # Deterministic per-partition IDs; downstream SOTA runners and
+                # the paired analysis key their outputs on these.
                 writer.writerow([
                     f"{split}-{index:05d}",
                     record.sequence,

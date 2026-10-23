@@ -1,3 +1,8 @@
+"""Pins the experimental flux audit's fail-closed behavior: inspection never
+guesses missing reaction mappings or column semantics, and incomplete
+governance yields only a training blocker, never derived training data.
+"""
+
 import hashlib
 import json
 

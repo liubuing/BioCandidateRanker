@@ -1,4 +1,18 @@
-"""Frozen internal evaluation of the completed adapted CatPred ensembles (WSL)."""
+"""Frozen internal evaluation of the completed adapted CatPred ensembles (WSL).
+
+Reads ``configs/catpred_internal_test_protocol.json``, the completed 30-member
+ensemble manifest under ``artifacts/catpred-mode-b/full-recoverable``, and the
+1,646-row internal homology-cold test CSV. Verifies every SHA-256 pin, computes
+ESM features from cached pretrained representations only (test labels are
+excluded from prediction inputs), runs each seed's 10-checkpoint ensemble
+through the upstream CatPred prediction path, and writes ``inputs.csv``,
+``protein_records.json.gz``, ``feature-manifest.json``, per-seed prediction
+CSVs with receipts, and ``summary.json`` under ``internal-test/``.
+
+Governance role: fail-closed evaluation -- partial prediction outputs require
+manual audit before retry, existing receipts are re-verified on rerun, and
+execution status is journaled under an exclusive fcntl lock.
+"""
 from pathlib import Path
 import csv, gzip, hashlib, json, os, sys, time
 
@@ -24,6 +38,7 @@ def write(path, data):
     os.replace(tmp, path)
 
 def main():
+    """Evaluate each seed ensemble against the internal test and write receipts/summary."""
     import numpy as np
     import torch
     protocol = json.loads(PROTOCOL.read_text())

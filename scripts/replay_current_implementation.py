@@ -1,4 +1,14 @@
-"""Separate current-code audit; never replace historical predictions or metrics."""
+"""Separate current-code audit; never replace historical predictions or metrics.
+
+Reads the current-implementation replay protocol plus the original
+paired-family-analysis protocol, re-verifies every pinned file (including this
+script's own SHA-256), rebuilds the 1,646-row internal test partition from the
+pinned source and split, reruns the frozen ESM2 checkpoints with the current
+code, and writes per-seed predictions and receipts (with explicit
+difference-from-historical metrics) under ``artifacts/paired-family-analysis/
+current-code``. Governance role: fail-closed side-by-side audit -- existing
+outputs abort the run, and historical artifacts are never overwritten.
+"""
 import json
 import sys
 from pathlib import Path
@@ -8,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import recover_reference_predictions as replay
 
 def main():
+    """Replay the checkpoints with current code and record metric differences."""
     protocol_path = replay.ROOT/'configs/current_implementation_replay_protocol.json'
     protocol = replay.read(protocol_path)
     assert replay.sha(__file__) == protocol['script_sha256']

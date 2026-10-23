@@ -1,3 +1,26 @@
+"""Curate Thermus thermophilus HB8 phosphomimetic-variant kinetics (DOI 10.1002/2211-5463.70103).
+
+Reads the BioStudies deposit S-EPMC12667214 under
+``artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12667214/raw``
+(article XML, SI DOCX, UniProt FASTA/JSON, PubChem compound records, RCSB
+polymer-entity JSON), plus the SHA-256-pinned UniKP reference and the frozen
+development corpus JSON. Writes under SOURCE: ``construct_sequences.fasta``,
+``candidate_records.csv``, ``exclusions.csv``, ``direct-kcat-rows.csv``,
+``pdb-construct-audit.csv``, ``saturation-audit.csv``,
+``family-admission-audit.json``, ``homology-audit.json``,
+``raw-file-hashes.json``, and ``provenance.json``.
+
+Accept/exclude logic: of the 27 author-reported Table 2 kcat rows across six
+enzyme families (AMPK/CMPK/UMPK/IDH/MDH/PPase, WT plus Ser/Tyr-to-Ala/Glu/Phe
+variants), only rows whose fixed reaction substrate is demonstrably in excess
+(``qualified_*`` disposition) become candidates; qualified rows are then
+re-marked ``excluded_homology`` on any development-reference hit, otherwise
+``accepted_homology_cold_pool``, while rows failing saturation or identity
+checks stay ``excluded_assay_saturation_or_identity``. Every PDB polymer must
+match its expected family mapping and the exact sequence-substrate overlap
+against the pinned development corpus is audited. Governance role: fail-closed
+family-wise curation -- readiness gate False, no model predictions.
+"""
 from __future__ import annotations
 
 import argparse
@@ -104,6 +127,7 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
+    """Fetch every pinned raw artifact (skip when already present and non-empty)."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -122,12 +146,14 @@ def read_fasta(path: Path) -> str:
 
 
 def mutate(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one position-verified substitution; fail on a wild-type residue mismatch."""
     if sequence[position - 1] != expected:
         raise ValueError(f"expected {expected}{position}, found {sequence[position - 1]}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def sequences() -> dict[str, str]:
+    """Build WT and variant sequences for the six families from UniProt FASTAs."""
     result = {}
     for family, (_, _, accession, _, position, native, control, phosphomimetic, _) in PROTEINS.items():
         wt = read_fasta(RAW / f"{accession}.fasta")
@@ -137,6 +163,7 @@ def sequences() -> dict[str, str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path for WSL when the executable spec requires it."""
     resolved = path.resolve()
     if not executable.startswith("wsl:"):
         return str(resolved)
@@ -145,6 +172,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def command(executable: str, *args: str) -> list[str]:
+    """Build argv for a native executable or a wsl:<distro>:<binary> spec."""
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -152,6 +180,7 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def run_checked(args: list[str]) -> str:
+    """Run a command, raising with stderr detail on failure; return its output."""
     completed = subprocess.run(args, capture_output=True, text=True, check=False)
     if completed.returncode:
         raise RuntimeError(f"command failed ({completed.returncode}): {' '.join(args)}\n{completed.stderr}")
@@ -159,6 +188,7 @@ def run_checked(args: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Run per-family easy-search plus easy-linclust; return hits, clusters, and version."""
     version = run_checked(command(executable, "version")).strip().splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -191,6 +221,7 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def read_fasta_entries(path: Path) -> dict[str, str]:
+    """Parse a multi-record FASTA into identifier-to-sequence mappings."""
     result, identifier, parts = {}, None, []
     for line in path.read_text(encoding="ascii").splitlines():
         if line.startswith(">"):
@@ -205,6 +236,7 @@ def read_fasta_entries(path: Path) -> dict[str, str]:
 
 
 def exact_overlap(entries: dict[str, str], records: list[dict[str, object]], corpus: Path) -> dict[str, object]:
+    """Audit exact sequence/sequence-substrate overlap with the pinned development corpus."""
     if corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE or sha256(corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("frozen 17,010-row development corpus changed")
     development = json.loads(corpus.read_text(encoding="utf-8"))
@@ -235,6 +267,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_outputs(mmseqs: str, threads: int, corpus: Path) -> None:
+    """Validate evidence, run homology, and write every curation artifact under SOURCE."""
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"missing raw files: {', '.join(missing)}; run with --download")

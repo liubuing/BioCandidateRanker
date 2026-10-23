@@ -1,3 +1,8 @@
+"""Pins the PcHB control-kinetics curation verdict: constructs without an
+exact assayed sequence are terminally excluded, the readiness gate still
+passes, and the source contributes zero admitted records.
+"""
+
 import csv
 import json
 from pathlib import Path

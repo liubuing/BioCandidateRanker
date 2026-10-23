@@ -34,6 +34,7 @@ REQUIRED_FIELDS = ("id", "role", "license_name", "license_basis", "redistributio
 
 
 def load_json(path: Path) -> dict[str, Any]:
+    """Read a UTF-8 JSON file into a dict."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -43,6 +44,7 @@ def audit(
     release_manifest: dict[str, Any] | None,
     cross_checks: tuple[dict[str, Any], ...] | None = None,
 ) -> dict[str, Any]:
+    """Validate every inventory declaration and cross-check independently recorded license state."""
     checks = CROSS_CHECKS if cross_checks is None else cross_checks
     issues: list[str] = []
     allowed = set(inventory.get("policy", {}).get("allowed_redistribution_states", []))
@@ -155,6 +157,7 @@ def audit(
 
 
 def render_markdown(report: dict[str, Any]) -> str:
+    """Render the audit report as a Markdown summary table with issues."""
     lines = ["# Development corpus license audit", ""]
     lines.append(f"Inventory: `{report['inventory_path']}`")
     lines.append("")
@@ -185,6 +188,7 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    """Run the audit and print it, optionally writing Markdown and JSON copies."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--inventory", type=Path, default=DEFAULT_INVENTORY)

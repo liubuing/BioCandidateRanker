@@ -1,4 +1,11 @@
-"""Export a deterministic development-only CatPred plumbing check."""
+"""Export a deterministic development-only CatPred plumbing check.
+
+Reads the first 32 training and 8 validation rows (frozen order) of the
+homology-cold data and writes ``artifacts/catpred-mode-b/smoke-data`` with
+partition CSVs, ``protein_records.json.gz``, and a ``receipt.json`` of source
+and output hashes. Governance role: pipeline plumbing only -- no test rows are
+touched and no performance claim is implied.
+"""
 from pathlib import Path
 import csv, gzip, hashlib, json
 
@@ -6,6 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/catpred-mode-b/smoke-data'
 
 def main():
+    """Write the smoke bundles and receipt for the development plumbing check."""
     OUT.mkdir(exist_ok=True)
     records={}; receipt={'purpose':'Development plumbing check only; no test rows, no performance claim', 'partitions':{}}
     for partition, count in [('train',32),('validation',8)]:

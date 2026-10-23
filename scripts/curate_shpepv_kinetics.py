@@ -1,3 +1,21 @@
+"""Curate Staphylococcus hominis ShPepV peptidase kinetics (DOI 10.1016/j.jbc.2024.107928).
+
+Reads the BioStudies deposit S-EPMC11742315 under
+``artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC11742315/raw``
+(article XML, supplement archives, QKQ29470.1 FASTA, archived A0A657M1L9
+UniSave record, PubChem substrate JSON) plus the SHA-256-pinned UniKP reference,
+and writes ``construct_sequences.fasta``, ``excluded_records.csv``,
+``candidate_records.csv``, ``blocker-evidence.json``, ``provenance.json``, and
+``homology-audit.json`` under SOURCE.
+
+Accept/exclude logic: all eight unique finite saturation-fit kcat rows (main
+Tables 1-2, WT plus six point mutants) are excluded -- Cys-Gly-3M3SH rows
+because the ShPatB/DTNB coupled-detection capacity was never demonstrated
+non-rate-limiting, and the Cys-Gly row because the Cd-ninhydrin method reports
+an implausible 20 mM enzyme concentration. Governance role: fail-closed --
+``candidate_records.csv`` stays schema-only, a ``blocked_fail_closed`` blocker
+record is emitted, and no model predictions are run.
+"""
 from __future__ import annotations
 
 import argparse
@@ -81,6 +99,7 @@ def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...]) -> str:
 
 
 def verify_raw() -> str:
+    """Validate every raw evidence marker and return the native QKQ29470.1 sequence."""
     required = (
         "PMC11742315-fullText.xml",
         "PMC11742315-supplementaryFiles.zip",
@@ -132,6 +151,7 @@ def verify_raw() -> str:
 
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
+    """Build argv for a native executable or a wsl:<distro>:<binary> spec."""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, binary = executable.split(":", 2)
@@ -139,6 +159,7 @@ def mmseqs_command(executable: str, *arguments: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path for WSL when the executable spec requires it."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -146,6 +167,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(command: list[str]) -> str:
+    """Run a command, raising with stderr detail on failure; return trimmed output."""
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"Command failed: {' '.join(command)}\n{result.stderr}")
@@ -153,6 +175,7 @@ def run_checked(command: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Run pinned easy-search and easy-linclust; return hit/cluster paths and version."""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -180,6 +203,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def write_outputs(mmseqs: str, threads: int) -> None:
+    """Verify evidence, run homology, and write exclusions, blocker, provenance, audit."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     native = verify_raw()
     sequences = {variant: mutate(native, changes) + TAG for variant, changes in MUTATIONS.items()}

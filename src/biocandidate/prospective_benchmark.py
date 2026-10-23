@@ -497,6 +497,7 @@ def _write_new(path: Path, payload: dict[str, Any]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Dispatch one of audit-freeze, deposit-freeze, or evaluate-once."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     common = argparse.ArgumentParser(add_help=False)

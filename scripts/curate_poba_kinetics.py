@@ -1,3 +1,14 @@
+"""Curate clade-F PobA flavin monooxygenase rows from DOI 10.1016/j.jbc.2023.105508.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC10770758:
+an empty candidate_records.csv, exclusions.csv (all 12 finite apparent kcat rows from
+Tables 1-2), construct_sequences.fasta (three deposited codon-optimized WT chains plus
+four XaPobA mutants), raw-file-hashes.json, provenance.json, and homology-audit.json.
+
+Exclusion-only fail-closed: the article states NADPH did not saturate up to 0.25 mM and
+reports no O2 concentration control for this obligate-oxygen monooxygenase, so no apparent
+kcat becomes a candidate label. Deposited sequences are used without inventing tag residues.
+"""
 from __future__ import annotations
 
 import csv
@@ -81,10 +92,12 @@ ACCEPTED_FIELDS = [
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -93,6 +106,7 @@ def read_fasta(path: Path) -> str:
 
 
 def genbank_translation(path: Path) -> str:
+    """Extract the CDS /translation qualifier from a GenBank flat file as a single string."""
     text = path.read_text(encoding="ascii")
     match = re.search(r'/translation="([A-Z\s]+)"', text)
     if not match:
@@ -101,12 +115,15 @@ def genbank_translation(path: Path) -> str:
 
 
 def substitute(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(f"Expected {expected}{position}, found {sequence[position - 1]}{position}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def load_sequences() -> dict[str, tuple[str, str, str]]:
+    """Load deposited translations, cross-check accessions, derive mutants; return id -> (variant,
+    accession, sequence)."""
     xa = genbank_translation(RAW / "OR631772.1.gb")
     ot = genbank_translation(RAW / "OR631773.1.gb")
     pk = genbank_translation(RAW / "OR631774.1.gb")
@@ -131,6 +148,8 @@ def load_sequences() -> dict[str, tuple[str, str, str]]:
 
 
 def verify_raw_evidence() -> None:
+    """Fail closed unless raw files, article assay statements, metadata, and PubChem records all
+    corroborate."""
     missing = [name for name in RAW_FILES if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw files: {', '.join(missing)}")
@@ -167,6 +186,8 @@ def verify_raw_evidence() -> None:
 
 
 def build_exclusions() -> list[dict[str, object]]:
+    """Build one exclusion row per finite Table 1/2 measurement under the NADPH and O2 saturation
+    gates."""
     organisms = {
         "XaPobA": "Xylophilus ampelinus CCH5-B3",
         "OtPobA": "Ottowia thiooxydans DSM 14619",
@@ -222,6 +243,7 @@ def build_exclusions() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fieldnames = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -230,6 +252,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_outputs() -> None:
+    """Verify evidence, build sequences/exclusions, and write the exclusion-only evidence bundle."""
     verify_raw_evidence()
     sequences = load_sequences()
     exclusions = build_exclusions()
@@ -348,6 +371,8 @@ def write_outputs() -> None:
 def verify_outputs(
     exclusions: list[dict[str, object]], sequences: dict[str, tuple[str, str, str]]
 ) -> None:
+    """Fail closed on cardinality, zero-label invariant, finiteness, and required artifact
+    presence."""
     if len(exclusions) != 12 or len(sequences) != 7:
         raise ValueError("Unexpected PobA curation cardinality")
     if any(row["candidate_label_created"] for row in exclusions):

@@ -1,4 +1,12 @@
-"""Save source-grounded assay metadata overlays; never modify accepted labels."""
+"""Save source-grounded assay metadata overlays; never modify accepted labels.
+
+Re-derives the two campaign groups named in the prior closeout
+(campaign-audit-complete-20261005), re-reads their candidate_records.csv rows
+against recorded SHA256s, and attaches source-grounded overlays (conditions,
+calibration, fitting, repeat/error status, range and scale flags). Writes
+campaign-detail-20261005/closeout.json with accepted_additions=0 and
+evaluation_ready=false everywhere; labels and label magnitudes stay untouched.
+"""
 import csv
 import hashlib
 import json
@@ -11,10 +19,12 @@ OUT = BASE / 'campaign-detail-20261005'
 
 
 def sha(path):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
+    """Audit two campaign groups and write their detail closeout."""
     prior = json.loads((BASE / 'campaign-audit-complete-20261005/closeout.json').read_text())
     groups = []
     for source, substrate in [('biostudies-S-EPMC12645435', 'pubchem:135398641'),

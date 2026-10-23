@@ -6,7 +6,8 @@ near-identical) and which endpoint the labels carry. This makes the scope of
 each claim visible in one panel.
 
 Writes a dependency-free SVG plus a markdown legend, so the figure can be
-reviewed in git without a plotting toolchain.
+reviewed in git without a plotting toolchain. Corpus positions are recorded
+constants, not measurements; the JSON summary carries the claim boundary.
 """
 
 from __future__ import annotations
@@ -272,6 +273,7 @@ def build_svg(corpora: tuple[dict[str, Any], ...]) -> str:
 
 
 def build_legend(corpora: tuple[dict[str, Any], ...]) -> str:
+    """Render the per-corpus table and reading guidance as Markdown."""
     lines = ["# Figure 1 legend", ""]
     lines.append("| Corpus | Task | Records | Use | License | Note |")
     lines.append("|---|---|---:|---|---|---|")
@@ -291,6 +293,7 @@ def build_legend(corpora: tuple[dict[str, Any], ...]) -> str:
 
 
 def main() -> int:
+    """Write the SVG figure, its legend, and the optional JSON summary."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

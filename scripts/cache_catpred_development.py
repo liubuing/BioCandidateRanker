@@ -1,4 +1,12 @@
-"""Bounded-memory official CatPred ESM features, development data only (WSL)."""
+"""Bounded-memory official CatPred ESM features, development data only (WSL).
+
+Reads development-data/protein_records.json.gz (verified against receipt.json),
+computes official CatPred ESM2 features for every distinct sequence in small
+CPU batches through the WSL upstream tree, and asserts shape and finiteness on
+each cache entry. Writes
+artifacts/catpred-mode-b/development-feature-manifest.json, which records this
+script's own SHA256 and the training-and-validation-only scope.
+"""
 from pathlib import Path
 import hashlib,json,gzip,time,sys,os
 
@@ -8,9 +16,12 @@ os.environ.setdefault('CATPRED_CACHE_PATH',str(BASE/'cache'))
 os.environ.setdefault('CATPRED_ESM_BATCH_SIZE','2')
 sys.path.insert(0,str(BASE/'upstream'))
 
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def sha(p):
+    """Return the SHA256 hex digest of a file."""
+    return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    """Cache ESM features for all development sequences and write the manifest."""
     import torch
     from catpred.data.esm_utils import get_many_esm_reprs,ESM_MAX_LENGTH,ESM_EMBED_DIM
     from catpred.data.cache_utils import cache_entry_path

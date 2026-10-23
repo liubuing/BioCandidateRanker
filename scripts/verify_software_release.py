@@ -1,4 +1,12 @@
-"""Verify every file identity in the software implementation release manifest."""
+"""Verify every file identity recorded in the software release manifest.
+
+Reads the release manifest JSON (default
+configs/software_implementation_release_v10.json), cross-checks its
+package_version against pyproject.toml when both are present, and re-hashes
+every frozen_files entry against the given repository root. Prints the JSON
+verdict {"valid": bool, "issues": [...]} and exits non-zero on any issue so it
+can gate release and deposit steps; those two output keys are a test contract.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +18,7 @@ from pathlib import Path
 
 
 def verify_release(root: Path, manifest_path: Path) -> list[str]:
+    """Return the release's integrity issues; an empty list means the freeze holds."""
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     issues: list[str] = []
     pyproject = root / "pyproject.toml"
@@ -40,7 +49,7 @@ def main() -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("configs/software_implementation_release_v9.json"),
+        default=Path("configs/software_implementation_release_v10.json"),
     )
     args = parser.parse_args()
     issues = verify_release(args.root, args.manifest)

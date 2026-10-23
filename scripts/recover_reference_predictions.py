@@ -1,4 +1,14 @@
-"""Replay frozen ESM2 checkpoints solely to recover aligned predictions for inference."""
+"""Replay frozen ESM2 checkpoints solely to recover aligned predictions for inference.
+
+Reads the paired-family-analysis protocol, the pinned UniKP source JSON, and
+the homology split; rebuilds the 1,646-row internal test partition, replays
+each frozen per-seed ESM2 checkpoint, cross-checks replayed metrics against the
+recorded test metrics within the protocol tolerance, and writes aligned
+per-seed prediction CSVs with receipts under
+``artifacts/paired-family-analysis``. Governance role: post-hoc fixed-checkpoint
+replay only -- no fitting, no selection, and existing receipts are re-verified
+instead of recomputed.
+"""
 from pathlib import Path
 import csv,json,hashlib,sys
 import torch
@@ -16,6 +26,7 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(Path(p).read_text(encoding='utf-8'))
 
 def main():
+    """Verify pins, replay each seed checkpoint, and write aligned predictions."""
     protocol=read(ROOT/'configs/paired_family_analysis_protocol.json')
     for entry in protocol['frozen_files']:
         if sha(ROOT/entry['path'])!=entry['sha256']:raise ValueError('Frozen file changed: '+entry['path'])

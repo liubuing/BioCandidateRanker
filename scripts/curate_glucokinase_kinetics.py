@@ -1,3 +1,15 @@
+"""Curate bacterial glucokinase (PsGK/EcGK) kcat rows from DOI 10.1111/febs.70367 (Dryad
+10.5061/dryad.ncjsxkt6b).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/dryad-ncjsxkt6b:
+candidate_records.csv (12 rows: four constructs x 1/25/40 C from Table 1 and
+Supplementary Table S2), construct_sequences.fasta (H7CHS4/P0A6V8 native sequences plus
+the C325S and DS-S mutants), provenance.json, and homology-audit.json.
+
+Every row carries exact WT or mutation-derived sequences and is re-statused by the frozen
+MMseqs2 result; the audit records that all constructs hit the development corpus, which
+excludes the source from the temporal pool.
+"""
 from __future__ import annotations
 
 import csv
@@ -17,6 +29,7 @@ ATP_SMILES = (
 
 
 def read_fasta(path: Path) -> str:
+    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
     lines = path.read_text(encoding="ascii").splitlines()
     sequence = "".join(line.strip() for line in lines if not line.startswith(">"))
     if not sequence or not sequence.isalpha() or not sequence.isupper():
@@ -25,6 +38,8 @@ def read_fasta(path: Path) -> str:
 
 
 def substitute(sequence: str, changes: list[tuple[int, str, str]]) -> str:
+    """Apply 1-based (position, expected, replacement) mutations, failing on a wrong wild-type
+    residue."""
     residues = list(sequence)
     for position, expected, replacement in changes:
         observed = residues[position - 1]
@@ -35,6 +50,8 @@ def substitute(sequence: str, changes: list[tuple[int, str, str]]) -> str:
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Load native sequences and derive the mutants; return sequence_id -> (accession label,
+    sequence)."""
     ps_wt = read_fasta(SOURCE / "raw" / "H7CHS4.fasta")
     ec_wt = read_fasta(SOURCE / "raw" / "P0A6V8.fasta")
     return {
@@ -49,6 +66,7 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen temperature-series rows into pending_homology candidate records."""
     rows = [
         ("PsGK WT", "Pseudoalteromonas sp. AS-131", "gk-ps-wt", "Table 1", 1, 0.12, 0.01, 0.83, 0.14, 11.25, 0.28, 92.15, 5.17, "SD", 3),
         ("PsGK WT", "Pseudoalteromonas sp. AS-131", "gk-ps-wt", "Table 1", 25, 0.36, 0.02, 1.55, 0.17, 33.49, 0.77, 93.99, 3.98, "SD", 3),
@@ -118,6 +136,7 @@ def build_records() -> list[dict[str, object]]:
 
 
 def homology_hit_ids() -> set[str] | None:
+    """Return the homology hit query ids, or None when the frozen hits file is absent."""
     path = SOURCE / "homology" / "homology_hits.tsv"
     if not path.exists():
         return None
@@ -129,6 +148,7 @@ def homology_hit_ids() -> set[str] | None:
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -137,6 +157,8 @@ def sha256(path: Path) -> str:
 
 
 def write_homology_audit(records: list[dict[str, object]]) -> None:
+    """Write homology-audit.json (no-op if MMseqs outputs are absent), hash-binding the hits and
+    cluster outputs."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.exists() or not cluster_path.exists():
@@ -189,6 +211,8 @@ def write_homology_audit(records: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
+    """Build sequences/records, apply homology status, and write the CSV/FASTA/provenance/audit
+    bundle."""
     sequences = build_sequences()
     records = build_records()
     hits = homology_hit_ids()

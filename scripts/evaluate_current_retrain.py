@@ -1,4 +1,14 @@
-"""One diagnostic test pass per frozen retrained checkpoint."""
+"""One diagnostic test pass per frozen retrained checkpoint.
+
+Reads the evaluation freeze and retrain protocol manifests under
+``artifacts/current-code-retrain`` plus ``configs/current_code_retrain_protocol.json``,
+rebuilds the 1,646-row internal test partition from the pinned UniKP source and
+homology split, and writes per-seed prediction CSVs with receipts and
+``summary.json`` under ``internal-test/``. Governance role: fail-closed,
+previously-observed-test diagnostic only -- every SHA-256 pin is re-verified,
+existing receipts must match the freeze and prediction hashes or the run
+aborts, and no checkpoint or selection is changed.
+"""
 from pathlib import Path
 import csv,json,hashlib,sys,os
 ROOT=Path(__file__).resolve().parents[1]
@@ -17,6 +27,7 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(Path(p).read_text(encoding='utf-8'))
 
 def main():
+    """Verify freezes, run each seed checkpoint once over the internal test, write receipts."""
     freeze=read(BASE/'evaluation-freeze.json')
     for e in freeze['files']:assert sha(ROOT/e['path'])==e['sha256'],e['path']
     protocol=read(ROOT/'configs/current_code_retrain_protocol.json')

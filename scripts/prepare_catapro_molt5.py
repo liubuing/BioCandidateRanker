@@ -1,4 +1,15 @@
-"""Download pinned official MolT5 files into this workspace, recording hashes."""
+"""Download pinned official MolT5 files into this workspace, recording hashes.
+
+Fetches the tokenizer/config files of ``laituan245/molt5-base-smiles2caption``
+at a pinned revision via ``snapshot_download`` into
+``artifacts/catapro-mode-b/models/molt5-base-smiles2caption`` and streams the
+LFS ``pytorch_model.bin`` directly, failing closed on any SHA-256 mismatch.
+Writes ``download-receipt.json`` with per-file hashes and sizes.
+
+Governance role: reproducible model-asset acquisition only -- the revision and
+weight hash are frozen constants, and a mismatched existing weight aborts
+instead of being replaced.
+"""
 from pathlib import Path
 import hashlib,json,os
 import requests

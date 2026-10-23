@@ -1,3 +1,17 @@
+"""Curate citrate synthase kcat rows from two open sources: Edmond S0HJ48 (DOI
+10.1038/s41467-024-54408-6)
+and PMC11041685 (DOI 10.1038/s41586-024-07287-2).
+
+Construct sequences are translated from the supplement DOCX DNA (ancestral and extant
+citrate synthases plus point-mutant/truncation variants). Each source directory gets
+candidate_records.csv, construct_sequences.fasta, provenance.json, and homology-audit.json
+under artifacts/external/temporal-absolute-kinetics/{edmond-S0HJ48,europepmc-PMC11041685}.
+
+Rows leave normalization as pending_homology and are re-statused by the frozen MMseqs2
+result: a sequence-level hit against the development reference excludes the record,
+otherwise it is accepted into the homology-cold pool. Source anomalies are retained
+verbatim and flagged, never corrected.
+"""
 from __future__ import annotations
 
 import csv
@@ -53,6 +67,7 @@ CODONS = {
 
 
 def docx_paragraphs(path: Path) -> list[str]:
+    """Return the stripped text of every paragraph in a .docx document body."""
     with zipfile.ZipFile(path) as archive:
         root = ET.fromstring(archive.read("word/document.xml"))
     namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -63,6 +78,8 @@ def docx_paragraphs(path: Path) -> list[str]:
 
 
 def extract_dna(paragraphs: list[str], label: str) -> str:
+    """Return the first ACGT-only paragraph after ``label``, failing unless its length is a
+    multiple of three."""
     index = paragraphs.index(label) + 1
     while index < len(paragraphs):
         dna = paragraphs[index].replace(" ", "").upper()
@@ -75,6 +92,7 @@ def extract_dna(paragraphs: list[str], label: str) -> str:
 
 
 def translate(dna: str) -> str:
+    """Translate a coding sequence, rejecting any internal stop codon."""
     protein = "".join(CODONS[dna[index : index + 3]] for index in range(0, len(dna), 3))
     if "*" in protein[:-1]:
         raise ValueError("Internal stop codon in construct sequence")
@@ -82,6 +100,8 @@ def translate(dna: str) -> str:
 
 
 def substitute(sequence: str, changes: list[tuple[int, str, str]]) -> str:
+    """Apply 1-based (position, expected, replacement) substitutions, failing on a mismatched
+    wild-type residue."""
     residues = list(sequence)
     for position, expected, replacement in changes:
         if residues[position - 1] != expected:
@@ -93,6 +113,8 @@ def substitute(sequence: str, changes: list[tuple[int, str, str]]) -> str:
 
 
 def build_sequences() -> dict[str, dict[str, str]]:
+    """Translate the supplement DOCX into the WT and variant construct sequences keyed by
+    sequence_id."""
     paragraphs = docx_paragraphs(SEQUENCE_DOCX)
     source_labels = {
         "cs-anc3a-wt": ("Anc 3a", "ancestral reconstruction"),
@@ -151,6 +173,8 @@ def kinetic_record(
     km_sem_uM: float,
     note: str = "",
 ) -> dict[str, object]:
+    """Assemble one normalized kcat record with both substrate structures and pending_homology
+    status."""
     fixed_substrate = "oxaloacetate" if variable_substrate == "acetyl-CoA" else "acetyl-CoA"
     variable = SUBSTRATES[variable_substrate]
     fixed = SUBSTRATES[fixed_substrate]
@@ -185,6 +209,8 @@ def kinetic_record(
 
 
 def edmond_records() -> list[dict[str, object]]:
+    """Build the 20 Edmond/NC paper records: six SEC-fraction rows plus seven constructs x two
+    substrates."""
     records = []
     dp_rows = [
         ("non-fractionated", 36.6, 1.1, 25.4, 3.1),
@@ -241,6 +267,8 @@ def edmond_records() -> list[dict[str, object]]:
 
 
 def fractal_records() -> list[dict[str, object]]:
+    """Build the four Nature-paper records: SeCS WT and L18Q each with acetyl-CoA and oxaloacetate
+    curves."""
     rows = [
         ("SeCS WT", "cs-secs-wt", (24.2, 1.3, 91.8, 9.2), (19.5, 1.7, 65.6, 10.6)),
         ("SeCS L18Q", "cs-secs-l18q", (21.7, 1.0, 78.5, 6.2), (20.5, 1.5, 57.2, 7.8)),
@@ -265,6 +293,7 @@ def fractal_records() -> list[dict[str, object]]:
 
 
 def write_records(path: Path, records: list[dict[str, object]]) -> None:
+    """Write ``records`` as a CSV whose header is the first record's key order."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(records[0]))
@@ -273,6 +302,7 @@ def write_records(path: Path, records: list[dict[str, object]]) -> None:
 
 
 def write_fasta(path: Path, sequence_ids: list[str], sequences: dict[str, dict[str, str]]) -> None:
+    """Write the 80-column-wrapped construct FASTA for the requested sequence ids."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id in sequence_ids:
@@ -284,10 +314,12 @@ def write_fasta(path: Path, sequence_ids: list[str], sequences: dict[str, dict[s
 
 
 def write_provenance(path: Path, payload: dict[str, object]) -> None:
+    """Serialize ``payload`` as indent-2 JSON at ``path``."""
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="ascii")
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -296,6 +328,8 @@ def sha256(path: Path) -> str:
 
 
 def apply_homology_status(records: list[dict[str, object]], hit_path: Path) -> set[str]:
+    """Re-status records from the frozen homology hits (excluded_homology vs homology-cold); return
+    the hit query ids."""
     if not hit_path.exists():
         return set()
     hit_ids = {
@@ -319,6 +353,8 @@ def write_homology_audit(
     article_doi: str,
     dataset_reference: str,
 ) -> None:
+    """Write homology-audit.json for one source, hash-binding the FASTA, hits, and cluster outputs
+    (no-op if absent)."""
     hit_path = output_dir / "homology" / "homology_hits.tsv"
     cluster_path = output_dir / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.exists() or not cluster_path.exists():
@@ -368,6 +404,8 @@ def write_homology_audit(
 
 
 def main() -> None:
+    """Build sequences and records for both sources, apply homology status, and write each source's
+    evidence bundle."""
     sequences = build_sequences()
     edmond = edmond_records()
     fractal = fractal_records()

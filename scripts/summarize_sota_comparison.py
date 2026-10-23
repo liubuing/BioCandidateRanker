@@ -32,6 +32,7 @@ def mean_sd(values: list[float]) -> dict:
 
 
 def collect_seed_metrics(run_dir: Path) -> dict[int, dict]:
+    """Read every seed's test_metrics.json present under a run directory."""
     metrics: dict[int, dict] = {}
     for path in sorted(run_dir.glob("seed*/test_metrics.json")):
         seed = int(path.parent.name.removeprefix("seed"))
@@ -40,6 +41,7 @@ def collect_seed_metrics(run_dir: Path) -> dict[int, dict]:
 
 
 def main() -> None:
+    """Aggregate per-seed metrics into the comparison receipt and print the table."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=SOTA_ROOT / "summary.json")
     args = parser.parse_args()

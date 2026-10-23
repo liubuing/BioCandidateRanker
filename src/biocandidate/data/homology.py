@@ -1,3 +1,11 @@
+"""MMseqs2 homology clustering and cold-split assignment.
+
+Sequences are clustered at the governed 30% identity / 80% coverage thresholds
+(``--cov-mode 0`` requires both query and target to be covered), and split
+assignment operates on whole clusters only, so no homolog pair is ever split
+across train/validation/test. Split manifests record the MMseqs2 parameters
+and the data source identity so runs can replay or reject stale manifests.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -11,10 +19,12 @@ from .schema import EnzymeSubstrateRecord
 
 
 def sequence_id(sequence: str) -> str:
+    """Stable content address ("seq_" + first 24 hex chars of the SHA256 digest)."""
     return "seq_" + hashlib.sha256(sequence.encode("ascii")).hexdigest()[:24]
 
 
 def write_unique_fasta(records: Sequence[EnzymeSubstrateRecord], path: str | Path) -> dict[str, str]:
+    """Write deduplicated sequences to FASTA; returns the identifier-to-sequence mapping."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     sequences = {sequence_id(record.sequence): record.sequence for record in records}
@@ -33,6 +43,12 @@ def run_mmseqs_easy_cluster(
     coverage: float = 0.8,
     threads: int = 4,
 ) -> Path:
+    """Cluster the FASTA with MMseqs2 linclust and return the cluster TSV path.
+
+    ``min_identity`` and ``coverage`` are the governed homology thresholds
+    (0.3 / 0.8); coverage uses ``--cov-mode 0``, meaning both cluster members
+    must cover that fraction of the alignment.
+    """
     executable_text = str(executable)
     wsl_parts = executable_text.split(":", 2) if executable_text.startswith("wsl:") else None
     if wsl_parts:
@@ -97,6 +113,7 @@ def run_mmseqs_easy_search(
     coverage: float = 0.8,
     threads: int = 4,
 ) -> Path:
+    """Search a query FASTA against a target FASTA; returns the top-hit TSV path."""
     executable_text = str(executable)
     wsl_parts = executable_text.split(":", 2) if executable_text.startswith("wsl:") else None
     if wsl_parts:
@@ -143,6 +160,11 @@ def run_mmseqs_easy_search(
 
 
 def read_mmseqs_clusters(path: str | Path) -> dict[str, str]:
+    """Read a createtsv cluster TSV into a member-to-representative mapping.
+
+    Raises if any member appears under two representatives, which would make
+    cold-split assignment ambiguous.
+    """
     member_to_representative: dict[str, str] = {}
     with Path(path).open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -163,6 +185,11 @@ def assign_homology_splits(
     ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
     seed: int = 42,
 ) -> tuple[EnzymeSubstrateRecord, ...]:
+    """Assign whole MMseqs2 clusters to train/validation/test by greedy fill.
+
+    Clusters are processed largest-first with a seed-hashed tie-break, so the
+    result is deterministic and a homology cluster never straddles two splits.
+    """
     if abs(sum(ratios) - 1.0) > 1e-9 or any(value < 0 for value in ratios):
         raise ValueError("ratios must be non-negative and sum to one")
     names = ("train", "validation", "test")
@@ -200,6 +227,7 @@ def assign_homology_splits(
 
 def write_split_manifest(records: Sequence[EnzymeSubstrateRecord], clusters: Mapping[str, str],
                          path: str | Path, *, parameters: dict) -> None:
+    """Persist per-row split assignments plus the parameters that produced them."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     split_counts: dict[str, int] = {}
@@ -225,6 +253,12 @@ def write_split_manifest(records: Sequence[EnzymeSubstrateRecord], clusters: Map
 
 def apply_split_manifest(records: Sequence[EnzymeSubstrateRecord], path: str | Path,
                          *, source_identity: Mapping[str, Any] | None = None):
+    """Replay split assignments from a manifest, verifying version and coverage.
+
+    Fails closed on unsupported formats, duplicate or invalid rows, source rows
+    absent from the records, accepted rows missing from the manifest, and any
+    declared ``source_identity`` that does not match the supplied data source.
+    """
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("format_version") != 1:
         raise ValueError("unsupported split manifest format")

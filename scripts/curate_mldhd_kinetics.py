@@ -1,3 +1,13 @@
+"""Curate mouse D-lactate dehydrogenase (mLDHD, Q7TNG8) rows from DOI 10.1038/s41467-023-42456-3.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC10589216:
+an empty candidate_records.csv, exclusions.csv (all nine Table 1 kcat rows), provenance.json,
+construct_sequences.fasta (ten exact Strep-tagged WT/mutant constructs cross-checked against
+18 deposited PDB polymers), pdb_construct_mapping.csv, and homology-audit.json.
+
+Exclusion-only fail-closed: every row comes from the PMS-DCIP coupled assay with no
+electron-acceptor saturation evidence, so no apparent kcat becomes a candidate label.
+"""
 from __future__ import annotations
 
 import argparse
@@ -101,6 +111,8 @@ VARIANTS = {
 
 
 def downloads() -> dict[str, str]:
+    """Build the full name -> URL map for the article, SI files, PDB entries, and PubChem
+    records."""
     result = {
         "PMC10589216-fullText.xml": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10589216/fullTextXML",
         "Q7TNG8.fasta": "https://rest.uniprot.org/uniprotkb/Q7TNG8.fasta",
@@ -122,6 +134,7 @@ def downloads() -> dict[str, str]:
 
 
 def download_raw() -> None:
+    """Download every file from downloads() with retry/backoff, skipping files already present."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in downloads().items():
         path = RAW / name
@@ -143,6 +156,7 @@ def download_raw() -> None:
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -151,6 +165,7 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -159,6 +174,7 @@ def read_fasta(path: Path) -> str:
 
 
 def cif_sequence(path: Path) -> str:
+    """Return the canonical one-letter polymer sequence embedded in a mmCIF file."""
     text = path.read_text(encoding="utf-8")
     match = re.search(
         r"_entity_poly\.pdbx_seq_one_letter_code_can\s+\n?;([^;]+);", text, re.DOTALL
@@ -169,6 +185,8 @@ def cif_sequence(path: Path) -> str:
 
 
 def mutate_native(native: str, changes: tuple[tuple[int, str, str], ...]) -> str:
+    """Apply Q7TNG8-native mutations, prepend the Strep tag, and trim the signal peptide (native
+    22-484)."""
     residues = list(native)
     for position, expected, replacement in changes:
         if residues[position - 1] != expected:
@@ -180,6 +198,7 @@ def mutate_native(native: str, changes: tuple[tuple[int, str, str], ...]) -> str
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Build the ten exact assay constructs and verify each against its deposited PDB polymer."""
     native = read_fasta(RAW / "Q7TNG8.fasta")
     if len(native) != 484 or not native.startswith("MAMLLRVATQRLSPWRSFCSR"):
         raise ValueError("Unexpected UniProt Q7TNG8 sequence")
@@ -196,6 +215,8 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def verify_raw() -> None:
+    """Fail closed unless raw files, article markers, PubChem identities, and the frozen reference
+    all check out."""
     missing = [name for name in downloads() if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw files: {', '.join(missing)}; run with --download")
@@ -232,6 +253,8 @@ FIELDS = [
 
 
 def exclusion_records() -> list[dict[str, object]]:
+    """Build one full-detail exclusion row per Table 1 substrate under the electron-acceptor
+    gate."""
     records = []
     for index, row in enumerate(KINETICS, 1):
         substrate, source_label, product, vmax, vmax_sem, km, km_sem, kcat, kcat_sem, efficiency = row
@@ -285,6 +308,7 @@ def exclusion_records() -> list[dict[str, object]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fieldnames = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -293,6 +317,8 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_outputs() -> None:
+    """Verify raw evidence, build constructs, and write the exclusion-only evidence bundle with
+    audits."""
     verify_raw()
     sequences = build_sequences()
     exclusions = exclusion_records()
@@ -394,6 +420,8 @@ def write_outputs() -> None:
 def write_homology_audit(
     sequences: dict[str, tuple[str, str]], exclusions: list[dict[str, object]], fasta_path: Path
 ) -> None:
+    """Write homology-audit.json (no-op if MMseqs outputs are absent), hash-binding the FASTA,
+    hits, and clusters."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.is_file() or not cluster_path.is_file():
@@ -441,6 +469,8 @@ def write_homology_audit(
 def verify_outputs(
     sequences: dict[str, tuple[str, str]], exclusions: list[dict[str, object]]
 ) -> None:
+    """Fail closed on construct cardinality, the 9-excluded/0-accepted split, and the frozen audit
+    boundary."""
     if len(sequences) != 10 or len(set(sequence for _, sequence in sequences.values())) != 10:
         raise ValueError("Expected ten distinct exact assayed constructs")
     if len(exclusions) != 9 or any(row["candidate_label_created"] for row in exclusions):
@@ -462,6 +492,8 @@ def verify_outputs(
 
 
 def main() -> None:
+    """Run the download/verify/write pipeline for the mLDHD source; zero candidate labels are
+    produced."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args()

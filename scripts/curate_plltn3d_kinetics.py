@@ -1,4 +1,17 @@
-"""Audit published PlLtn3D measurements; no predictions or protocol changes."""
+"""Curate PlLtn3D L-threonate dehydrogenase kcat rows from DOI 10.1016/j.jbc.2026.111280
+(PMC12994016).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12994016:
+candidate_records.csv (ten accepted rows: WT on five carbon substrates plus four alanine
+mutants on L-threonate), construct_sequences.fasta and core_sequences.fasta (deposited
+9X6I entity with the retained 11-residue leader), provenance.json, homology-audit.json,
+and homology outputs under SOURCE/homology.
+
+Acceptance requires the exact deposited sequence (PDB 9X6I vs UniProt A0A844HLS7 checked),
+table-order selection without magnitude bias, and a homology-cold pool: full constructs,
+tag-free cores, and the native reference must all return zero MMseqs2 hits against the
+frozen development reference. Ambiguous or duplicate measurements are withheld.
+"""
 import csv
 import hashlib
 import json
@@ -26,10 +39,13 @@ VERSION = '5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 
 
 def sha(p):
+    """Return the SHA-256 hex digest of the file at ``p``."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
+    """Copy/verify stage inputs, run the homology audit, and write the PlLtn3D evidence bundle
+    fail-closed."""
     protected = [ROOT / 'configs/temporal_absolute_kinetics_protocol.json',
                  ROOT / 'artifacts/external/temporal-global-family-audit-20261004-batch2/readiness-audit.json']
     before = {str(p): sha(p) for p in protected}
@@ -68,6 +84,8 @@ def main():
     reference = {str(r.seq) for r in SeqIO.parse(REF, 'fasta')}
     assert not reference.intersection([*constructs.values(), *[s[11:] for s in constructs.values()], native])
     assert sha(REF) == '69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
+    # Frozen WSL mmseqs binary: verify the pinned version, then hand the homology helpers a
+    # "wsl:<distro>:<path>" handle so they translate Windows artifact paths to /mnt/... form.
     version = subprocess.check_output(['wsl', '-d', 'Ubuntu-24.04-D', '--', '/home/liubuing/.local/bin/mmseqs', 'version']).decode().strip()
     assert version == VERSION
     exe = 'wsl:Ubuntu-24.04-D:/home/liubuing/.local/bin/mmseqs'

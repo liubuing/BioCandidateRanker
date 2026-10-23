@@ -1,3 +1,9 @@
+"""Pins the global temporal audit: exact sequence mapping with an emitted
+manifest, label-independent global family caps, and fail-closed blockers for
+ambiguous FASTA ids, undeclared schemas, hash mismatches, and partial
+cluster coverage.
+"""
+
 import csv
 import hashlib
 import json

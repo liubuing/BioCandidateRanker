@@ -1,3 +1,6 @@
+"""Pins the mutation-notation contract of apply_substitutions: WT passthrough,
+multi-site substitution strings, and rejection of ambiguous or noncanonical
+inputs."""
 import pytest
 
 from biocandidate.data.variants import apply_substitutions

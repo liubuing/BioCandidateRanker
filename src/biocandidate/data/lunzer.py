@@ -1,3 +1,11 @@
+"""Adapter for the frozen Lunzer et al. 2005 E. coli IDH specificity landscape.
+
+The Dryad TSV (SHA256 bound below) provides 4^6 = 512 genotypes over six
+mutation positions, each measured with NAD and NADP. Kinetics stay in ln
+space end to end: ln kcat is derived as ``ln Km + ln(kcat/Km)`` and exposed to
+the model as log10. Reading is fail-closed on any drift from the frozen
+512-genotype / 1024-observation structure.
+"""
 from __future__ import annotations
 
 import csv
@@ -49,6 +57,7 @@ class LunzerObservation:
 
 
 def _variant_sequence(genotype: str) -> str:
+    """Rebuild a full variant by substituting the six landscape positions into the reference."""
     if len(genotype) != len(MUTATION_POSITIONS):
         raise ValueError(f"genotype must contain six residues: {genotype!r}")
     residues = list(REFERENCE_SEQUENCE)
@@ -60,6 +69,7 @@ def _variant_sequence(genotype: str) -> str:
 
 
 def read_lunzer_tsv(path: str | Path) -> tuple[LunzerObservation, ...]:
+    """Read the frozen landscape into one observation per (genotype, cofactor) pair."""
     source = Path(path)
     try:
         text = source.read_text(encoding="utf-8-sig")
@@ -92,6 +102,7 @@ def read_lunzer_tsv(path: str | Path) -> tuple[LunzerObservation, ...]:
             if not math.isfinite(ln_km) or not math.isfinite(ln_efficiency):
                 raise ValueError(f"non-finite kinetic value at source row {source_row}")
             derived_ln_kcat = ln_km + ln_efficiency
+            # ln kcat = ln Km + ln(kcat/Km); convert to the canonical log10 unit.
             record = EnzymeSubstrateRecord(
                 sequence=sequence,
                 substrate_smiles=canonicalize_smiles(COFACTORS[cofactor]),
@@ -123,6 +134,7 @@ def read_lunzer_tsv(path: str | Path) -> tuple[LunzerObservation, ...]:
 
 
 def cofactor_counts(observations: Sequence[LunzerObservation]) -> dict[str, int]:
+    """Count observations per cofactor."""
     return {
         cofactor: sum(item.cofactor == cofactor for item in observations)
         for cofactor in COFACTORS

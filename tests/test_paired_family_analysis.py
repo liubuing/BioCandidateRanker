@@ -1,3 +1,6 @@
+"""Pins paired-family analysis helpers: cluster-level metric weights match
+explicit row pooling, CSV alignment reorders and guards against label
+mismatch, and seed averaging is a mean over draws rather than an ensemble."""
 import importlib.util
 from pathlib import Path
 import tempfile

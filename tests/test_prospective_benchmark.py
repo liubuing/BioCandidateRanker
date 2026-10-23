@@ -1,3 +1,9 @@
+"""Pins the prospective benchmark lifecycle: label-independent readiness gates,
+a frozen prediction deposit that must cover the full candidate cross product,
+and a final label join that reports per-campaign metrics, counts censored rows,
+refuses a second receipt, and rejects roster edits.
+"""
+
 import csv
 import hashlib
 import json

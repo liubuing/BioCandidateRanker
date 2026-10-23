@@ -1,3 +1,12 @@
+"""Strict v1 adapter for absolute-kinetics JSONL datasets.
+
+Every row must declare ``schema_version: 1`` and carry labels keyed by the
+canonical kinetic tasks. Values are normalized to log10 units (linear source
+units are converted through positive-value log transforms), evidence must be
+``direct`` with non-empty provenance, and activity/flux labels are rejected
+outright: this adapter accepts absolute kinetics only. Any malformed row fails
+the entire read instead of being skipped.
+"""
 from __future__ import annotations
 
 import json
@@ -59,6 +68,11 @@ def _normalize_label(
     label: Any,
     line_number: int,
 ) -> tuple[float, KineticLabelMetadata]:
+    """Validate one label and convert it to the task's canonical log10 unit.
+
+    Non-kinetic tasks (activity/flux) are rejected here; linear-unit values
+    must be strictly positive before the log10 transform.
+    """
     if task not in CANONICAL_KINETIC_UNITS:
         raise ValueError(
             f"line {line_number}: unsupported kinetic task {task!r}; activity and flux "

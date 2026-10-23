@@ -1,4 +1,12 @@
-"""Reproducible public-source discovery; never modifies accepted data or runs models."""
+"""Reproducible public-source discovery; never modifies accepted data or runs models.
+
+Runs the eight predeclared Europe PMC direction queries (first publication
+2023-01-01 through 2026-10-04, open access only), snapshots search pages and
+full-text XML with license and kinetics-table evidence, and records everything
+in public-batch-20261004/batch-register.json with accepted_additions=0. The
+CC-BY/CC0 license screen and table mentions are screening signals only; the
+frozen protocol and pool hashes must be identical before and after.
+"""
 import concurrent.futures as cf
 import hashlib
 import json
@@ -23,9 +31,11 @@ DIRECTIONS = {
 }
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def fetch(url, path):
+    """Download url into path once, then always serve the cached local bytes."""
     if not path.exists():
         req = urllib.request.Request(url, headers={'User-Agent': 'PublicKineticsEvidenceAudit/1.0'})
         data = urllib.request.urlopen(req, timeout=45).read()
@@ -33,6 +43,7 @@ def fetch(url, path):
     return path.read_bytes()
 
 def search(item):
+    """Run one direction's Europe PMC query and return its receipt and raw results."""
     name, terms = item
     q = f'{terms} AND (kcat OR "turnover number" OR "kinetic characterization") AND FIRST_PDATE:[2023-01-01 TO 2026-10-04] AND OPEN_ACCESS:y'
     url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?' + urllib.parse.urlencode(dict(query=q, format='json', pageSize=100))
@@ -44,6 +55,7 @@ def search(item):
         return dict(direction=name, query=q, url=url, error=str(e)), []
 
 def fulltext(entry):
+    """Acquire one article's full text, screen its license, and extract evidence."""
     pmc = entry['pmcid']
     p = OUT / f'{pmc}.xml'
     url = f'https://www.ebi.ac.uk/europepmc/webservices/rest/{pmc}/fullTextXML'
@@ -68,6 +80,7 @@ def fulltext(entry):
     return entry
 
 def main():
+    """Discover, screen, and register the public batch without accepting anything."""
     OUT.mkdir(parents=True, exist_ok=True)
     protected = [ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before = {str(p.relative_to(ROOT)): sha(p) for p in protected}

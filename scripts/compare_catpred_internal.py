@@ -1,4 +1,13 @@
-"""Exploratory paired-family comparison after frozen CatPred inference."""
+"""Exploratory paired-family comparison after frozen CatPred inference.
+
+Reads the frozen internal test split, the homology family mapping, and the
+per-seed prediction CSVs for CatPred, CataPro, UniKP and both
+BioCandidateRanker replays, then computes family-stratified paired bootstrap
+contrasts (seed 20260918, 5000 replicates) against the adapted CatPred run.
+Writes artifacts/catpred-mode-b/internal-test/paired-comparison.json,
+refusing to overwrite an existing report. Exploratory only: no multiplicity
+adjustment and a CI crossing zero never establishes equivalence.
+"""
 from pathlib import Path
 import json, hashlib
 import numpy as np
@@ -8,6 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/catpred-mode-b/internal-test'
 
 def main():
+    """Compute and write the paired family-bootstrap comparison report."""
     target=OUT/'paired-comparison.json'
     if target.exists(): raise FileExistsError(target)
     data=rows(ROOT/'artifacts/external/sota-homology-cold/data/test.csv')

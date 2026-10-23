@@ -1,4 +1,16 @@
-"""Synchronize CtNDT candidate statuses with its already-frozen homology audit."""
+"""Synchronize CtNDT candidate statuses with its already-frozen homology audit.
+
+Reads the frozen ``homology-audit.json`` and the ``candidate_records.csv`` of
+the CtNDT source (``artifacts/external/temporal-absolute-kinetics/
+biostudies-S-EPMC12645435``), and rewrites the CSV after flipping each
+``pending_homology`` row to ``accepted_homology_cold_pool``, then updates the
+audit's candidate hash and size in place.
+
+Governance role: fail-closed finalization -- the run aborts unless the CSV
+still matches the audit's recorded SHA-256, the audit is a zero-hit audit, and
+it accepts every candidate row; only the status column's pending marker is
+promoted, no values or rows are altered.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +37,7 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
+    """Promote pending CtNDT rows only after every frozen-audit guard passes."""
     audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
     candidate = audit.get("candidate_records", {})
     expected_hash = candidate.get("sha256")

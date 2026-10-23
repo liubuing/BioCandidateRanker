@@ -8,6 +8,12 @@ re-pins content without quietly widening or narrowing the scope.
 Reports the drift against the predecessor before writing, so the reason for a
 new release is recorded rather than implied.
 
+Reads the predecessor manifest JSON and every frozen file it lists; writes the
+next manifest under ``configs/`` (dry run by default, actual write only with
+--write). Governance role: release identity bookkeeping -- the frozen file list
+is inherited verbatim and a missing file fails the run instead of being
+silently dropped.
+
 Usage:
     python scripts/freeze_software_release.py \
         --predecessor configs/software_implementation_release_v6.json \
@@ -28,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def binary_identity(path: Path) -> dict[str, Any]:
+    """Return the SHA-256 and byte size used to pin a frozen file."""
     payload = path.read_bytes()
     return {
         "sha256": hashlib.sha256(payload).hexdigest(),
@@ -65,6 +72,7 @@ def rebuild(
     drift: list[dict[str, Any]],
     root: Path,
 ) -> dict[str, Any]:
+    """Build the next manifest: same file list, re-pinned hashes, drift annotated."""
     changed = {entry["path"] for entry in drift}
     frozen_files = []
     for entry in predecessor["frozen_files"]:

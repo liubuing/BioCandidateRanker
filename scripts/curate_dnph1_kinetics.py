@@ -1,3 +1,16 @@
+"""Curate human DNPH1 (O43598) kcat rows from DOI 10.1042/BCJ20253400 (BioStudies S-EPMC12751057).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12751057:
+candidate_records.csv (four Supplementary Table S2 steady-state kcat rows for 5hmdUMP:
+WT and H56A/E55Q variants at pH 7.0/8.5), sequence_mapping.csv, structure_mapping.csv,
+construct_sequences.fasta, raw-file-hashes.json, provenance.json, homology-audit.json,
+and blocker-evidence.json when any gate fails.
+
+The exact assayed product is reconstructed as TEV-cleaved "G + full-length O43598"
+(vector provenance from the prior PMC10483697 paper). Rows are re-statused by the frozen
+MMseqs2 result, and the exact-overlap audit runs against the hash-pinned 17,010-row
+UniKP development corpus.
+"""
 from __future__ import annotations
 
 import argparse
@@ -32,8 +45,12 @@ REFERENCE = (
 REFERENCE_SHA256 = "69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9"
 MMSEQS_VERSION = "5d152c612b6ad2a56f657b7a02c127eceaea2a75"
 DEFAULT_MMSEQS = "mmseqs"
+# Pinpoints the exact frozen UniKP development corpus file (17,010 rows); the hash and byte
+# size together prove the overlap audit compares against the identical training data.
 DEVELOPMENT_CORPUS_SHA256 = "13643b0b36374f8d3f64d8b014882cf1b3b58946eeaae2b9dcd59e8b2c2d6719"
 DEVELOPMENT_CORPUS_SIZE = 12132719
+# Machine-specific default; pass --development-corpus to point at the same frozen corpus
+# from another machine without editing this file.
 DEFAULT_DEVELOPMENT_CORPUS = Path(
     r"D:\biological\Metabolic model prediction\Integrated_Yeast_MetaTwin_Deployment"
     r"\04_prediction_plugins\UniKP\datasets\Kcat_combination_0918_wildtype_mutant.json"
@@ -73,6 +90,7 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -81,6 +99,7 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
+    """Download every raw evidence URL with retry/backoff, skipping files already present."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -102,6 +121,7 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -110,12 +130,15 @@ def read_fasta(path: Path) -> str:
 
 
 def mutate_native(native: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based O43598-native point mutation, failing on a wrong wild-type residue."""
     if native[position - 1] != expected:
         raise ValueError(f"O43598 expected {expected}{position}, found {native[position - 1]}")
     return native[: position - 1] + replacement + native[position:]
 
 
 def build_sequences() -> dict[str, str]:
+    """Build the three exact assay products (WT/H56A/E55Q) with the single vector Gly left after
+    TEV cleavage."""
     native = read_fasta(RAW / "O43598.fasta")
     if len(native) != 174 or not native.startswith("MAAAMVPGRSESWERGEPGR"):
         raise ValueError("Unexpected UniProt O43598 sequence")
@@ -129,11 +152,13 @@ def build_sequences() -> dict[str, str]:
 
 
 def xml_text(path: Path) -> tuple[ET.Element, str]:
+    """Parse an XML file and return (root, whitespace-collapsed full text) for marker searches."""
     root = ET.parse(path).getroot()
     return root, re.sub(r"\s+", " ", " ".join(root.itertext())).strip()
 
 
 def cif_polymer_sequence(path: Path) -> str:
+    """Return the canonical one-letter polymer sequence embedded in a mmCIF file."""
     text = path.read_text(encoding="utf-8")
     match = re.search(
         r"_entity_poly\.pdbx_seq_one_letter_code_can\s+\n?;([^;]+);", text, re.DOTALL
@@ -144,6 +169,8 @@ def cif_polymer_sequence(path: Path) -> str:
 
 
 def verify_raw(sequences: dict[str, str]) -> None:
+    """Fail closed unless articles, metadata, structures, substrate mappings, and the frozen
+    reference all corroborate."""
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw files: {', '.join(missing)}; run with --download")
@@ -224,6 +251,7 @@ def verify_raw(sequences: dict[str, str]) -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fieldnames = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -232,6 +260,7 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_fasta(sequences: dict[str, str]) -> Path:
+    """Write the 80-column-wrapped construct FASTA and return its path."""
     path = SOURCE / "construct_sequences.fasta"
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for identifier, sequence in sequences.items():
@@ -245,6 +274,7 @@ def write_fasta(sequences: dict[str, str]) -> Path:
 
 
 def build_records(hit_ids: set[str]) -> list[dict[str, object]]:
+    """Turn the frozen KINETICS table into candidate records statused by the homology hit set."""
     records = []
     for index, (condition_id, variant, ph, kcat, error, replicates) in enumerate(KINETICS, 1):
         sequence_id = f"dnph1-{variant.lower()}"
@@ -281,6 +311,8 @@ def build_records(hit_ids: set[str]) -> list[dict[str, object]]:
 def exact_overlap_audit(
     sequences: dict[str, str], development_corpus: Path
 ) -> dict[str, object]:
+    """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
+    corpus."""
     if not development_corpus.is_file():
         raise FileNotFoundError(f"Frozen development corpus is absent: {development_corpus}")
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
@@ -310,6 +342,8 @@ def exact_overlap_audit(
 
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, command = executable.split(":", 2)
@@ -320,6 +354,7 @@ def mmseqs_command(executable: str, *arguments: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -328,6 +363,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(command: list[str]) -> str:
+    """Run ``command`` and return its output, raising RuntimeError on a non-zero exit."""
     completed = subprocess.run(command, capture_output=True, text=True, check=False)
     if completed.returncode:
         raise RuntimeError(f"Command failed ({completed.returncode}): {' '.join(command)}\n{completed.stderr}")
@@ -335,6 +371,8 @@ def run_checked(command: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Easy-search/easy-linclust ``fasta`` against the frozen reference; return (hits, clusters,
+    version)."""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -396,6 +434,8 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
+    """Verify, audit overlap and homology, and write the full candidate/mapping/audit evidence
+    bundle."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     sequences = build_sequences()
     verify_raw(sequences)
@@ -542,6 +582,8 @@ def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
 
 
 def verify_outputs(records: list[dict[str, object]], sequences: dict[str, str]) -> None:
+    """Fail closed on cardinality, endpoint/substrate validity, and the frozen homology/no-peeking
+    protocol."""
     if len(records) != 4 or len(sequences) != 3 or len(set(sequences.values())) != 3:
         raise ValueError("Unexpected DNPH1 curation cardinality")
     if any(row["endpoint"] != "kcat_s-1" or float(row["kcat_s-1"]) <= 0 for row in records):
@@ -557,6 +599,8 @@ def verify_outputs(records: list[dict[str, object]], sequences: dict[str, str]) 
 
 
 def write_blocker(exc: Exception) -> None:
+    """Persist the failing exception as machine-readable blocker-evidence.json with no candidates
+    released."""
     SOURCE.mkdir(parents=True, exist_ok=True)
     evidence = {
         "source_id": SOURCE_ID,
@@ -575,6 +619,8 @@ def write_blocker(exc: Exception) -> None:
 
 
 def main() -> None:
+    """Run the pipeline, clearing any stale blocker on success and writing blocker-evidence.json on
+    any failure."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

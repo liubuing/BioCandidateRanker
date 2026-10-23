@@ -1,3 +1,8 @@
+"""Pins the 2026-07-27 project-state archive: every receipted file still matches
+its recorded SHA256 (live pointers excepted), RESUME_HERE.md names a current
+release manifest, and the archived claim boundary stays honestly blocked.
+"""
+
 import hashlib
 import json
 from pathlib import Path

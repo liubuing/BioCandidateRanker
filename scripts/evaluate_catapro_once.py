@@ -1,4 +1,19 @@
-"""Evaluate three pre-frozen CataPro checkpoints on the existing internal test once."""
+"""Evaluate three pre-frozen CataPro checkpoints on the existing internal test once.
+
+Reads ``configs/catapro_internal_test_freeze.json`` plus the frozen feature
+manifest, ProtT5 reuse gates, and seed receipts under
+``artifacts/catapro-mode-b`` produced by ``run_catapro_mode_b.py``, and the
+1,646-row internal test partition. Test features are rebuilt strictly from
+frozen caches (cached ProtT5 embeddings joined to cached-or-newly-encoded
+MolT5+MACCS molecule vectors) and written once to ``internal-test/``, followed
+by per-seed prediction CSVs, metric JSONs, and ``summary.json``.
+
+Governance role: fail-closed single-shot evaluation -- training receipts must
+prove the test set was never accessed during training; the exclusive
+``started.json`` marker prevents repeat inference after outcomes are seen; an
+existing summary is verified against the freeze hash and reused without
+inference.
+"""
 from datetime import datetime,timezone
 import csv,json,hashlib,sys,statistics
 import numpy as np
@@ -14,11 +29,13 @@ sys.path.insert(0,str(ROOT/'src'))
 from biocandidate.evaluation import regression_metrics
 
 def verify_files(entries,root=ROOT):
+    """Recompute SHA-256 for each pinned entry and raise on any mismatch."""
     for item in entries:
         if run.sha(root/item['path'])!=item['sha256']:
             raise ValueError(f"Frozen file changed: {item['path']}")
 
 def features(rows,identity):
+    """Build the 1646x1959 test feature matrix from frozen encoders and caches only."""
     from transformers import T5EncoderModel,T5Tokenizer
     gate=run.read_json(run.OUT/'prott5-reuse-check.json')
     if not gate['passed'] or run.sha(run.OUT/'prott5-reuse-check.json')!=identity['prott5_reuse_check_sha256']:
@@ -54,6 +71,7 @@ def features(rows,identity):
     return x
 
 def main():
+    """Verify freeze and provenance, run the one-shot seeded evaluation, write receipts."""
     freeze=run.read_json(FREEZE);verify_files(freeze['files'])
     DEST.mkdir(parents=True,exist_ok=True)
     summary_path=DEST/'summary.json'

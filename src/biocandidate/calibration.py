@@ -21,6 +21,8 @@ import torch
 
 Tensor = torch.Tensor
 _FORMAT_VERSION = 2
+# Candidate variance models ordered simplest-first; grouped-CV selection walks
+# them in this order and breaks metric ties toward the earlier (simpler) entry.
 _MODEL_ORDER = ("identity", "scalar", "affine_variance")
 
 
@@ -68,10 +70,12 @@ class IdentityGaussianCalibrator:
     def fit(
         cls, mean: Tensor, standard_deviation: Tensor, labels: Tensor
     ) -> IdentityGaussianCalibrator:
+        """Validate the calibration sample and return the no-op calibrator."""
         _validated_gaussian_sample(mean, standard_deviation, labels)
         return cls()
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
+        """Return the predictions unchanged (validating them first)."""
         _validated_predictions(mean, standard_deviation)
         return mean, standard_deviation
 
@@ -96,6 +100,7 @@ class ScalarGaussianCalibrator:
     def fit(
         cls, mean: Tensor, standard_deviation: Tensor, labels: Tensor
     ) -> ScalarGaussianCalibrator:
+        """Fit one scale as the root-mean-square z-score of the validation residuals."""
         _validated_gaussian_sample(mean, standard_deviation, labels)
         scale = torch.sqrt(torch.mean(((labels - mean) / standard_deviation).square()))
         if not torch.isfinite(scale) or scale <= 0:
@@ -103,6 +108,7 @@ class ScalarGaussianCalibrator:
         return cls(float(scale))
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
+        """Scale predictive standard deviations by the fitted scalar."""
         _validated_predictions(mean, standard_deviation)
         return mean, standard_deviation * self.scale
 
@@ -136,6 +142,7 @@ class AffineVarianceGaussianCalibrator:
         *,
         max_steps: int = 250,
     ) -> AffineVarianceGaussianCalibrator:
+        """Fit ``scale * variance + offset`` by LBFGS on the validation Gaussian NLL."""
         _validated_gaussian_sample(mean, standard_deviation, labels)
         if isinstance(max_steps, bool) or not isinstance(max_steps, int):
             raise TypeError("max_steps must be an integer")
@@ -171,6 +178,7 @@ class AffineVarianceGaussianCalibrator:
         return cls(float(parameters[0]), float(parameters[1]))
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
+        """Apply the affine variance transform and return the new standard deviations."""
         _validated_predictions(mean, standard_deviation)
         variance = self.scale * standard_deviation.square() + self.offset
         return mean, torch.sqrt(variance)
@@ -261,6 +269,12 @@ class SplitConformalCalibrator:
         standard_deviation: Tensor | None = None,
         normalized: bool = False,
     ) -> SplitConformalCalibrator:
+        """Fit the conformal radius on validation absolute scores.
+
+        The rank is the finite-sample ``ceil((n + 1) * (1 - alpha))`` order
+        statistic; when it exceeds the sample size the radius is infinity and
+        every interval is unbounded (an honest answer at this alpha).
+        """
         alpha = _probability(alpha)
         _vector(mean, "mean")
         _vector(labels, "labels")
@@ -286,6 +300,7 @@ class SplitConformalCalibrator:
         mean: Tensor,
         standard_deviation: Tensor | None = None,
     ) -> tuple[Tensor, Tensor]:
+        """Return symmetric (lower, upper) conformal bounds around the mean."""
         _vector(mean, "mean")
         if self.normalized:
             if standard_deviation is None:
@@ -309,6 +324,11 @@ class SplitConformalCalibrator:
 
 
 def conformal_calibrator_from_dict(payload: Mapping[str, Any]) -> SplitConformalCalibrator:
+    """Rebuild a calibrator from :meth:`SplitConformalCalibrator.to_dict` output.
+
+    A serialized ``radius`` of null denotes the infinite radius fitted when the
+    conformal quantile exceeds the calibration sample size.
+    """
     if not isinstance(payload, Mapping) or set(payload) != {
         "alpha", "normalized", "radius", "tie_policy",
     }:
@@ -497,6 +517,7 @@ def select_grouped_gaussian_calibrator(
 
 
 def calibrator_from_dict(payload: Mapping[str, Any]) -> GaussianCalibrator:
+    """Rebuild a Gaussian calibrator from its ``to_dict`` payload, rejecting unknown schemas."""
     if not isinstance(payload, Mapping):
         raise TypeError("calibrator payload must be a mapping")
     kind = payload.get("kind")

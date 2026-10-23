@@ -1,4 +1,14 @@
-"""Summarize source-level eligibility and audit G6PD reference variants."""
+"""Summarize source-level eligibility and audit G6PD reference variants.
+
+Classifies Fordyce portal studies by publication year and direct-kcat
+endpoints (portal metadata years are screening clues, not verified dates),
+builds six in-silico G6PD reference variants, screens them with a pinned
+MMseqs2 build via WSL, and records the portal's missing license and the
+Sabath ancestral-sequence state. Writes source-review-20261004/{
+g6pd-reference-variants.fasta, g6pd-variant-hits.tsv, variant-mmseqs.log,
+review-audit.json}; protected hashes are re-verified before and after and
+accepted_additions stays 0.
+"""
 import collections
 import hashlib
 import json
@@ -8,10 +18,15 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/external/temporal-absolute-kinetics/source-review-20261004'
 REF=ROOT/'artifacts/homology-final/unique_proteins.fasta'
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
-def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
+def sha(p):
+    """Return the SHA256 hex digest of a file."""
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+def linux(p):
+    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation."""
+    return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
+    """Screen portal studies and G6PD variants, then write the review audit."""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'

@@ -52,6 +52,8 @@ def add_runs(paragraph, text: str) -> None:
 
 
 def add_table(doc: Document, rows: list[list[str]]) -> None:
+    """Append one markdown table as a DOCX table with a bold header row."""
+    # Drop the markdown header-separator row (e.g. |---|---|) before layout.
     rows = [r for r in rows if not all(re.fullmatch(r":?-{2,}:?", c.strip()) for c in r)]
     if not rows:
         return
@@ -68,6 +70,7 @@ def add_table(doc: Document, rows: list[list[str]]) -> None:
 
 
 def convert(md_path: Path, docx_path: Path) -> None:
+    """Convert one manuscript markdown file to a DOCX file with basic block rendering."""
     doc = Document()
     style = doc.styles["Normal"]
     style.font.name = "Times New Roman"

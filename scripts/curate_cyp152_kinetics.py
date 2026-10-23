@@ -1,3 +1,14 @@
+"""Curate CYP152 peroxygenase (OleTLA/OleTJE) kcat rows from DOI 10.1016/j.jbc.2025.110397.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12284513:
+candidate_records.csv (five Table 1 rows for hexadecanoic acid, including the ethanol
+co-solvent contrast), construct_sequences.fasta (native WT and I178L sequences),
+provenance.json, and homology-audit.json.
+
+Rows start as pending_homology and are re-statused by the frozen MMseqs2 result against
+the development reference: a hit excludes the sequence, otherwise the row joins the
+homology-cold pool. The kcat min-1 -> s-1 conversion is the only transformation applied.
+"""
 from __future__ import annotations
 
 import csv
@@ -11,6 +22,7 @@ SOURCE = ROOT / "artifacts" / "external" / "temporal-absolute-kinetics" / "europ
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -19,6 +31,8 @@ def read_fasta(path: Path) -> str:
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Load native sequences and derive the I178L mutant; return sequence_id -> (accession,
+    sequence)."""
     oletla = read_fasta(SOURCE / "raw" / "A0A1M7CBV6.fasta")
     oletje = read_fasta(SOURCE / "raw" / "E9NSU2.fasta")
     if oletla[177] != "I":
@@ -31,6 +45,7 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen Table 1 rows into candidate records, converting kcat min-1 to s-1."""
     rows = [
         ("oletla-wt", "OleTLA WT", 2.5, 20.6, 0.5),
         ("oletla-wt", "OleTLA WT", 10.0, 88.4, 1.6),
@@ -72,6 +87,8 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-status records from the frozen homology hits; leave pending_homology untouched when the
+    hits file is absent."""
     hit_path = SOURCE / "homology" / "all-constructs" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -89,10 +106,13 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
+    """Build sequences and records, apply homology status, and write the CSV/FASTA/provenance/audit
+    bundle."""
     sequences = build_sequences()
     records = build_records()
     apply_homology_status(records)

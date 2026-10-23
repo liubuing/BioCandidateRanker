@@ -1,4 +1,20 @@
-"""Figure-transcribed ancestor verification and exclusion-only homology prescreen."""
+"""Figure-transcribed ancestor verification and exclusion-only homology prescreen.
+
+Reads the staged Sabath et al. supplement (DOI 10.1093/gbe/evae016) under
+``artifacts/external/temporal-absolute-kinetics/source-review-20261004``,
+transcribes the AncSBXMT ancestor from supplementary Figure S2 with landmark
+residue checks, cross-validates transcribed segments against published
+mutagenesis primers by three-frame translation search, screens the figure
+ancestor and its Y267Q variant against the pinned development reference with
+frozen MMseqs2, and writes ``ancestor-queries.fasta`` plus
+``verification-audit.json`` under ``sabath-verification-20261004``.
+
+Accept/exclude logic: qualifying hits (>=30% identity, >=80% query and target
+coverage) on every query force ``exclude_family_cold_source``; otherwise the
+source stays ``pending_exact_construct_and_remaining_gates``. Governance role:
+fail-closed prescreen -- the transcription is validated, never presented as a
+deposited sequence; ``accepted_additions`` stays 0 and no predictions run.
+"""
 import hashlib
 import json
 import re
@@ -25,6 +41,7 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
+    """Verify the transcription, screen homology, and write the exclusion audit."""
     OUT.mkdir(exist_ok=True)
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}

@@ -1,3 +1,11 @@
+"""Adapter for the UniKP kcat value corpus (17,010 raw rows; 16,838 accepted).
+
+Invalid rows are rejected individually with an explicit reason recorded in the
+audit report rather than failing the read or being dropped silently. Duplicate
+detection runs at the (sequence, canonical SMILES) model input pair, and
+:func:`aggregate_pair_measurements` collapses replicates to the median log10
+kcat with replicate counts and standard deviations.
+"""
 from __future__ import annotations
 
 import json
@@ -30,6 +38,8 @@ class DuplicateRow:
 
 @dataclass(frozen=True, slots=True)
 class UniKPAuditReport:
+    """Accept/reject and duplicate audit for one UniKP read."""
+
     total_rows: int
     accepted_rows: int
     rejected: Tuple[RejectedRow, ...]
@@ -42,6 +52,8 @@ class UniKPAuditReport:
 
 @dataclass(frozen=True, slots=True)
 class UniKPReadResult:
+    """Accepted records plus the audit trail explaining every other row."""
+
     records: Tuple[EnzymeSubstrateRecord, ...]
     audit: UniKPAuditReport
 
@@ -99,6 +111,12 @@ def read_unikp_json(
     split: Optional[str] = None,
     source_rows: set[int] | None = None,
 ) -> UniKPReadResult:
+    """Read the corpus into records; invalid rows land in the audit, not the caller's lap.
+
+    Rejection is row-local: non-numeric, non-positive, or non-finite values and
+    unusable sequences/SMILES are recorded with reasons while the remaining rows
+    are accepted, so the caller decides whether the audit passes governance.
+    """
     rows = _load_rows(Path(path))
     records = []
     rejected = []

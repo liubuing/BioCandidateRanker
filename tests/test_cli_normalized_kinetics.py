@@ -1,3 +1,8 @@
+"""Pins the normalized-kinetics CLI surface: parser defaults, explicit task
+selection, and an end-to-end train/evaluate smoke run that fails closed on a
+sparse partition with zero train observations.
+"""
+
 import json
 import tempfile
 import unittest

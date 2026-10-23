@@ -1,4 +1,13 @@
-"""Audit both selectors against the complete common validation history."""
+"""Audit both selectors against the complete common validation history.
+
+Reads the completed-training manifest and each seed's full epoch log under
+``artifacts/selection-rule-comparison``, re-derives the epoch each rule (NLL
+and RMSE) would select, confirms the saved checkpoints match those epochs and
+their recorded hashes, and writes ``selection-summary.json``. Governance role:
+validation-only diagnostic -- explicitly biased because selection uses the same
+validation history it is measured on, no test inference occurs, and a
+pre-existing summary aborts the run.
+"""
 from pathlib import Path
 import json,hashlib
 import torch
@@ -8,6 +17,7 @@ BASE=ROOT/'artifacts/selection-rule-comparison'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    """Re-derive both selection rules per seed and write the selection summary."""
     out=BASE/'selection-summary.json'
     if out.exists():raise FileExistsError(out)
     manifest=json.loads((BASE/'completed-training-manifest.json').read_text())

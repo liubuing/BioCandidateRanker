@@ -1,4 +1,14 @@
-"""Exploratory family-bootstrap comparisons of the retrained current model."""
+"""Exploratory family-bootstrap comparisons of the retrained current model.
+
+Reads the frozen internal test split, the homology family mapping, and the
+per-seed prediction CSVs for the current retrained model and its comparators
+(CatPred, CataPro, UniKP, historical replay), then computes family-stratified
+paired bootstrap contrasts (seed 20260918, 5000 replicates) for the current
+model minus each comparator. Writes
+artifacts/current-code-retrain/internal-test/paired-comparison.json, refusing
+to overwrite. Exploratory diagnostic on the already-observed split: no
+multiplicity correction and a zero-crossing CI is not equivalence.
+"""
 from pathlib import Path
 import json,hashlib
 import numpy as np
@@ -7,6 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/current-code-retrain/internal-test'
 
 def main():
+    """Compute and write the current-vs-comparator paired comparison report."""
     target=OUT/'paired-comparison.json'
     if target.exists():raise FileExistsError(target)
     data=rows(ROOT/'artifacts/external/sota-homology-cold/data/test.csv');ids=[r['pair_id'] for r in data];y=np.array([float(r['log10_kcat']) for r in data])

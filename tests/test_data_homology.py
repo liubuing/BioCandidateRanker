@@ -1,3 +1,8 @@
+"""Pins the homology-split contract: MMseqs clusters never straddle a split,
+split manifests round trip, and applying a manifest fails closed on source
+identity mismatch, duplicate or unknown rows, or invalid split names.
+"""
+
 import json
 import tempfile
 import unittest

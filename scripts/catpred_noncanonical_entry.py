@@ -7,6 +7,7 @@ import inspect
 import textwrap
 
 def patch_source(source):
+    """Rewrite the tokenizer to fall back to index 20, refusing any other source text."""
     original='[letter_to_num[a] for a in seq]'
     replacement='[letter_to_num.get(a, 20) for a in seq]'
     if source.count(original)!=1:
@@ -14,6 +15,7 @@ def patch_source(source):
     return source.replace(original,replacement)
 
 def install_adapter():
+    """Recompile MoleculeModel.forward with the patched tokenizer on the imported module."""
     import catpred.models.model as module
     source=textwrap.dedent(inspect.getsource(module.MoleculeModel.forward))
     namespace={}

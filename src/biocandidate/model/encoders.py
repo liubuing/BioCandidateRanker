@@ -1,3 +1,11 @@
+"""Protein, molecule, and host-context encoders feeding the candidate ranker.
+
+Protein backbones share one (tokens, mask) -> (chunk tokens, chunk mask)
+interface so the local Transformer, frozen ESM-2, and a mean-embedding
+ablation are interchangeable. Molecules run through a sparse message-passing
+encoder over the collator's graph tensors; hashed context ids plus an optional
+FBA vector become the context tokens of the fusion layer.
+"""
 from __future__ import annotations
 
 import math
@@ -221,6 +229,8 @@ class ESM2ProteinEncoder(nn.Module):
 
 
 class SparseMessageLayer(nn.Module):
+    """One round of degree-normalized sparse message passing with a GRU update."""
+
     def __init__(self, d_model: int, dropout: float) -> None:
         super().__init__()
         self.message = nn.Sequential(
@@ -248,6 +258,8 @@ class SparseMessageLayer(nn.Module):
 
 
 class SparseMoleculeEncoder(nn.Module):
+    """Embed atoms and bonds, run sparse message passing, mean-pool to one token per graph."""
+
     def __init__(self, d_model: int, layers: int, dropout: float) -> None:
         super().__init__()
         dims = (128, 12, 16, 2, 16, 12)
@@ -284,6 +296,8 @@ class SparseMoleculeEncoder(nn.Module):
 
 
 class ContextEncoder(nn.Module):
+    """Embed hashed context fields plus the optional FBA vector as extra attention tokens."""
+
     def __init__(self, buckets: int, fields: int, fba_context_dim: int,
                  d_model: int) -> None:
         super().__init__()

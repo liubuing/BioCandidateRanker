@@ -1,3 +1,17 @@
+"""Curate Pa-RmlA glucose-1-phosphate thymidylyltransferase rows from DOI
+10.3390/microorganisms14051070.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC13210114:
+an empty candidate_records.csv, exclusions.csv (both Table 1 kcat rows), provenance.json,
+native_prescreen_sequence.fasta (AYM85572.1 from assembly GCA_003668795.1; prescreen only),
+sequence_mapping.csv, construct-resolution.json (contradictory pET-22b/pET16b evidence),
+raw-file-hashes.json, homology_hits.csv, homology-audit.json.
+
+Exclusion-only fail-closed: the exact assay construct cannot be reconstructed from the
+contradictory source statements, fixed-cosubstrate saturation is asserted without any
+series, reported kcat/Vmax/enzyme-concentration arithmetic is inconsistent, and the frozen
+MMseqs2 prescreen finds development hits to the native sequence.
+"""
 from __future__ import annotations
 
 import argparse
@@ -78,6 +92,7 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -86,6 +101,8 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
+    """Fetch article/supplement/assembly/compound files, unpack the nested SI PDF, and extract
+    assembly members."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -120,6 +137,7 @@ def download_raw() -> None:
 
 
 def read_fasta_record(path: Path, accession: str) -> str:
+    """Return the sequence of the single FASTA record whose header id equals ``accession``."""
     sequence: list[str] = []
     selected = False
     for line in path.read_text(encoding="ascii").splitlines():
@@ -133,6 +151,8 @@ def read_fasta_record(path: Path, accession: str) -> str:
 
 
 def validate_raw() -> None:
+    """Fail closed unless article/supplement/assembly/PubChem markers and the frozen reference all
+    corroborate."""
     required = [*URLS, "microorganisms-14-01070-s001.zip", "microorganisms-4240565-supplementary.pdf", "genomic.gbff", "genomic.gff", "protein.faa", "sequence_report.jsonl", "assembly_data_report.jsonl"]
     missing = [name for name in required if not (RAW / name).is_file()]
     if missing:
@@ -184,6 +204,8 @@ def validate_raw() -> None:
 
 
 def command(executable: str, *args: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -191,6 +213,7 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -198,6 +221,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(args: list[str]) -> str:
+    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit."""
     result = subprocess.run(args, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"Command failed: {' '.join(args)}\n{result.stderr}")
@@ -205,6 +229,8 @@ def run_checked(args: list[str]) -> str:
 
 
 def run_mmseqs(query: Path, executable: str, threads: int) -> str:
+    """Easy-search the native prescreen sequence against the frozen reference; return the verified
+    version."""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs version {version!r} is not frozen version {MMSEQS_VERSION!r}")
@@ -238,6 +264,7 @@ def run_mmseqs(query: Path, executable: str, threads: int) -> str:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> None:
+    """Write ``rows`` as CSV with exactly ``fields`` as the header order."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
@@ -245,6 +272,8 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def write_outputs(executable: str, threads: int, run_homology: bool) -> None:
+    """Validate raw evidence, run the prescreen homology search, and write the exclusion-only
+    evidence bundle."""
     validate_raw()
     SOURCE.mkdir(parents=True, exist_ok=True)
     query = SOURCE / "native_prescreen_sequence.fasta"
@@ -427,6 +456,7 @@ def write_outputs(executable: str, threads: int, run_homology: bool) -> None:
 
 
 def main() -> int:
+    """Run the acquire/verify/homology/write pipeline; every reported row stays excluded."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--acquire", action="store_true")
     parser.add_argument("--run-mmseqs", action="store_true")

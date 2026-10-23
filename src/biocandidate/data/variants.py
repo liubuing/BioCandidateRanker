@@ -1,3 +1,5 @@
+"""Construction of variant sequences from one-letter substitution notation."""
+
 from __future__ import annotations
 
 import re
@@ -7,6 +9,11 @@ _SUBSTITUTION = re.compile(r"([ACDEFGHIKLMNPQRSTVWY])(\d+)([ACDEFGHIKLMNPQRSTVWY
 
 
 def apply_substitutions(reference_sequence: str, notation: str) -> str:
+    """Apply dash-separated substitutions (``A23G-T45S``; ``WT`` returns the reference).
+
+    Fails on non-canonical references, malformed notation, out-of-range or
+    duplicated positions, and reference-residue mismatches.
+    """
     sequence = "".join(reference_sequence.split()).upper()
     if not sequence or any(residue not in "ACDEFGHIKLMNPQRSTVWY" for residue in sequence):
         raise ValueError("reference sequence must contain only canonical amino acids")

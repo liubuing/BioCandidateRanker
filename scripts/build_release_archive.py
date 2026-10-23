@@ -38,6 +38,7 @@ LOCAL_PATH_PATTERNS = (
 
 
 def _run_git(root: Path, *args: str) -> str | None:
+    """Run a git subcommand in root and return stdout, or None when git is unavailable."""
     try:
         completed = subprocess.run(
             ["git", *args],
@@ -52,6 +53,7 @@ def _run_git(root: Path, *args: str) -> str | None:
 
 
 def _excluded(relative: str) -> bool:
+    """Return True for VCS, cache and bytecode paths that never belong in the archive."""
     if relative.startswith(EXCLUDED_PREFIXES):
         return True
     if relative.endswith(EXCLUDED_SUFFIXES):
@@ -77,15 +79,18 @@ def source_date(root: Path) -> str:
 
 
 def head_commit(root: Path) -> str | None:
+    """Return the HEAD commit hash, or None outside a Git checkout."""
     commit = _run_git(root, "rev-parse", "HEAD")
     return commit.strip() if commit and commit.strip() else None
 
 
 def sha256_bytes(payload: bytes) -> str:
+    """Return the SHA256 hex digest of a byte payload."""
     return hashlib.sha256(payload).hexdigest()
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:
+    """Create a ZipInfo with the fixed epoch timestamp so builds are reproducible."""
     info = zipfile.ZipInfo(filename=name, date_time=ZIP_TIMESTAMP)
     info.compress_type = zipfile.ZIP_DEFLATED
     info.create_system = 0
@@ -190,6 +195,7 @@ def build_redact_map(
 
 
 def member_bytes(entry: dict[str, Any], root: Path, redact_map: dict[str, bytes] | None) -> bytes:
+    """Return a member's bytes, substituting the redacted payload when one exists."""
     if redact_map and entry["path"] in redact_map:
         return redact_map[entry["path"]]
     return (root / entry["path"]).read_bytes()
@@ -262,6 +268,7 @@ def build_manifest(
     missing: list[str],
     redact_map: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
+    """Assemble the embedded manifest with per-file hashes and frozen-evidence verification."""
     # Resolve against root, not the process working directory, so --root works
     # from anywhere.
     resolved_manifest = (
@@ -326,6 +333,7 @@ def write_archive(
     manifest: dict[str, Any],
     redact_map: dict[str, bytes] | None = None,
 ) -> None:
+    """Write every member plus the embedded manifest into the zip archive."""
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for entry in entries:
@@ -335,6 +343,7 @@ def write_archive(
 
 
 def main() -> int:
+    """Collect, gate, and write the release archive with its sidecar manifest."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--manifest", type=Path, default=DEFAULT_RELEASE_MANIFEST)

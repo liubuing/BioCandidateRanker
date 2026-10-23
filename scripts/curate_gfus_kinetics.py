@@ -1,3 +1,14 @@
+"""Curate human GFUS (Q13630) kcat rows from DOI 10.1021/acscatal.5c02722.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12362431:
+candidate_records.csv (four Table 1 rows: WT, H186K, C116S, Y143F on the
+GDP-4-keto-6-deoxy-D-mannose/NADPH assay), construct_sequences.fasta (exact pNIC28_hgfs
+constructs: His6/TEV leader + Q13630 residues 8-321), provenance.json, and
+homology-audit.json.
+
+Rows start as pending_homology and are re-statused by the frozen MMseqs2 result against
+the development reference; stopped-flow duplicates and non-finite rows are excluded.
+"""
 from __future__ import annotations
 
 import csv
@@ -12,6 +23,7 @@ LEADER = "MHHHHHHSSGVDLGTENLYFQS"
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -20,12 +32,15 @@ def read_fasta(path: Path) -> str:
 
 
 def substitute(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(f"Expected {expected}{position}, found {sequence[position - 1]}{position}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Build the four exact assay constructs (leader + Q13630 residues 8-321); return id ->
+    (variant, sequence)."""
     canonical = read_fasta(SOURCE / "raw" / "Q13630.fasta")
     variants = {
         "gfus-wt": ("WT", canonical),
@@ -40,6 +55,7 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen Table 1 rows into pending_homology candidate records with assay metadata."""
     rows = [
         ("gfus-wt", "WT", 2.11, 0.03, 1.7, 0.2, 0.75, 3.18, ""),
         ("gfus-h186k", "H186K", 0.36, 0.03, 0.8, 0.2, "", 31.8, ""),
@@ -81,6 +97,8 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-status records from the frozen homology hits; leave pending_homology untouched when the
+    hits file is absent."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -98,10 +116,13 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
+    """Build sequences and records, apply homology status, and write the CSV/FASTA/provenance/audit
+    bundle."""
     sequences = build_sequences()
     records = build_records()
     apply_homology_status(records)

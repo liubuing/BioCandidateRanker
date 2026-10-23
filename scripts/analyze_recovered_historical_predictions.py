@@ -1,9 +1,19 @@
-"""Apply the unchanged bootstrap estimator to authenticated historical replay."""
+"""Apply the unchanged bootstrap estimator to authenticated historical replay.
+
+Reads configs/recovered_historical_analysis_protocol.json and re-verifies the
+SHA256 of this runner, the paired_family_analysis estimator, and every frozen
+input listed there before delegating to paired_family_analysis.main(), which
+writes the artifacts/paired-family-analysis/legacy-default outputs. The three
+per-seed reference receipts must already exist, pass, and match the legacy
+replay protocol hash. Any failed assertion aborts before the estimator runs;
+this runner is itself hash-bound by the protocol's runner_sha256.
+"""
 from pathlib import Path
 import json
 import paired_family_analysis as analysis
 
 def main():
+    """Re-verify every frozen identity, then rerun the estimator unchanged."""
     plan_path=analysis.ROOT/'configs/recovered_historical_analysis_protocol.json'
     plan=json.loads(plan_path.read_text())
     assert analysis.sha(__file__)==plan['runner_sha256']

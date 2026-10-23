@@ -1,4 +1,21 @@
-"""Curate four primary Ta0887 measurements with deposited processed construct."""
+"""Curate four primary Ta0887 esterase measurements with deposited processed construct.
+
+Reads staged raw evidence for Europe PMC PMC13498779 (article XML, PDB 10XN
+CIF/FASTA, UniProt Q9HJS7 FASTA, PubChem 4-nitrophenyl ester records) from
+``artifacts/external/temporal-absolute-kinetics/public-batch-20261004`` into
+``europepmc-PMC13498779/raw``, screens the exact processed construct
+(GPH + Q9HJS7) against the SHA-256-pinned development reference with frozen
+MMseqs2, and writes ``construct_sequences.fasta``, ``candidate_records.csv``,
+``provenance.json``, and ``homology-audit.json``.
+
+Accept/exclude logic: the four Table 2 p-NP ester kcat rows (acetate, butyrate,
+hexanoate, octanoate) are accepted as ``accepted_homology_cold_pool`` only when
+the construct has zero development-corpus hits, the article carries CC-BY-4.0,
+and a Vmax/native-mass unit cross-check agrees within 1.5%; any failed marker
+assertion aborts the run before outputs are written. Governance role:
+fail-closed cold-pool curation -- readiness gate stays False, no model
+predictions are generated.
+"""
 import csv
 import hashlib
 import json
@@ -25,6 +42,7 @@ VERSION='5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    """Validate evidence, run the pinned homology screen, and emit accepted records."""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     RAW.mkdir(parents=True,exist_ok=True)

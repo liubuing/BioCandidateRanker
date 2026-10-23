@@ -1,4 +1,18 @@
-"""Inventory storage and maintain a bounded, incremental evidence index without moving files."""
+"""Inventory storage and maintain a bounded, incremental evidence index without moving files.
+
+Walks ``artifacts/`` and ``data/`` in place, classifies files (evidence, cache,
+environment, link, research output), incrementally hashes evidence within a
+per-run byte budget (reusing prior SHA-256s for unchanged size/mtime), and
+reconciles each temporal-kinetics source against the read-only registry to
+assign layers (accepted_source_evidence / archive_candidate / pending). Writes
+``artifacts/data-pool-management/``: ``index.sqlite``, ``report.json``,
+``report.md``, ``registry-current.json``, and content-addressed evidence
+snapshots under ``snapshots/``.
+
+Governance role: index-only bookkeeping -- no files are moved or deleted, and
+``--reviewed-source`` acknowledgements fail closed unless the source is fully
+hashed, resolved, and error-free.
+"""
 
 from __future__ import annotations
 
@@ -31,12 +45,14 @@ def encode(value: object) -> str:
 
 
 def source_id(path: str) -> str | None:
+    """Return the temporal-pool source name for a path, or None outside the pool."""
     parts = Path(path).as_posix().split("/")
     prefix = POOL.split("/")
     return parts[len(prefix)] if parts[:len(prefix)] == prefix and len(parts) > 4 else None
 
 
 def storage_kind(path: str) -> str:
+    """Classify a path as cache, environment, evidence, or research output."""
     parts = set(Path(path).parts)
     if parts & CACHE_PARTS:
         return "cache"
@@ -48,6 +64,7 @@ def storage_kind(path: str) -> str:
 
 
 def scan(root: Path, output: Path, previous: dict, budget: int, verify: bool) -> tuple:
+    """Walk the tree, reuse or spend the hash budget, and return the file inventory."""
     files = []
     errors = []
     for folder in ("artifacts", "data"):
@@ -115,6 +132,7 @@ def scan(root: Path, output: Path, previous: dict, budget: int, verify: bool) ->
 
 
 def manage(root: Path, budget: int, verify: bool = False, reviewed: tuple = ()) -> dict:
+    """Build the index, layer sources, snapshot evidence, and write the report bundle."""
     root = root.resolve()
     output = root / OUTPUT
     output.mkdir(parents=True, exist_ok=True)
@@ -289,6 +307,7 @@ def manage(root: Path, budget: int, verify: bool = False, reviewed: tuple = ()) 
 
 
 def main() -> int:
+    """Run the inventory and print a summary; exit nonzero when scan errors exist."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--hash-budget-mib", type=int, default=1024)

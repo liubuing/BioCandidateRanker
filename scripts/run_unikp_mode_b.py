@@ -3,7 +3,8 @@
 Uses the local UniKP deployment's frozen pretrained feature extractors exactly as
 published (SMILES transformer + ProtT5-XL-UniRef50 mean pooling), computes embeddings
 once over unique rows, and fits one ExtraTreesRegressor per frozen seed on the train
-partition only. Test predictions and metrics are written per seed under the protocol's
+partition only. Test predictions and metrics are written per seed (default set
+7, 42, 123) under the protocol's
 artifacts root. Governed by configs/sota_homology_cold_comparison_protocol.json.
 """
 
@@ -98,7 +99,8 @@ def main() -> None:
         trfm.eval()
 
         pad_index, unk_index, sos_index, eos_index = 0, 1, 2, 3
-
+        # Fixed by the published UniKP vocabulary; get_inputs pads/truncates
+        # every SMILES to the 220-token window the pretrained trfm expects.
         def get_inputs(sm: str) -> tuple[list[int], list[int]]:
             seq_len = 220
             sm = sm.split()
@@ -151,6 +153,8 @@ def main() -> None:
                 batch = unique_sequences[start:start + args.prot_t5_batch]
                 prepared = []
                 for sequence in batch:
+                    # Long sequences keep the first and last 500 residues,
+                    # mirroring UniKP's published ProtT5 preprocessing.
                     if len(sequence) > 1000:
                         sequence = sequence[:500] + sequence[-500:]
                     prepared.append(re.sub(r"[UZOB]", "X", " ".join(sequence)))
@@ -161,6 +165,8 @@ def main() -> None:
                                     attention_mask=attention_mask).last_hidden_state.cpu().numpy()
                 for row_index in range(len(embedding)):
                     seq_len = int(attention_mask[row_index].sum())
+                    # Drop the appended EOS position so mean pooling covers
+                    # real residues only, matching UniKP's mean-pooling scheme.
                     seq_emb = embedding[row_index][:seq_len - 1]
                     features.append(seq_emb.mean(axis=0))
                 done = start + len(batch)
@@ -208,6 +214,7 @@ def main() -> None:
     for seed in args.seeds:
         run_dir = args.out_dir / f"seed{seed}"
         run_dir.mkdir(parents=True, exist_ok=True)
+        # Only the seed varies across fits; UniKP's default forest settings apply.
         model = ExtraTreesRegressor(random_state=seed)
         model.fit(x_train, y_train)
         predictions = model.predict(x_test)

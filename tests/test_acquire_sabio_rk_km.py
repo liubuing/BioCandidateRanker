@@ -1,3 +1,10 @@
+"""Pins the governed Sabio-RK Km acquisition's fail-closed blocker artifact.
+
+Requires the prepared acquisition workspace under artifacts/; checks that the
+blocker JSON proves no training outputs were emitted and that 404 redirects
+were recorded once without being retried.
+"""
+
 import importlib.util
 import json
 from pathlib import Path

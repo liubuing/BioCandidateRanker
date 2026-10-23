@@ -1,10 +1,19 @@
-"""Atomic epoch-boundary state for single-member CatPred runs."""
+"""Atomic epoch-boundary state for single-member CatPred runs.
+
+save() persists complete epoch-boundary state (model, optimizer, scheduler,
+sampler and Python/NumPy/Torch/CUDA RNG states, plus the latest best
+checkpoint bytes) atomically via a tmp file and os.replace; restore() replays
+it so a rerun is deterministic. The saved identity must match the
+CATPRED_RECOVERY_ID environment variable, and CATPRED_TEST_STOP_EPOCH makes
+save() exit 75 to rehearse interruption at a chosen epoch.
+"""
 from pathlib import Path
 import os,random
 import numpy as np
 import torch
 
 def pack(value):
+    """Recursively convert NumPy arrays/scalars into JSON-safe structures."""
     if isinstance(value,np.ndarray):return {'__array__':value.tolist(),'dtype':str(value.dtype)}
     if isinstance(value,np.generic):return value.item()
     if isinstance(value,dict):return {k:pack(v) for k,v in value.items()}
@@ -13,6 +22,7 @@ def pack(value):
     return value
 
 def unpack(value):
+    """Inverse of pack: rebuild NumPy arrays and containers from saved structures."""
     if isinstance(value,dict) and set(value)=={'__array__','dtype'}:return np.array(value['__array__'],dtype=value['dtype'])
     if isinstance(value,dict):return {k:unpack(v) for k,v in value.items()}
     if isinstance(value,tuple):return tuple(unpack(v) for v in value)
@@ -20,6 +30,7 @@ def unpack(value):
     return value
 
 def restore(folder,model,optimizer,scheduler,loader):
+    """Load recovery.pt if present; return (start_epoch, best_score, best_epoch, n_iter)."""
     path=Path(folder)/'recovery.pt'
     if not path.exists():return 0,float('inf'),0,0
     state=unpack(torch.load(path,map_location='cpu',weights_only=True))
@@ -35,6 +46,7 @@ def restore(folder,model,optimizer,scheduler,loader):
     return state['epoch']+1,state['best_score'],state['best_epoch'],state['n_iter']
 
 def save(folder,model,optimizer,scheduler,loader,epoch,best_score,best_epoch,n_iter):
+    """Atomically persist all epoch-boundary state after each epoch."""
     state={'identity':os.environ['CATPRED_RECOVERY_ID'],'epoch':epoch,'model':model.state_dict(),
         'optimizer':optimizer.state_dict(),'scheduler':pack(scheduler.state_dict()),
         'sampler_rng':loader._sampler._random.getstate(),'python_rng':random.getstate(),

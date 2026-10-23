@@ -1,3 +1,5 @@
+"""Model package facade: the ranker architecture and the governed training losses."""
+
 from .losses import (
     masked_multitask_gaussian_loss,
     masked_multitask_mse_loss,

@@ -1,3 +1,9 @@
+"""Pins the software-release freeze: the current manifest is internally
+consistent and byte-verifiable, re-freezes never widen the frozen file set,
+historical manifests survive untouched, and external data blockers stay
+explicit.
+"""
+
 import json
 from pathlib import Path
 
@@ -9,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # The closed baseline. Bump both when a new release is frozen; the tests below
 # then verify the new one, and the superseded release joins the historical list.
-CURRENT_RELEASE_ID = "software-implementation-v9"
-CURRENT_RELEASE_MANIFEST = "configs/software_implementation_release_v9.json"
+CURRENT_RELEASE_ID = "software-implementation-v10"
+CURRENT_RELEASE_MANIFEST = "configs/software_implementation_release_v10.json"
 
 
 def test_current_release_manifest_is_internally_consistent():
@@ -44,7 +50,7 @@ def test_current_release_does_not_widen_the_frozen_scope():
     ]
 
 
-def test_v1_through_v8_release_manifests_exist_as_historical_records():
+def test_v1_through_v9_release_manifests_exist_as_historical_records():
     for path, release_id, predecessor in (
         ("configs/software_implementation_release_v1.json", "software-implementation-v1", None),
         ("configs/software_implementation_release_v2.json", "software-implementation-v2", "software-implementation-v1"),
@@ -54,6 +60,7 @@ def test_v1_through_v8_release_manifests_exist_as_historical_records():
         ("configs/software_implementation_release_v6.json", "software-implementation-v6", "software-implementation-v5"),
         ("configs/software_implementation_release_v7.json", "software-implementation-v7", "software-implementation-v6"),
         ("configs/software_implementation_release_v8.json", "software-implementation-v8", "software-implementation-v7"),
+        ("configs/software_implementation_release_v9.json", "software-implementation-v9", "software-implementation-v8"),
     ):
         manifest = json.loads((ROOT / path).read_text(encoding="utf-8"))
         assert manifest["release_id"] == release_id

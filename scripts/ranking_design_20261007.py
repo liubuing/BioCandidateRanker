@@ -1,4 +1,17 @@
-"""Read-only workbook structure audit and label-free rank-null simulation."""
+"""Read-only workbook structure audit and label-free rank-null simulation.
+
+Reads the stored A. comosus kinetics workbook (``Kinetic_Acomosus_and_variant.xlsx``)
+and the 20261006 ranking-campaign review, and writes two artifacts under
+``artifacts/external/ranking-design-20261007``: ``citrate-workbook-audit.json``
+(observed sheet layout, formulas, and unresolved unit/replicate caveats with the
+workbook hash re-verified after reading) and ``design-simulation.json``
+(metadata-size sensitivity over reviewed campaign groups plus a seeded,
+label-free Spearman rank-null simulation under independent uniform ranks).
+
+Governance role: read-only decision aid -- external labels and predictions are
+never read, the workbook is never modified, no minimum group size is frozen and
+no significance gate is created.
+"""
 import hashlib
 import json
 import math
@@ -15,6 +28,7 @@ def sha(p):
 
 
 def main():
+    """Audit the workbook layout and run the label-free design simulations."""
     OUT.mkdir(exist_ok=True)
     p = ROOT/'artifacts/external/temporal-absolute-kinetics/edmond-S0HJ48/raw/Kinetic_Acomosus_and_variant.xlsx'
     original_hash = sha(p)

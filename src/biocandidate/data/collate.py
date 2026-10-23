@@ -1,3 +1,10 @@
+"""Batch collation of :class:`EnzymeSubstrateRecord` rows into model tensors.
+
+Tokenizes sequences, converts substrate SMILES into sparse molecular graphs,
+hashes organism/EC/enzyme/reaction context into fixed bucket ids, and packs
+sparse multi-task labels (``labels`` plus ``label_mask``) with evidence-tier
+weights. The returned key set is the input contract of the ranker model.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -15,6 +22,8 @@ AMINO_ACIDS = "ACDEFGHIKLMNPQRSTVWY"
 
 
 class AminoAcidTokenizer:
+    """Fixed project vocabulary: 0=pad, 1=unknown, 2-21 map onto the 20 canonical acids."""
+
     pad_id = 0
     unknown_id = 1
 
@@ -30,6 +39,7 @@ class AminoAcidTokenizer:
         return tuple(self._ids.get(amino_acid, self.unknown_id) for amino_acid in sequence.upper())
 
     def pad(self, sequences: Sequence[str]) -> tuple[torch.Tensor, torch.Tensor]:
+        """Encode sequences and right-pad them into rectangular token and mask tensors."""
         encoded = [self.encode(sequence) for sequence in sequences]
         width = max((len(item) for item in encoded), default=0)
         tokens = torch.full((len(encoded), width), self.pad_id, dtype=torch.long)
@@ -43,6 +53,8 @@ class AminoAcidTokenizer:
 
 @dataclass(frozen=True, slots=True)
 class MolecularGraph:
+    """Sparse molecular graph: integer atom/bond features and a COO edge index."""
+
     atom_features: torch.Tensor
     edge_index: torch.Tensor
     edge_features: torch.Tensor
@@ -50,6 +62,13 @@ class MolecularGraph:
 
 @lru_cache(maxsize=8192)
 def smiles_to_sparse_graph(smiles: str) -> MolecularGraph:
+    """Convert a single-component SMILES into a cached sparse graph.
+
+    Atom features are (atomic number, degree, formal charge, aromatic,
+    hybridization, total Hs); bond features are (type, conjugated, in-ring)
+    with both directions stored per bond. The result is shared across batches
+    via the cache and must not be mutated by callers.
+    """
     Chem = require_rdkit()
     molecule = Chem.MolFromSmiles(smiles)
     if molecule is None:
@@ -85,6 +104,7 @@ def smiles_to_sparse_graph(smiles: str) -> MolecularGraph:
 
 
 def _hash_id(value: str, buckets: int) -> int:
+    """Hash a context string into [1, buckets); 0 stays reserved as the "missing" id."""
     if not value:
         return 0
     digest = hashlib.sha256(value.encode("utf-8")).digest()
@@ -92,6 +112,8 @@ def _hash_id(value: str, buckets: int) -> int:
 
 
 class EnzymeSubstrateCollator:
+    """Collate records into the tensor batch consumed by ``BioCandidateRanker``."""
+
     def __init__(
         self,
         *,
@@ -161,6 +183,8 @@ class EnzymeSubstrateCollator:
                 fba_context[row] = torch.tensor(record.fba_context, dtype=torch.float32)
                 fba_context_mask[row] = True
         evidence_weights = {
+            # Per-tier loss weights: stronger provenance contributes more to
+            # the masked training loss through the evidence_weight column.
             "direct": 1.0,
             "curated": 0.75,
             "inferred": 0.25,
@@ -190,6 +214,7 @@ class EnzymeSubstrateCollator:
 
 
 def _stable_campaign_id(value: str) -> int:
+    """Map a campaign group string to a positive int64; 0 is reserved for empty groups."""
     if not value:
         return 0
     digest = hashlib.sha256(value.encode("utf-8")).digest()

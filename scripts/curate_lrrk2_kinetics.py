@@ -1,3 +1,14 @@
+"""Curate full-length human LRRK2 (Q5S007) GTPase kcat rows from DOI 10.7554/eLife.91083.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/zenodo-14055918:
+candidate_records.csv (seven Table 1 rows: WT and four Parkinson variants, with and
+without ATP preincubation), construct_sequences.fasta (full-length native sequences with
+point mutations applied), provenance.json, and homology-audit.json.
+
+The kcat min-1 -> s-1 conversion is the only transformation. Rows start as
+pending_homology and are re-statused by the frozen MMseqs2 result against the
+development reference; MBP-RocCOR construct rows are out of scope.
+"""
 from __future__ import annotations
 
 import csv
@@ -11,6 +22,7 @@ SOURCE = ROOT / "artifacts" / "external" / "temporal-absolute-kinetics" / "zenod
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -19,12 +31,15 @@ def read_fasta(path: Path) -> str:
 
 
 def substitute(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation, failing on a wrong wild-type residue."""
     if sequence[position - 1] != expected:
         raise ValueError(f"Expected {expected}{position}, found {sequence[position - 1]}{position}")
     return sequence[: position - 1] + replacement + sequence[position:]
 
 
 def build_sequences() -> dict[str, tuple[str, str]]:
+    """Build the WT and four variant full-length sequences; return sequence_id -> (variant,
+    sequence)."""
     wt = read_fasta(SOURCE / "raw" / "Q5S007.fasta")
     return {
         "lrrk2-wt": ("WT", wt),
@@ -36,6 +51,8 @@ def build_sequences() -> dict[str, tuple[str, str]]:
 
 
 def build_records() -> list[dict[str, object]]:
+    """Turn the frozen Table 1 rows into pending_homology candidate records, converting kcat to
+    s-1."""
     rows = [
         ("lrrk2-wt", "WT", False, 554, 62, 0.36, 0.02, 5),
         ("lrrk2-wt", "WT", True, 1036, 169, 0.14, 0.01, 2),
@@ -84,6 +101,8 @@ def build_records() -> list[dict[str, object]]:
 
 
 def apply_homology_status(records: list[dict[str, object]]) -> None:
+    """Re-status records from the frozen homology hits; leave pending_homology untouched when the
+    hits file is absent."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     if not hit_path.exists():
         return
@@ -101,10 +120,13 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
+    """Build sequences and records, apply homology status, and write the CSV/FASTA/provenance/audit
+    bundle."""
     sequences = build_sequences()
     records = build_records()
     apply_homology_status(records)

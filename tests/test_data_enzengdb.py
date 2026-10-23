@@ -1,3 +1,8 @@
+"""Pins the EnzEngDB adapter and campaign-ranking primitives: primary-reactant
+selection, fail-closed row auditing, tie-aware percentile ranks, deterministic
+consensus representatives, and ranking metric edge cases.
+"""
+
 import csv
 import tempfile
 import unittest

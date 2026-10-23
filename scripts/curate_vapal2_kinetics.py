@@ -1,3 +1,24 @@
+"""Curate VaPAL2 asparaginyl endoprotease kinetics (DOI 10.1016/j.jbc.2026.111301).
+
+Downloads and validates the Europe PMC PMC12995904 deposit (full-text XML,
+rendered PDF, supplementary-file ZIP, Crossref record) into
+``artifacts/external/temporal-absolute-kinetics/europepmc-PMC12995904/raw``,
+reconstructs the exact His6-expressed VaPAL2 zymogens from the supplement
+(Table S4 primer, Data S1 FASTA), screens them against the SHA-256-pinned
+UniKP reference with frozen MMseqs2, and writes ``acquisition-attempts.json``,
+``supplement-inventory.json``, ``authoritative_translated_sequences.fasta``,
+``construct_sequences.fasta``, ``substrate-structure-evidence.json``,
+``measurement-audit.json``, ``homology-audit.json``, ``blocker-evidence.json``,
+and ``provenance.json``.
+
+Accept/exclude logic: none of the three Figure 3C kcat rows (VaPAL2,
+VaPAL2(I244A), OaAEP1b(C247A)) is curated -- the autocatalytically processed
+active-enzyme termini are unreported and the GN10-SL peptide substrate has no
+PubChem structure identifier accepted by the frozen registry. Any
+development-corpus hit on the conservative exact zymogen queries likewise
+forces the blocker. Governance role: fail-closed -- zero candidate records, a
+``curation_blocked`` blocker is always emitted, and no model predictions run.
+"""
 from __future__ import annotations
 
 import argparse
@@ -61,6 +82,7 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
+    """Fetch pinned article assets, reusing local copies, and record the acquisition log."""
     RAW.mkdir(parents=True, exist_ok=True)
     attempts = []
     for name, url in DOWNLOADS.items():
@@ -91,6 +113,7 @@ def download() -> None:
 
 
 def docx_paragraphs(payload: bytes) -> list[str]:
+    """Extract non-empty paragraph texts from an in-memory DOCX payload."""
     temp = RAW / "_docx-inspection.zip"
     temp.write_bytes(payload)
     try:
@@ -108,6 +131,7 @@ def docx_paragraphs(payload: bytes) -> list[str]:
 
 
 def extract_supplements() -> list[dict[str, object]]:
+    """Unpack the supplement ZIP and write a hashed inventory with DOCX text extractions."""
     extracted = RAW / "supplements"
     extracted.mkdir(exist_ok=True)
     inventory = []
@@ -140,6 +164,7 @@ def extract_supplements() -> list[dict[str, object]]:
 
 
 def validate_article() -> str:
+    """Fail unless the article XML carries the pinned DOI, license, and kinetics tokens."""
     xml = (RAW / f"{PMC_ID}-fullText.xml").read_text(encoding="utf-8")
     required = (
         f'<article-id pub-id-type="doi">{DOI}</article-id>',
@@ -156,6 +181,7 @@ def validate_article() -> str:
 
 
 def inspect_authoritative_text() -> dict[str, object]:
+    """Collect supplement-text evidence lines for the pinned enzyme and motif terms."""
     text_files = sorted((RAW / "supplements").glob("*.docx.txt"))
     joined = "\n".join(path.read_text(encoding="utf-8") for path in text_files)
     evidence = {}
@@ -166,6 +192,7 @@ def inspect_authoritative_text() -> dict[str, object]:
 
 
 def exact_source_sequences() -> tuple[str, str, str]:
+    """Recover native, His6-expressed WT, and I244A zymogen sequences from the SI."""
     text = (RAW / "supplements" / "mmc1.docx.txt").read_text(encoding="utf-8")
     match = re.search(r"^>VaPAL2\s*\n([A-Z]+)$", text, re.MULTILINE)
     if not match:
@@ -186,11 +213,13 @@ def exact_source_sequences() -> tuple[str, str, str]:
 
 
 def windows_to_wsl(path: Path) -> str:
+    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations."""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive[0].lower()}/{resolved.as_posix()[3:]}"
 
 
 def write_sequence_evidence(native: str, wt: str, variant: str) -> Path:
+    """Write authoritative and query FASTAs; return the homology query path."""
     source_fasta = SOURCE / "authoritative_translated_sequences.fasta"
     source_fasta.write_text(
         ">VaPAL2_native_Data_S1 length=483; supplement_Figure_S2_caption_claims_1551bp\n"
@@ -217,6 +246,7 @@ def write_sequence_evidence(native: str, wt: str, variant: str) -> Path:
 
 
 def write_substrate_evidence() -> None:
+    """Record the GN10-SL peptide identity and why the frozen registry rejects it."""
     evidence = {
         "name": "GN10-SL",
         "linear_sequence": "GLRRGYSGSNSL",
@@ -243,6 +273,7 @@ def write_substrate_evidence() -> None:
 
 
 def write_measurement_audit() -> None:
+    """Log all reported kcat rows as non-curated with the blocking rationale."""
     rows = [
         ("VaPAL2", 100, 3.5, 0.2, 140, 30, 2.5e4),
         ("VaPAL2(I244A)", 50, 16.9, 0.8, 87, 20, 1.9e5),
@@ -292,6 +323,7 @@ def write_measurement_audit() -> None:
 
 
 def write_blocker(reason_code: str, reason: str, inspection: dict[str, object]) -> None:
+    """Emit the fail-closed blocker record asserting no labels or predictions."""
     blocker = {
         "schema_version": 1,
         "source_id": SOURCE_ID,
@@ -313,6 +345,7 @@ def write_blocker(reason_code: str, reason: str, inspection: dict[str, object]) 
 
 
 def write_provenance(status: str, inspection: dict[str, object]) -> None:
+    """Write final provenance with per-file SHA-256 over everything under SOURCE."""
     raw_files = sorted(path for path in RAW.rglob("*") if path.is_file())
     provenance = {
         "source_id": SOURCE_ID,
@@ -338,6 +371,7 @@ def write_provenance(status: str, inspection: dict[str, object]) -> None:
 
 
 def run_frozen_homology(query: Path) -> dict[str, object]:
+    """Search zymogens against the pinned reference and write the homology audit."""
     if sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen UniKP reference hash changed")
     probe = subprocess.run(
@@ -403,6 +437,7 @@ def run_frozen_homology(query: Path) -> dict[str, object]:
 
 
 def main() -> None:
+    """Gate the VaPAL2 source: acquire, validate, screen homology, and emit the blocker."""
     parser = argparse.ArgumentParser(description="Acquire and gate VaPAL2 absolute kinetics")
     parser.add_argument("--no-download", action="store_true")
     args = parser.parse_args()

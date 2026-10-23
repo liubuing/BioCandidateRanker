@@ -1,4 +1,16 @@
-"""Run three frozen current-code training jobs, without test evaluation (Windows)."""
+"""Run the three frozen current-code training jobs; no test evaluation (Windows).
+
+Reads configs/current_code_retrain_protocol.json, which pins this runner's own
+SHA256, every frozen input file, the training source tree, the pretrained
+weights and the seed set (7, 42, 123). For each seed it re-verifies all
+hashes, launches ``biocandidate.cli train`` as a subprocess with the frozen
+configuration, and writes an execution.json receipt plus train.log under
+artifacts/current-code-retrain/seed<seed>/; completed-training-manifest.json
+is written only after every seed finishes. Governance: an exclusive msvcrt
+file lock serialises runs; a completed receipt short-circuits that seed while
+an incomplete receipt fails closed and demands a manual recovery audit; the
+held-out test partition is never evaluated.
+"""
 from pathlib import Path
 import hashlib, json, os, subprocess, sys, time, msvcrt
 
@@ -16,10 +28,14 @@ def write(path,data):
     tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8');os.replace(tmp,path)
 
 def main():
+    """Verify the freeze and run one training job per protocol seed, fail-closed throughout."""
     BASE.mkdir(exist_ok=True)
+    # Single-byte non-blocking lock: a second concurrent retrain on this
+    # machine would race the per-seed receipts, so refuse to start.
     lock=(BASE/'queue.lock').open('a+b');lock.seek(0);lock.write(b'0');lock.flush();lock.seek(0)
     msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
     p=json.loads(PROTOCOL.read_text(encoding='utf-8'))
+    # The protocol pins this runner's own hash, so any edit invalidates the freeze.
     assert sha(__file__)==p['runner_sha256']
     for e in p['frozen_files']:assert sha(ROOT/e['path'])==e['sha256'],e['path']
     assert sha(p['source_path'])==p['source_sha256']
@@ -34,6 +50,7 @@ def main():
             if old['status']=='completed':
                 assert old['protocol_sha256']==sha(PROTOCOL) and sha(folder/'best.pt')==old['checkpoint_sha256']
                 completed.append(old);continue
+            # An interrupted run must be audited by hand; never silently restart it.
             raise RuntimeError(f'Incomplete run needs recovery audit: {folder}')
         for e in p['frozen_files']:assert sha(ROOT/e['path'])==e['sha256'],e['path']
         cmd=[sys.executable,'-u','-m','biocandidate.cli','train','--data',p['source_path'],

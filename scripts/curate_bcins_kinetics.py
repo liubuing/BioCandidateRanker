@@ -1,3 +1,15 @@
+"""Curate Streptomyces clavuligerus 1,8-cineole synthase (bCinS) kinetics from DOI
+10.1111/febs.70308.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12958101:
+excluded_records.csv (identical copy of candidate_records.csv, all 11 apparent kcat rows),
+native_coordinate_homology_queries.fasta (WT and mutant B5GMG2 sequences), provenance.json,
+and homology-audit.json.
+
+The source is exclusion-only fail-closed: every reported kcat is an apparent 5-minute
+endpoint without substrate-saturation evidence, the exact His6-TEV assay constructs are
+unresolved, and the native-coordinate homology prescreen cannot cure those gates.
+"""
 from __future__ import annotations
 
 import argparse
@@ -76,6 +88,7 @@ REPORTED_VALUES = [
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -84,6 +97,7 @@ def sha256(path: Path) -> str:
 
 
 def acquire() -> None:
+    """Download the article, supplement archive, sequence, structure, and PubChem files into RAW."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in DOWNLOADS.items():
         path = RAW / name
@@ -98,6 +112,7 @@ def acquire() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the single-letter sequence of a protein FASTA, rejecting any non-residue character."""
     sequence = "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if not line.startswith(">")
@@ -108,6 +123,8 @@ def read_fasta(path: Path) -> str:
 
 
 def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...]) -> str:
+    """Apply 1-based (position, expected, replacement) point mutations, failing on a wrong
+    wild-type residue."""
     result = sequence
     for position, expected, replacement in changes:
         if result[position - 1] != expected:
@@ -117,6 +134,8 @@ def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...]) -> str:
 
 
 def verify_and_build_sequences() -> dict[str, str]:
+    """Validate raw evidence and DOI/license, then build the native-coordinate WT and variant
+    sequences."""
     required = [*DOWNLOADS, "FEBS-293-1341-s001.pdf"]
     missing = [name for name in required if not (RAW / name).is_file()]
     if missing:
@@ -154,6 +173,8 @@ def verify_and_build_sequences() -> dict[str, str]:
 
 
 def write_fasta(path: Path, sequences: dict[str, str]) -> None:
+    """Write the homology-query FASTA (80-column wrapped) with the explicit not-the-assay-construct
+    header."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id, sequence in sequences.items():
             handle.write(
@@ -164,6 +185,8 @@ def write_fasta(path: Path, sequences: dict[str, str]) -> None:
 
 
 def command(executable: str, *args: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -171,6 +194,7 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -178,6 +202,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(args: list[str]) -> str:
+    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit."""
     completed = subprocess.run(args, capture_output=True, text=True, check=False)
     if completed.returncode:
         raise RuntimeError(f"Command failed: {' '.join(args)}\n{completed.stderr}")
@@ -185,6 +210,8 @@ def run_checked(args: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Easy-search/easy-linclust the queries against the frozen reference; return (hits, clusters,
+    version)."""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -216,10 +243,13 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def sequence_id(variant: str) -> str:
+    """Return the native-coordinate sequence id for a variant label (e.g. "F74A" ->
+    "bcins-native-f74a")."""
     return "bcins-native-" + variant.lower().replace("-", "-")
 
 
 def substrate_structure(code: str) -> tuple[int, str]:
+    """Return the (PubChem CID, isomeric SMILES) recorded for a substrate code."""
     cid = SUBSTRATES[code][1]
     item = json.loads((RAW / f"pubchem-{code}-{cid}.json").read_text(encoding="utf-8"))[
         "PropertyTable"
@@ -228,6 +258,8 @@ def substrate_structure(code: str) -> tuple[int, str]:
 
 
 def excluded_records(hit_queries: set[str]) -> list[dict[str, object]]:
+    """Build one excluded row per reported apparent kcat, stamping saturation/construct gates and
+    any frozen-mmseqs hit."""
     rows = []
     for index, (variant, substrate, product_scope, value, error) in enumerate(REPORTED_VALUES, 1):
         cid, smiles = substrate_structure(substrate)
@@ -284,6 +316,8 @@ def excluded_records(hit_queries: set[str]) -> list[dict[str, object]]:
 
 
 def write_outputs(sequences: dict[str, str], hits: Path, clusters: Path, version: str) -> None:
+    """Write the exclusion CSVs, provenance.json, and homology-audit.json, hash-bound to the raw
+    and homology outputs."""
     fasta = SOURCE / "native_coordinate_homology_queries.fasta"
     hit_lines = [line for line in hits.read_text(encoding="utf-8").splitlines() if line]
     hit_queries = {line.split("\t", 1)[0] for line in hit_lines}
@@ -371,6 +405,8 @@ def write_outputs(sequences: dict[str, str], hits: Path, clusters: Path, version
 
 
 def main() -> None:
+    """Run the download/verify/homology/write pipeline; raw files are only fetched under
+    --download."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

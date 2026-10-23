@@ -1,3 +1,15 @@
+"""Curate bifunctional CM-CDT / CDT-CM fusion chorismate enzymes from DOI 10.1016/j.jbc.2023.105161.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC10520331:
+candidate_records.csv (direct single-activity rows), exclusions.csv (coupled/no-activity/
+duplicate cells and sub-saturation rows), construct_sequences.fasta (13 exact leaderless
+assay constructs rebuilt from SI DNA and primers), pdb_construct_mapping.csv,
+provenance.json, and homology-audit.json.
+
+A direct row is admitted only when the 100 uM maximum varied substrate reaches 5x the
+fitted Km; survivors are re-statused by the frozen MMseqs2 result (hit -> excluded_homology,
+else homology-cold). Sequential coupled CM+CDT apparent kcat values are never candidates.
+"""
 from __future__ import annotations
 
 import argparse
@@ -179,6 +191,8 @@ CODON_TABLE = {
 
 
 def download_raw() -> None:
+    """Fetch article/supplement/PDB/PubChem files with retry/backoff and extract mmc1.pdf from the
+    archive."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in DOWNLOADS.items():
         path = RAW / name
@@ -203,6 +217,7 @@ def download_raw() -> None:
 
 
 def sha256(path: Path) -> str:
+    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -211,6 +226,7 @@ def sha256(path: Path) -> str:
 
 
 def translate(dna: str) -> str:
+    """Translate from the first ATG to the first in-frame stop, failing if either is missing."""
     start = dna.find("ATG")
     if start < 0:
         raise ValueError("Expression DNA lacks a start codon")
@@ -224,6 +240,8 @@ def translate(dna: str) -> str:
 
 
 def si_parent_sequences() -> dict[str, str]:
+    """Extract and translate the six parent expression DNAs from the SI PDF, enforcing exact
+    lengths."""
     expected_lengths = {
         "WP_083814300.1": 424,
         "WP_116808336.1": 435,
@@ -255,6 +273,7 @@ def si_parent_sequences() -> dict[str, str]:
 
 
 def cif_sequence(path: Path) -> str:
+    """Return the canonical one-letter polymer sequence embedded in a mmCIF file."""
     text = path.read_text(encoding="utf-8")
     match = re.search(
         r"_entity_poly\.pdbx_seq_one_letter_code_can\s*\n;([^;]+);", text, re.DOTALL
@@ -265,6 +284,8 @@ def cif_sequence(path: Path) -> str:
 
 
 def mutate_precursor(sequence: str, position: int, expected: str, replacement: str) -> str:
+    """Apply one 1-based point mutation on full-precursor numbering, failing on a wrong wild-type
+    residue."""
     residues = list(sequence)
     if residues[position - 1] != expected:
         raise ValueError(f"Expected precursor residue {expected}{position}, found {residues[position - 1]}")
@@ -273,12 +294,16 @@ def mutate_precursor(sequence: str, position: int, expected: str, replacement: s
 
 
 def leaderless(sequence: str, marker: str) -> str:
+    """Strip the signal peptide: prepend Met at the unique mature marker, keeping the C-terminal
+    LE-His6 tag."""
     if not sequence.endswith("LEHHHHHH") or sequence.count(marker) != 1:
         raise ValueError(f"Cannot locate exact mature tagged construct using marker {marker}")
     return "M" + sequence[sequence.index(marker) :]
 
 
 def build_sequences() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
+    """Rebuild all 13 exact assay constructs (parents, KOs, splits); return (constructs, full
+    precursors by code)."""
     parent_precursors = si_parent_sequences()
     sequences: dict[str, dict[str, str]] = {}
     full_by_code = {}
@@ -341,6 +366,7 @@ def direct_record(
     km_sd: float,
     sequences: dict[str, dict[str, str]],
 ) -> dict[str, object]:
+    """Assemble one normalized direct-activity kcat record with its saturation diagnostics."""
     if code in PARENTS:
         parent = code
         sequence_id = str(PARENTS[code]["sequence_id"])
@@ -400,6 +426,8 @@ def direct_record(
 
 
 def build_records(sequences: dict[str, dict[str, str]]) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Build direct records plus the exclusion list (sub-saturation, coupled, nonfinite, and
+    duplicate cells)."""
     direct = [
         direct_record(f"cm-cdt-{index:03d}", *row, sequences)
         for index, row in enumerate(DIRECT_ROWS, 1)
@@ -460,6 +488,7 @@ def build_records(sequences: dict[str, dict[str, str]]) -> tuple[list[dict[str, 
 
 
 def exclusion(table: str, cell: str, value: object, error: object, reason: str) -> dict[str, object]:
+    """Return one exclusion row for a source cell that is not an admissible direct kcat."""
     return {
         "article_doi": DOI,
         "source_table": table,
@@ -476,6 +505,8 @@ def exclusion(table: str, cell: str, value: object, error: object, reason: str) 
 
 
 def verify_raw() -> None:
+    """Fail closed unless raw files, DOI, table values, PubChem records, and the frozen reference
+    all check out."""
     missing = [name for name in DOWNLOADS if not (RAW / name).is_file()]
     if missing or not (RAW / "mmc1.pdf").is_file():
         raise FileNotFoundError(f"Missing raw files: {missing}; run with --download")
@@ -500,6 +531,7 @@ def verify_raw() -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write ``rows`` as CSV, refusing to emit an empty artifact."""
     if not rows:
         raise ValueError(f"Cannot write empty artifact {path.name}")
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -509,6 +541,7 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def write_fasta(path: Path, sequences: dict[str, dict[str, str]]) -> None:
+    """Write the 80-column-wrapped construct FASTA with per-construct provenance in each header."""
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id in sorted(sequences):
             item = sequences[sequence_id]
@@ -519,12 +552,14 @@ def write_fasta(path: Path, sequences: dict[str, dict[str, str]]) -> None:
 
 
 def homology_hits(path: Path) -> set[str]:
+    """Return the distinct query ids in a homology hits TSV (empty set when the file is absent)."""
     if not path.is_file():
         return set()
     return {line.split("\t", 1)[0] for line in path.read_text(encoding="utf-8").splitlines() if line}
 
 
 def write_outputs() -> None:
+    """Verify raw evidence, gate on saturation and homology, and write the full evidence bundle."""
     verify_raw()
     sequences, full_by_code = build_sequences()
     records, exclusions = build_records(sequences)
@@ -631,6 +666,8 @@ def write_homology_audit(
     sequences: dict[str, dict[str, str]],
     fasta_path: Path,
 ) -> None:
+    """Write homology-audit.json (no-op if MMseqs outputs are absent), hash-binding FASTA, hits,
+    and clusters."""
     hit_path = SOURCE / "homology" / "homology_hits.tsv"
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
     if not hit_path.is_file() or not cluster_path.is_file():
@@ -677,6 +714,8 @@ def verify_outputs(
     exclusions: list[dict[str, object]],
     sequences: dict[str, dict[str, str]],
 ) -> None:
+    """Fail closed on cardinality, finiteness, saturation, activity/substrate consistency, and
+    required artifacts."""
     if len(records) != 17 or len(sequences) != 13 or len(exclusions) != 23:
         raise ValueError(
             f"Unexpected cardinality: {len(records)} records, {len(sequences)} sequences, {len(exclusions)} exclusions"
@@ -721,6 +760,7 @@ def verify_outputs(
 
 
 def main() -> None:
+    """Run the download/verify/write pipeline for the CM-CDT fusion source."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args()

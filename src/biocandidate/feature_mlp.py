@@ -1,3 +1,12 @@
+"""Feature-based MLP baseline for log10_kcat regression.
+
+Trains a small multilayer perceptron on the classical features from
+:mod:`biocandidate.baselines` under a governed protocol: seeded training,
+standardization fitted on the train partition only, and the reported epoch
+selected by validation RMSE. It exists to give the deep ranker a like-for-like
+shallow reference on identical splits.
+"""
+
 from __future__ import annotations
 
 import os
@@ -13,6 +22,8 @@ from .evaluation import regression_metrics
 
 
 class FeatureMLP(nn.Module):
+    """Plain MLP regressor: Linear/SiLU/Dropout blocks ending in one scalar output."""
+
     def __init__(
         self, input_dimension: int, hidden_dimensions: tuple[int, ...], dropout: float,
     ) -> None:
@@ -31,6 +42,11 @@ class FeatureMLP(nn.Module):
 def standardize_features(
     train: np.ndarray, validation: np.ndarray, test: np.ndarray,
 ) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray]:
+    """Z-score all partitions with train-only mean and standard deviation.
+
+    Zero-variance columns are rescaled by 1.0 instead of dividing by zero, and
+    the fitted statistics are returned so inference can reproduce them.
+    """
     mean = train.mean(axis=0, dtype=np.float64)
     standard_deviation = train.std(axis=0, dtype=np.float64)
     standard_deviation[standard_deviation == 0] = 1.0
@@ -55,6 +71,12 @@ def train_feature_mlp(
     dropout: float,
     device: torch.device,
 ) -> tuple[FeatureMLP, dict, np.ndarray, np.ndarray]:
+    """Train the MLP; return (model, metrics, feature mean, feature stddev).
+
+    The seed pins torch (CPU and CUDA) and the DataLoader shuffling. The epoch
+    with the lowest validation RMSE is restored before test metrics are
+    computed, so test labels never influence model selection.
+    """
     if set(features) != {"train", "validation", "test"} or set(labels) != set(features):
         raise ValueError("feature MLP requires train, validation, and test partitions")
     if epochs < 1 or batch_size < 1:
@@ -125,6 +147,7 @@ def train_feature_mlp(
 
 
 def save_feature_checkpoint(payload: dict, path: str | Path) -> None:
+    """Write a torch payload atomically via a temp file plus ``os.replace``."""
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(

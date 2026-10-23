@@ -1,3 +1,14 @@
+"""Command-line entry points for every governed BioCandidateRanker pipeline.
+
+Subcommands cover the protocol stages end to end: dataset audits, homology and
+cold splits, ranker training, evaluation, uncertainty calibration, external
+transfer benchmarks (EnzEngDB, Lunzer, DLKcat), and run summaries. Every
+command re-verifies the frozen SHA256 identities of its inputs (data manifests,
+split manifests, protocols, checkpoints) before doing work and raises on any
+mismatch, so artifacts can only be produced against byte-exact,
+protocol-frozen inputs.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -102,6 +113,7 @@ def _calibration_identities(checkpoint: str | Path, task: str) -> dict:
 
 
 def audit_command(args: argparse.Namespace) -> None:
+    """Audit the UniKP source file and report adapter accept/reject counts."""
     manifest = build_manifest(args.data)
     result = read_unikp_json(args.data)
     output = {
@@ -127,6 +139,7 @@ def audit_command(args: argparse.Namespace) -> None:
 
 
 def audit_lunzer_command(args: argparse.Namespace) -> None:
+    """Audit the frozen Lunzer source and report the confirmatory protocol view."""
     source_identity = build_manifest(args.data)
     if (source_identity.sha256 != LUNZER_SOURCE_SHA256
             or source_identity.size_bytes != LUNZER_SOURCE_SIZE_BYTES):
@@ -190,6 +203,11 @@ def audit_lunzer_command(args: argparse.Namespace) -> None:
 
 def _select_enzengdb_observations(observations, *, min_campaign_size: int,
                                   max_records_per_campaign: int) -> tuple[list, dict]:
+    """Label-independent selection: order by SHA256(candidate_id), then cap each campaign.
+
+    Sorting by a hash of the id makes the frozen selection independent of the
+    fitness values, so no label can influence which rows enter the benchmark.
+    """
     campaigns = defaultdict(list)
     for observation in observations:
         campaigns[observation.campaign_id].append(observation)
@@ -211,6 +229,7 @@ def _select_enzengdb_observations(observations, *, min_campaign_size: int,
 
 
 def audit_enzengdb_command(args: argparse.Namespace) -> None:
+    """Audit EnzEngDB, freeze the label-independent selection, and report UniKP overlap."""
     if args.exclude_homology_hits and not args.mmseqs:
         raise ValueError("--exclude-homology-hits requires --mmseqs")
     archive_identity = build_manifest(args.archive)
@@ -351,6 +370,7 @@ def audit_enzengdb_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_enzengdb_command(args: argparse.Namespace) -> None:
+    """Score a checkpoint on the frozen EnzEngDB selection with within-campaign ranking."""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     if args.task not in model.config.task_names:
@@ -438,6 +458,7 @@ def evaluate_enzengdb_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_lunzer_command(args: argparse.Namespace) -> None:
+    """Score a checkpoint on the frozen Lunzer landscape, ranking within cofactor groups."""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     if args.task not in model.config.task_names:
@@ -527,6 +548,7 @@ def evaluate_lunzer_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_lunzer_dlkcat_output_command(args: argparse.Namespace) -> None:
+    """Score external DLKcat predictions on the same frozen Lunzer landscape."""
     selection = json.loads(Path(args.selection_manifest).read_text(encoding="utf-8"))
     source_identity = build_manifest(args.data)
     if selection.get("source_identity") != _manifest_dict(source_identity):
@@ -627,6 +649,7 @@ def evaluate_lunzer_dlkcat_output_command(args: argparse.Namespace) -> None:
 
 
 def build_enzengdb_rank_split_command(args: argparse.Namespace) -> None:
+    """Build the campaign-family train/validation split for the EnzEngDB ranker."""
     archive_identity = build_manifest(args.archive)
     if (archive_identity.sha256 != ENZENGDB_ARCHIVE_SHA256
             or archive_identity.size_bytes != ENZENGDB_ARCHIVE_SIZE_BYTES):
@@ -760,6 +783,12 @@ def build_enzengdb_rank_split_command(args: argparse.Namespace) -> None:
 def _initialize_activity_ranker(base_checkpoint: str, device: torch.device,
                                 *, use_protein: bool, use_molecule: bool,
                                 use_context: bool) -> tuple[BioCandidateRanker, dict]:
+    """Rebuild the base checkpoint as a single-task activity_rank model.
+
+    Encoder weights transfer wherever shapes match; the ranking head is randomly
+    initialized and the task query is copied from the base model's log10_kcat
+    column so the frozen representations stay aligned with it.
+    """
     base_model, base_payload = load_checkpoint(base_checkpoint, device)
     values = base_model.config.to_dict()
     values.update({
@@ -814,6 +843,8 @@ def _evaluate_campaign_ranker(model, records, device, batch_size: int) -> dict:
         campaigns[record.campaign_group]["labels"].append(record.activity_rank)
     metrics = {}
     for campaign, values in sorted(campaigns.items()):
+        # Pairwise-sampling seed derived from the campaign identity: repeated
+        # evaluations of one campaign are deterministic without a global seed.
         seed = int(hashlib.sha256(campaign.encode("utf-8")).hexdigest()[:8], 16)
         metrics[campaign] = campaign_ranking_metrics(
             values["predictions"], values["labels"], seed=seed)
@@ -827,6 +858,7 @@ def _evaluate_campaign_ranker(model, records, device, batch_size: int) -> dict:
 
 
 def train_enzengdb_ranker_command(args: argparse.Namespace) -> None:
+    """Fine-tune the kcat checkpoint into an activity_rank campaign ranker."""
     torch.manual_seed(args.seed)
     split = json.loads(Path(args.split_manifest).read_text(encoding="utf-8"))
     archive_identity = build_manifest(args.archive)
@@ -902,6 +934,7 @@ def train_enzengdb_ranker_command(args: argparse.Namespace) -> None:
 
 
 def summarize_enzengdb_runs_command(args: argparse.Namespace) -> None:
+    """Aggregate seed runs into the campaign-level bootstrap summary."""
     runs = [json.loads(Path(path).read_text(encoding="utf-8")) for path in args.inputs]
     summary = summarize_campaign_runs(
         runs, bootstrap_samples=args.bootstrap_samples, seed=args.seed)
@@ -918,6 +951,7 @@ def summarize_enzengdb_runs_command(args: argparse.Namespace) -> None:
 
 
 def train_command(args: argparse.Namespace) -> None:
+    """Train the multimodal ranker under a manifest-verified, seeded protocol."""
     torch.manual_seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
@@ -1076,6 +1110,7 @@ def train_command(args: argparse.Namespace) -> None:
 
 
 def homology_command(args: argparse.Namespace) -> None:
+    """Cluster unique proteins with MMseqs2 and write the homology-cold split manifest."""
     manifest_payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**manifest_payload["identity"]))
     records = read_unikp_json(args.data).records
@@ -1112,6 +1147,7 @@ def homology_command(args: argparse.Namespace) -> None:
 
 
 def cold_split_command(args: argparse.Namespace) -> None:
+    """Write a development cold-split manifest (protein, scaffold, or double cold)."""
     manifest_payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**manifest_payload["identity"]))
     records = read_unikp_json(args.data).records
@@ -1129,6 +1165,7 @@ def cold_split_command(args: argparse.Namespace) -> None:
 
 
 def predict_command(args: argparse.Namespace) -> None:
+    """Predict per-task means/deviations for candidate JSON, with optional calibrated intervals."""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     calibrator = None
@@ -1265,6 +1302,7 @@ def predict_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_command(args: argparse.Namespace) -> None:
+    """Evaluate a checkpoint on a manifest-verified partition of the source data."""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
@@ -1338,6 +1376,7 @@ def evaluate_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_classical_baselines_command(args: argparse.Namespace) -> None:
+    """Fit ridge baselines on classical features with a validation-selected alpha grid."""
     try:
         import numpy as np
         from sklearn.linear_model import Ridge
@@ -1404,6 +1443,7 @@ def evaluate_classical_baselines_command(args: argparse.Namespace) -> None:
 
 
 def summarize_fusion_runs_command(args: argparse.Namespace) -> None:
+    """Paired task_query versus late_concat seed summary with checkpoint identity checks."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds or not all(isinstance(seed, int) for seed in seeds):
@@ -1460,6 +1500,7 @@ def summarize_fusion_runs_command(args: argparse.Namespace) -> None:
 
 
 def train_feature_mlp_command(args: argparse.Namespace) -> None:
+    """Train the feature MLP for one registered seed and feature set under the frozen protocol."""
     import numpy as np
 
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
@@ -1549,6 +1590,7 @@ def train_feature_mlp_command(args: argparse.Namespace) -> None:
 
 
 def summarize_feature_mlp_runs_command(args: argparse.Namespace) -> None:
+    """Aggregate feature-MLP seed runs after verifying protocol and checkpoint identities."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1599,6 +1641,7 @@ def summarize_feature_mlp_runs_command(args: argparse.Namespace) -> None:
 
 
 def summarize_internal_ablations_command(args: argparse.Namespace) -> None:
+    """Compare ablation checkpoints against the baseline under one frozen protocol."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     expected_source = protocol.get("source_identity")
     expected_split = protocol.get("split_identity")
@@ -1656,6 +1699,7 @@ def summarize_internal_ablations_command(args: argparse.Namespace) -> None:
 
 
 def summarize_uncertainty_ablation_command(args: argparse.Namespace) -> None:
+    """Paired heteroscedastic versus fixed-variance summary across the registered seeds."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1738,6 +1782,7 @@ def _collect_task_outputs(model, records, task: str, batch_size: int, device: to
 
 
 def fit_calibration_command(args: argparse.Namespace) -> None:
+    """Fit a calibrator on validation outputs and save the identity-bound artifact."""
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**source_manifest["identity"]))
     split_identity = _manifest_dict(build_manifest(args.split_manifest))
@@ -1829,6 +1874,7 @@ def fit_calibration_command(args: argparse.Namespace) -> None:
 
 
 def calibrate_uncertainty_command(args: argparse.Namespace) -> None:
+    """Apply the validation-fitted scalar scale and report test coverage before and after."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     if source_manifest.get("identity") != protocol.get("source_identity"):
@@ -1880,6 +1926,7 @@ def calibrate_uncertainty_command(args: argparse.Namespace) -> None:
 
 
 def summarize_uncertainty_calibration_command(args: argparse.Namespace) -> None:
+    """Aggregate per-seed uncertainty calibration runs into before/after summaries."""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1934,6 +1981,7 @@ def summarize_uncertainty_calibration_command(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Assemble the full subcommand tree; each subcommand binds its handler through ``func``."""
     parser = argparse.ArgumentParser(description="BioCandidateRanker research CLI")
     commands = parser.add_subparsers(dest="command", required=True)
     audit = commands.add_parser("audit-data")
@@ -2220,6 +2268,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    """Parse arguments and dispatch to the selected command handler."""
     args = build_parser().parse_args()
     args.func(args)
 

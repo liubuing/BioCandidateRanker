@@ -1,3 +1,11 @@
+"""Model architecture configuration shared by training, inference, and checkpoints.
+
+``ModelConfig`` is the single source of truth for every architecture and
+task-head knob. It is serialized verbatim into each checkpoint, and
+``load_checkpoint`` rebuilds the model from that payload, so any field added
+here needs a stable default to keep old checkpoints loadable.
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -5,6 +13,8 @@ from dataclasses import asdict, dataclass
 
 @dataclass(slots=True)
 class ModelConfig:
+    """Architecture, modality, and task-head settings for :class:`BioCandidateRanker`."""
+
     d_model: int = 128
     num_heads: int = 8
     protein_layers: int = 3
@@ -53,10 +63,12 @@ class ModelConfig:
                 "uncertainty_mode must be heteroscedastic or fixed_variance_mse")
 
     def to_dict(self) -> dict:
+        """Return the configuration as a plain JSON-serializable dict."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, values: dict) -> "ModelConfig":
+        """Rebuild a config from :meth:`to_dict` output, coercing task_names back to a tuple."""
         values = dict(values)
         if "task_names" in values:
             values["task_names"] = tuple(values["task_names"])

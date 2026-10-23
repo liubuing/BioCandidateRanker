@@ -1,3 +1,15 @@
+"""Curate wild-type KPC-2 beta-lactamase buffer-series kcat rows from DOI 10.1128/aac.01069-25.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC12959137:
+excluded_records.csv (all 25 direct finite rows across Tables 1/3 and S3/S5), an empty
+candidate_records.csv, exclusions.csv, sequence_mapping.csv, construct_sequences.fasta,
+raw-file-hashes.json, acquisition-attempts.json, blocker-evidence.json,
+homology-audit.json, and provenance.json.
+
+Exclusion-only fail-closed: rows are direct nonlinear Michaelis-Menten fits, but the exact
+TEV-cleaved assay chain is unresolved (no insert boundary or residual scar reported), and
+the sequence-resolved mature catalytic component hits the frozen development reference.
+"""
 from __future__ import annotations
 
 import argparse
@@ -75,10 +87,13 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> list[dict[str, object]]:
+    """Fetch raw files, probe the BioStudies API, and return structured acquisition attempt
+    records."""
     RAW.mkdir(parents=True, exist_ok=True)
     attempts = []
     for name, url in URLS.items():
@@ -99,10 +114,13 @@ def download_raw() -> list[dict[str, object]]:
 
 
 def fasta_sequence(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(line.strip() for line in path.read_text(encoding="ascii").splitlines() if line and not line.startswith(">"))
 
 
 def validate_raw() -> tuple[str, str]:
+    """Check article/supplement markers, precursor and structure identities, and the frozen
+    reference; return (mature, tagged)."""
     xml = (RAW / "PMC12959137-fullText.xml").read_text(encoding="utf-8")
     markers = (DOI, "creativecommons.org/licenses/by/4.0", "pET28a", "TEV protease", "removal of the His-tag", "nonlinear Michaelis", "at least two independent replicates")
     missing = [marker for marker in markers if marker not in xml]
@@ -134,6 +152,8 @@ def validate_raw() -> tuple[str, str]:
 
 
 def command(executable: str, *arguments: str) -> list[str]:
+    """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
+    invocation."""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, binary = executable.split(":", 2)
@@ -141,6 +161,7 @@ def command(executable: str, *arguments: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -148,6 +169,7 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(arguments: list[str]) -> str:
+    """Run ``arguments`` and return its output, raising RuntimeError on a non-zero exit."""
     result = subprocess.run(arguments, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"Command failed: {' '.join(arguments)}\n{result.stderr}")
@@ -155,6 +177,8 @@ def run_checked(arguments: list[str]) -> str:
 
 
 def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
+    """Easy-search/easy-linclust ``query`` against the frozen reference; return (hits, clusters,
+    version)."""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs2 {version!r} differs from frozen version")
@@ -174,6 +198,7 @@ def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | None = None) -> None:
+    """Write ``rows`` as CSV using ``fields`` or the first row's key order as the header."""
     fields = fields or list(rows[0])
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
@@ -182,6 +207,8 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def curate(acquire: bool, mmseqs: str, threads: int) -> None:
+    """Verify evidence, run the homology gate first, then write the exclusion-only evidence
+    bundle."""
     attempts = download_raw() if acquire else []
     mature, tagged = validate_raw()
     SOURCE.mkdir(parents=True, exist_ok=True)

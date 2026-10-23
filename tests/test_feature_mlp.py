@@ -1,3 +1,6 @@
+"""Pins FeatureMLP preprocessing and training: standardization uses train-split
+statistics (constant columns get unit stddev) and checkpoint selection always
+yields a finite test RMSE."""
 import unittest
 
 import numpy as np

@@ -1,3 +1,8 @@
+"""Pins the simulated-flux data path: a missing model asset yields only a
+training blocker (never partial artifacts), and generated rows must carry the
+full FBA identity metadata with the label target excluded from the features.
+"""
+
 import json
 
 import pytest

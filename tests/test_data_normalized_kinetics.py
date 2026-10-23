@@ -1,3 +1,8 @@
+"""Pins the normalized-kinetics JSONL adapter: unit conversion to canonical
+log10 molar quantities, sparse multi-task labels, and fail-closed rejection of
+wrong units, nonpositive values, indirect evidence, or missing provenance.
+"""
+
 import json
 import math
 import tempfile

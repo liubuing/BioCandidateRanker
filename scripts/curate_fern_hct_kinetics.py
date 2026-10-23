@@ -1,3 +1,14 @@
+"""Curate fern hydroxycinnamoyltransferase (NbHCT1/3/8) kcat rows from DOI 10.1111/tpj.70837.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC13033379:
+candidate_records.csv (24 Table 2-4 rows including saturation exclusions), provenance.json,
+construct_sequences.fasta (GenBank PV344582/84/89 native coding sequences), and
+homology-audit.json.
+
+Rows pass only the frozen saturation gate (constant cosubstrate >=5x its Km and an
+interpretable variable-substrate fit); survivors are re-statused by the frozen MMseqs2
+result against the development reference.
+"""
 from __future__ import annotations
 
 import csv
@@ -80,6 +91,7 @@ CONDITIONS = {
 
 
 def parse_fasta(path: Path) -> dict[str, str]:
+    """Parse a multi-record FASTA, keying each sequence by the NbHCT gene matched in its header."""
     records: dict[str, str] = {}
     key = ""
     for line in path.read_text(encoding="ascii").splitlines():
@@ -92,10 +104,13 @@ def parse_fasta(path: Path) -> dict[str, str]:
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
+    """Write the construct FASTA, candidate records with saturation/homology status, provenance,
+    and homology audit."""
     sequences = parse_fasta(SOURCE / "raw" / "fern-HCT-cds-aa.fasta")
     fasta = SOURCE / "construct_sequences.fasta"
     with fasta.open("w", encoding="ascii", newline="\n") as handle:

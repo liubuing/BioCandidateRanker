@@ -1,3 +1,15 @@
+"""Audit PnPEPCK (WP_011799537.1) direct kcat rows from DOI 10.1002/pro.70326 (PMC12529880).
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12529880:
+direct-kcat-audit.csv (four Table 2 temperature rows retained as unnormalized audit
+evidence), an empty schema-bearing candidate_records.csv, construct_sequences.fasta,
+structure-audit.json (seven PDB entries, including the 9E34 L9N discrepancy),
+saturation-audit.json, provenance.json, and homology-audit.json.
+
+Exclusion-only fail-closed: Table 2 never establishes saturation of the fixed GDP, Mg2+,
+Mn2+, and bicarbonate components, and the frozen MMseqs2 search of the exact full-length
+construct finds a development-corpus hit; no value is normalized into a label.
+"""
 from __future__ import annotations
 
 import csv
@@ -63,10 +75,12 @@ STRUCTURES = (
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
+    """Fetch article/supplement/sequence/compound/PDB files and extract the supplement DOCX."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -83,6 +97,7 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -91,6 +106,8 @@ def read_fasta(path: Path) -> str:
 
 
 def validate_sources() -> tuple[str, int, str]:
+    """Check article markers, the 622-aa accession, PubChem identity, and PDB cross-references;
+    return (sequence, cid, smiles)."""
     xml = (RAW / "PMC12529880-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI,
@@ -133,11 +150,14 @@ def validate_sources() -> tuple[str, int, str]:
 
 
 def windows_to_wsl(path: Path) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive[0].lower()}/{resolved.as_posix()[3:]}"
 
 
 def run_frozen_mmseqs(query_path: Path) -> None:
+    """Easy-search ``query_path`` against the frozen reference inside the pinned WSL Ubuntu-24.04
+    mmseqs."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen UniKP reference FASTA is missing or has changed")
     version = subprocess.run(
@@ -165,6 +185,8 @@ def run_frozen_mmseqs(query_path: Path) -> None:
 
 
 def write_outputs(*, acquire: bool = True) -> None:
+    """Verify sources, run the frozen homology search first, and write the audit-only evidence
+    bundle."""
     if acquire:
         download_raw()
     sequence, cid, smiles = validate_sources()

@@ -1,9 +1,20 @@
-"""Reconstruct historical evaluation using the CLI's default batch size 64."""
+"""Reconstruct historical evaluation using the CLI's default batch size 64.
+
+Verifies this script's own SHA256 and the legacy encoder module against
+configs/legacy_default_replay_protocol.json, then replays the frozen test
+split with the historical ESM2 encoder forward at batch size 64 for each seed.
+Writes artifacts/paired-family-analysis/legacy-default/reference-seed{seed}.csv
+plus a per-seed receipt; a predictions CSV is written only when RMSE/MAE/
+Pearson deltas against the recorded historical metrics are all within 1e-5,
+and the seed loop stops at the first failure. The frozen paired-family
+protocol files and the UniKP source identity are re-hashed before inference.
+"""
 import importlib.util,json,csv
 import torch
 import recover_reference_predictions as r
 
 def main():
+    """Replay the legacy evaluation per seed under the frozen protocol."""
     protocol=r.read(r.ROOT/'configs/legacy_default_replay_protocol.json')
     assert r.sha(__file__)==protocol['script_sha256']
     legacy=r.ROOT/protocol['legacy_source']

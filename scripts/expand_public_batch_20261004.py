@@ -1,4 +1,13 @@
-"""Second, explicitly selected batch of 20 benign enzymology primary-source leads."""
+"""Second, explicitly selected batch of 20 benign enzymology primary-source leads.
+
+Reads the prior batch register from ``batch_public_kinetics_20261004`` output
+(``public-batch-20261004/batch-register.json``), re-fetches full text for the
+20 hand-listed PMC IDs via the shared discovery helpers into
+``public-batch2-20261004/``, and writes a new ``batch-register.json`` audit
+with license screens and kinetics-table mentions. Governance role: acquisition
+and screening only -- ``accepted_additions`` stays 0 and no predictions are
+generated; curation decisions belong to the per-source curate_* scripts.
+"""
 import concurrent.futures as cf
 import json
 import batch_public_kinetics_20261004 as discovery
@@ -11,6 +20,7 @@ SELECTED=['PMC13396203','PMC12770603','PMC12896513','PMC12960341','PMC12734981',
           'PMC11199699','PMC13358373','PMC12817654','PMC10572201','PMC11372007']
 
 def main():
+    """Re-screen the 20 selected PMC leads and write the batch2 register audit."""
     OUT.mkdir(exist_ok=True)
     prior=BASE/'public-batch-20261004/batch-register.json'
     original=json.loads(prior.read_text(encoding='utf-8'))

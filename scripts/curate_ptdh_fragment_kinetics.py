@@ -1,3 +1,15 @@
+"""Curate 17X-PsPTDH phosphite dehydrogenase kcat rows from DOI 10.1021/acs.biochem.5c00561.
+
+Evidence written under artifacts/external/temporal-absolute-kinetics/europepmc-PMC12676663:
+candidate_records.csv (two reciprocal-saturation kcat rows: phosphite-varied and NAD+
+varied), exclusions.csv, construct_sequences.fasta (exact GSH + O69054 17-substitution
+construct, mass- and 4E5K-verified), raw-file-hashes.json, provenance.json, and
+homology-audit.json.
+
+Acceptance requires the exactly reconstructed 339-aa construct and reciprocal fixed-
+cosubstrate saturation at >=5x the measured Km of the other substrate; the homology gate
+then re-statuses both rows against the frozen MMseqs2 development reference.
+"""
 from __future__ import annotations
 
 import argparse
@@ -74,10 +86,13 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of the file at ``path``."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
+    """Fetch article/sequence/compound/PDB files and extract the SI PDF from the archive if
+    needed."""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -97,6 +112,7 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -105,6 +121,8 @@ def read_fasta(path: Path) -> str:
 
 
 def exact_construct() -> str:
+    """Build the GSH + 17-substitution construct and fail unless its length and calculated mass
+    match the article."""
     if len(PARENT_SEQUENCE) != 336:
         raise ValueError("Unexpected O69054 parent sequence length")
     sequence = list(PARENT_SEQUENCE)
@@ -122,6 +140,8 @@ def exact_construct() -> str:
 
 
 def validate_raw() -> tuple[str, dict[str, tuple[int, str]]]:
+    """Check article markers, the O69054 parent, PubChem identities, and the 4E5K 16X cross-check;
+    return (construct, structures)."""
     xml = (RAW / "PMC12676663-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI, "creativecommons.org/licenses/by/4.0/", "D13E", "C336D", "E175A",
@@ -158,6 +178,7 @@ def validate_raw() -> tuple[str, dict[str, tuple[int, str]]]:
 
 
 def wsl_path(path: Path) -> str:
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
     resolved = path.resolve()
     drive = resolved.drive.rstrip(":").lower()
     if not drive:
@@ -166,11 +187,13 @@ def wsl_path(path: Path) -> str:
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
 
 def reset_wsl_workspace(path: Path) -> None:
+    """Delete a managed workspace from inside the WSL distribution, failing if it survives."""
     if not path.exists():
         return
     _, distribution, _ = MMSEQS.split(":", 2)
@@ -180,6 +203,8 @@ def reset_wsl_workspace(path: Path) -> None:
 
 
 def run_mmseqs(query: Path) -> None:
+    """Easy-search and linclust ``query`` against the frozen reference inside the pinned WSL
+    mmseqs."""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -224,6 +249,7 @@ def run_mmseqs(query: Path) -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> None:
+    """Write ``rows`` as CSV with exactly ``fields`` as the header order."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
@@ -231,6 +257,8 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
+    """Verify evidence, gate on homology, and write the candidate/exclusion/audit bundle for the
+    17X construct."""
     if acquire:
         download_raw()
     construct, structures = validate_raw()

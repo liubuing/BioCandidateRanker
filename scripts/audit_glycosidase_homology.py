@@ -1,4 +1,14 @@
-"""Audit reference and article-supported construct interpretations, without prediction."""
+"""Audit reference and article-supported construct interpretations, without prediction.
+
+Reconstructs AnGH3 (deposited 737-residue translation vs 19-residue signal
+removed) and BGA3P (deposited reference vs article I2V) interpretations, then
+screens all four query sequences against the development reference with a
+pinned MMseqs2 build run through WSL. Writes discovery-20261003/{
+audit-queries.fasta, homology-audit.json, excluded-measurements.csv,
+source-decisions.json}: all seven angh3/bgap measurements are re-labelled
+excluded_development_homology, no record is accepted, and the frozen protocol
+and prior audit hashes must be unchanged.
+"""
 import hashlib
 import csv
 import copy
@@ -13,12 +23,15 @@ REF = ROOT / 'artifacts/homology-final/unique_proteins.fasta'
 VERSION = '5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 
 def sha(p):
+    """Return the SHA256 hex digest of a file."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def linux(p):
+    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation."""
     return '/mnt/d/' + p.relative_to(Path('D:/')).as_posix()
 
 def main():
+    """Screen both construct interpretations per enzyme and record the exclusion decision."""
     assert sha(REF) == '69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
     protected = [ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes = {str(p.relative_to(ROOT)):sha(p) for p in protected}

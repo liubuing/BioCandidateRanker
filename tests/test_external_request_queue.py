@@ -1,3 +1,6 @@
+"""Pins the outbound external-request artifacts: nothing is ever recorded as
+sent (zero messages, null sent_at/message_reference) and the response tracker
+stays in sync with the request queue."""
 import csv
 import json
 from pathlib import Path

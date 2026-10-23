@@ -91,6 +91,7 @@ class ModelCache:
         self.lock = threading.Lock()
 
     def get(self, relative: str):
+        """Return the cached model for a checkpoint, loading it on first use or mtime change."""
         import torch
         from biocandidate.training import load_checkpoint
 
@@ -521,6 +522,7 @@ def _fba_model(model_id: str, root: Path):
 
 
 def fba_status(root: Path) -> dict[str, Any]:
+    """Report availability, hashes, presets, and surrogate coverage per GEM model."""
     from biocandidate import fba_context
 
     models = {}
@@ -587,6 +589,7 @@ def fba_status(root: Path) -> dict[str, Any]:
 
 
 def fba_run(root: Path, body: dict[str, Any]) -> dict[str, Any]:
+    """Run the governed FBA context for one registered model and scenario body."""
     from biocandidate import fba_context
 
     model_id = str(body.get("model_id", "iML1515"))
@@ -717,6 +720,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    """Bind the local-only workbench server and serve until interrupted."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--host", default="127.0.0.1")
