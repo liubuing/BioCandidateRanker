@@ -6,7 +6,7 @@
 
 **Motivation:** Multimodal architectures jointly encoding protein sequence, substrate graph, and reaction context have been proposed for enzyme kinetic prediction, yet their advantage over single-modality baselines remains poorly characterized under homology-cold evaluation.
 
-**Results:** We evaluate BioCandidateRanker for log10(kcat) prediction under a frozen MMseqs2 homology-cold split (30% identity, 16,838 pairs). With a from-scratch encoder, a Morgan fingerprint MLP nearly matches the multimodal model (RMSE 1.4756 vs. 1.4699). With frozen ESM-2, three-seed RMSE is 1.5025 for protein only, 1.4454 for protein plus substrate, and 1.3916 for the full model. Retrained UniKP achieves RMSE 1.4093 on the same split. These modality comparisons are post-hoc diagnostics on an already observed internal test. Zero-shot transfer to EnzEngDB fitness ranking (Spearman 0.071) and the IMDH landscape (Spearman −0.166) is poor.
+**Results:** We evaluate BioCandidateRanker for log10(kcat) prediction under a frozen MMseqs2 homology-cold split (30% identity, 16,838 pairs). With a from-scratch encoder, a Morgan fingerprint MLP nearly matches the multimodal model (RMSE 1.4756 vs. 1.4699). With frozen ESM-2, three-seed RMSE is 1.5025 for protein only, 1.4454 for protein plus substrate, and 1.3916 for the full model. Retrained modern predictors achieve RMSE 1.4093 (UniKP), 1.3893 (CatPred), and 1.3876 (CataPro) on the same split; family-level paired bootstrap intervals for every RMSE difference cross zero. These modality comparisons are post-hoc diagnostics on an already observed internal test. Zero-shot transfer to EnzEngDB fitness ranking (Spearman 0.071) and the IMDH landscape (Spearman −0.166) is poor.
 
 **Availability and Implementation:** All code, frozen evaluation protocols, and generated result artifacts are deposited in a public archive (DOI to be inserted upon acceptance). The log10(kcat) development corpus is not redistributed; scripts that reconstruct the frozen split from a locally obtained copy are provided. The evaluated external benchmarks (EnzEngDB v1, CC BY 4.0; Lunzer IMDH landscape, CC0) are redistributed with attribution under their original licenses.
 
@@ -28,7 +28,7 @@ We show that this limitation is resolved by pretrained protein language model re
 
 We further demonstrate that this internal predictive gain does not transfer to practical candidate ranking tasks. Zero-shot evaluation on EnzEngDB engineering fitness data (Long et al., 2026) and the Lunzer ancient adaptive IMDH landscape (Lunzer et al., 2005) both produce results indistinguishable from or worse than random ranking. This endpoint non-transferability—between absolute kcat prediction and relative engineering fitness—is itself a scientifically informative negative result with implications for the field (Hie et al., 2022).
 
-Our contributions are: (1) an evaluation of pretrained protein representations and post-hoc modality controls under a frozen homology-cold split; (2) a comparison with retrained UniKP and DLKcat under the same split; and (3) a characterization of poor transfer from kcat prediction to engineering-fitness ranking.
+Our contributions are: (1) an evaluation of pretrained protein representations and post-hoc modality controls under a frozen homology-cold split; (2) a comparison with retrained UniKP, DLKcat, CataPro, and CatPred under the same split; and (3) a characterization of poor transfer from kcat prediction to engineering-fitness ranking.
 
 ---
 
@@ -60,7 +60,9 @@ All models use AdamW (Loshchilov and Hutter, 2019) with weight decay 0.01, gradi
 
 ### 2.5 Baselines
 
-(1) Train-set mean predictor. (2) Amino-acid composition MLP (20-dim, 128→64, 40 epochs). (3) Morgan radius-2 2048-bit fingerprint MLP (Rogers and Hahn, 2010; same architecture). (4) Ridge regression variants of both feature sets (alpha selected from {0.1, 1, 10, 100} on validation). (5) Late-concatenation multimodal model with identical encoders and training budget, representing the common early-fusion vs. late-fusion comparison (Baltrušaitis et al., 2019). (6) DLKcat (Li et al., 2022) evaluated under GPL-3.0-only on the IMDH landscape.
+(1) Train-set mean predictor. (2) Amino-acid composition MLP (20-dim, 128→64, 40 epochs). (3) Morgan radius-2 2048-bit fingerprint MLP (Rogers and Hahn, 2010; same architecture). (4) Ridge regression variants of both feature sets (alpha selected from {0.1, 1, 10, 100} on validation). (5) Late-concatenation multimodal model with identical encoders and training budget, representing the common early-fusion vs. late-fusion comparison (Baltrušaitis et al., 2019). (6) DLKcat (Li et al., 2022) evaluated under GPL-3.0-only on the IMDH landscape. (7) Published predictors retrained on the frozen training partition under their published settings: UniKP (Yu et al., 2023; frozen SMILES-transformer and ProtT5 features with an ExtraTrees regressor), DLKcat (Li et al., 2022; pinned upstream commit and published hyperparameters), CataPro (Wang et al., 2025; official prediction head and default optimizer over cached ProtT5 and MolT5 features, with fixed-validation early stopping replacing the official ten-fold scheme), and CatPred (Boorla and Maranas, 2025; adapted pipeline—non-standard residues mapped to a zero embedding, memory-mapped feature cache, and per-member seed revision—around the frozen 650M-parameter ESM-2 features and official ensemble inference; not a bit-level reproduction of the upstream training run).
+
+Differences between models were assessed with an exploratory family-level paired bootstrap: the 219 MMseqs families of the test partition are resampled with replacement 5,000 times (seed 20260918), the same resample weighting is applied to every model and seed, per-seed metrics are averaged, and seeds are not treated as independent samples. No multiple-comparison correction is applied, and the intervals reflect family resampling only—not retraining, re-splitting, or data-shift uncertainty.
 
 ### 2.6 External Evaluation
 
@@ -100,8 +102,10 @@ Replacing the protein encoder with frozen ESM-2 (esm2_t6_8M_UR50D) representatio
 | **ESM-2 multimodal (ours)** | **1.3916 ± 0.0183** | **1.0708 ± 0.0117** | **0.3810 ± 0.0222** |
 | UniKP Mode B, retrained | 1.4093 ± 0.0094 | 1.0785 ± 0.0041 | 0.3777 ± 0.0222 |
 | DLKcat Mode B, retrained | 1.7138 ± 0.1415 | 1.3351 ± 0.1251 | 0.1463 ± 0.0764 |
+| CataPro Mode B, retrained | 1.3876 ± 0.0195 | 1.0650 ± 0.0105 | 0.4320 ± 0.0004 |
+| CatPred Mode B, retrained (adapted) | 1.3893 ± 0.0175 | 1.0744 ± 0.0144 | 0.3897 ± 0.0279 |
 
-The Mode B predictors were retrained on the frozen training partition with published hyperparameters. The difference from UniKP is small and does not establish superiority. As-published checkpoints were excluded because every test sequence overlaps the published training corpus. The ESM-2 modality controls were added after this internal test had been observed, so they diagnose rather than confirm the fusion contribution.
+The Mode B predictors were retrained on the frozen training partition with published settings. As-published checkpoints were excluded because every test sequence overlaps the published training corpus. CataPro and CatPred—the two 2025 frameworks—reach numerically lower mean RMSE and, for CataPro, numerically higher Pearson (0.4320 ± 0.0004). CatPred's features come from a 650M-parameter ESM-2, whereas the encoder evaluated here has 8M parameters, so the comparison spans unequal representation capacity. An exploratory family-level paired bootstrap (Methods) gives 95% intervals for the RMSE differences that cross zero in every comparison: +0.0023 [−0.0555, +0.0634] against CatPred (historical implementation), +0.0080 [−0.0731, +0.0967] against CataPro (current-code replay of the historical weights), and −0.0137 [−0.0717, +0.0511] against UniKP. Neither superiority nor equivalence is established against any modern baseline. The ESM-2 modality controls were added after this internal test had been observed, so they diagnose rather than confirm the fusion contribution.
 
 The improvement over the from-scratch multimodal model is 0.078 RMSE (5.3%) and 0.134 Pearson (54%). The improvement over the strongest single-modality baseline (Morgan MLP) is 0.084 RMSE (5.7%) and 0.124 Pearson (48%). All three seeds show consistent direction; no seed crosses (per-seed breakdown in Supplementary Table S2). The direction of improvement is consistent with reports on pretrained protein representations (Rives et al., 2021; Hie et al., 2022).
 
@@ -135,6 +139,8 @@ The central observation is that pretrained protein representation improves this 
 
 This has practical implications for the field. Claims about multimodal architecture superiority that use from-scratch encoders on modest datasets may be measuring noise rather than signal. The Morgan MLP parity result should serve as a mandatory sanity check: if a fingerprint baseline (Rogers and Hahn, 2010) matches your multimodal model, your protein encoder is not contributing. We echo the call for rigorous baselines in molecular machine learning (Wu et al., 2018; Bouthillier et al., 2021).
 
+The same discipline reshapes how published predictors should be read. Under random splits their reported advantages partly reflect sequence-homology leakage—DLKcat, a reported state of the art, collapses under the cold split while the 2022–2025 frameworks cluster within roughly 0.02 RMSE of one another and of this model. Reported rankings on leaky splits should therefore be treated as upper references, and cold-split parity, not leaderboard position, is the reproducible fact.
+
 ### 4.2 The Endpoint Non-Transferability Gap
 
 The external evaluation failures constrain the practical utility of kcat prediction models. EnzEngDB fitness values (Long et al., 2026) reflect campaign-specific engineering objectives (expression, stability, activity under process conditions) that are not reducible to kcat. The IMDH landscape (Lunzer et al., 2005) measures relative fitness effects of mutations in a specific cofactor-binding context, where the ranking depends on Km and kcat/Km trade-offs that a kcat-only predictor cannot capture.
@@ -143,7 +149,7 @@ This gap suggests that candidate ranking applications require either (a) multi-o
 
 ### 4.3 Limitations
 
-The evaluated ESM-2 experiments use the smallest variant (t6, 8M parameters, 6 layers) due to GPU memory constraints (8 GB). A t12 run was trained but has no test evaluation; larger variants were not evaluated. The 512-residue truncation affects a minority of long enzymes. The development corpus lacks record-level citations, preventing audit of overlap with existing predictors' training data—a known limitation of aggregated kinetic databases (Schomburg et al., 2004; Kroll et al., 2023). The prospective independent benchmark (192/300 records, 25/30 families) remains incomplete; no model predictions have been generated for this pool.
+The evaluated ESM-2 experiments use the smallest variant (t6, 8M parameters, 6 layers) due to GPU memory constraints (8 GB); CatPred's 650M-parameter ESM-2 features mean the capacity frontier for this architecture is untested. A t12 run was trained but has no test evaluation; larger variants were not evaluated. The CatPred result comes from an adapted pipeline rather than a bit-level reproduction of the upstream run. The 512-residue truncation affects a minority of long enzymes. The development corpus lacks record-level citations, preventing audit of overlap with existing predictors' training data—a known limitation of aggregated kinetic databases (Schomburg et al., 2004; Kroll et al., 2023). The paired bootstrap intervals are exploratory and carry no multiple-comparison correction. The prospective independent benchmark (209/300 records, 28/30 families) remains incomplete; no model predictions have been generated for this pool.
 
 ### 4.4 Toward Honest Benchmarking
 
@@ -153,7 +159,7 @@ We froze the prospective external evaluation protocol before observing its resul
 
 ## 5 Conclusion
 
-The model benefits from pretrained protein representations under the frozen internal split. Post-hoc ESM-2 controls show lower error after adding substrate and reaction context, while the full model matches retrained UniKP closely. The internal gain does not establish engineering candidate-ranking utility: transfer to the two evaluated ranking endpoints is poor. Independent, same-endpoint kcat validation remains necessary before a generalization claim.
+The model benefits from pretrained protein representations under the frozen internal split. Post-hoc ESM-2 controls show lower error after adding substrate and reaction context, and the full model is statistically indistinguishable from retrained modern baselines (UniKP, CataPro, CatPred). The internal gain does not establish engineering candidate-ranking utility: transfer to the two evaluated ranking endpoints is poor. Independent, same-endpoint kcat validation remains necessary before a generalization claim.
 
 ---
 
@@ -247,6 +253,7 @@ Vaswani,A., Shazeer,N., Parmar,N., Uszkoreit,J., Jones,L., Gomez,A.N. et al. (20
 
 Vovk,V., Gammerman,A. and Shafer,G. (2005) *Algorithmic Learning in a Random World*. Springer.
 
+Wang,Z., Xie,D. et al. (2025) Robust enzyme discovery and engineering with deep learning using CataPro. *Nat. Commun.*, **16**. DOI: 10.1038/s41467-025-58038-4.
 Weinberger,K., Dasgupta,A., Langford,J., Smola,A. and Attenberg,J. (2009) Feature hashing for large scale multitask learning. In *Proceedings of the 26th International Conference on Machine Learning*, pp. 1113–1120.
 
 Wu,Z., Ramsundar,B., Feinberg,E.N., Gomes,J., Geniesse,C., Pappu,A.S. et al. (2018) MoleculeNet: a benchmark for molecular machine learning. *Chem. Sci.*, **9**, 513–530.

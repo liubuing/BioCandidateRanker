@@ -91,6 +91,33 @@ Paired mean RMSE changes are −0.0571 ± 0.0213 for protein + substrate versus 
 
 ---
 
+## S5a: Comparison With Retrained Modern Baselines
+
+All predictors were retrained on the frozen training partition and evaluated once on the 1,646-record test partition. UniKP and DLKcat follow their frozen protocols; CataPro uses the official head and default optimizer over cached ProtT5/MolT5 features with fixed-validation early stopping; CatPred is an adapted pipeline (non-standard residues mapped to a zero embedding, memory-mapped feature cache, per-member seed revision) around frozen 650M-parameter ESM-2 features with official ensemble inference (three group seeds x 10 ensemble members), not a bit-level reproduction of the upstream run.
+
+**Supplementary Table S4.** Three-seed summaries (mean +/- SD over seeds).
+
+| Model | RMSE | MAE | Pearson |
+|---|---:|---:|---:|
+| BioCandidateRanker ESM-2 (historical implementation) | 1.3916 +/- 0.0183 | 1.0708 +/- 0.0117 | 0.3810 +/- 0.0222 |
+| BioCandidateRanker (current-code replay of historical weights) | 1.3956 +/- 0.0174 | 1.0744 +/- 0.0113 | 0.3749 +/- 0.0223 |
+| CataPro Mode B | 1.3876 +/- 0.0195 | 1.0650 +/- 0.0105 | 0.4320 +/- 0.0004 |
+| CatPred Mode B (adapted) | 1.3893 +/- 0.0175 | 1.0744 +/- 0.0144 | 0.3897 +/- 0.0279 |
+| UniKP Mode B | 1.4093 +/- 0.0094 | 1.0785 +/- 0.0041 | 0.3777 +/- 0.0222 |
+| DLKcat Mode B | 1.7138 +/- 0.1415 | 1.3351 +/- 0.1251 | 0.1463 +/- 0.0764 |
+
+**Supplementary Table S5.** Exploratory family-level paired bootstrap, RMSE difference (ours minus baseline), 95% interval over 5,000 family resamples (219 families, seed 20260918; no multiple-comparison correction).
+
+| Baseline | Reference implementation | RMSE difference | 95% interval |
+|---|---|---:|---|
+| CatPred | historical | +0.0023 | [-0.0555, +0.0634] |
+| CataPro | current-code replay | +0.0080 | [-0.0731, +0.0967] |
+| UniKP | current-code replay | -0.0137 | [-0.0717, +0.0511] |
+
+Every interval crosses zero: neither superiority nor equivalence is established. Machine-readable receipts: `artifacts/catapro-mode-b/internal-test/`, `artifacts/catpred-mode-b/internal-test/`, `artifacts/paired-family-analysis/current-code/paired-bootstrap.json`; frozen protocols `configs/catapro_internal_test_freeze.json`, `configs/catpred_internal_test_protocol.json`.
+
+---
+
 ## S6: Claim Boundary
 
-This work establishes an internal homology-cold predictive gain and post-hoc modality diagnostic. It does not establish: calibrated uncertainty, external kcat validation, activity or flux prediction, candidate ranking utility, or publication-grade efficacy for enzyme engineering decisions. The prospective independent benchmark remains incomplete (192/300 records, 25/30 families). No model predictions have been generated for the prospective pool.
+This work establishes an internal homology-cold predictive gain and post-hoc modality diagnostic. It does not establish: calibrated uncertainty, external kcat validation, activity or flux prediction, candidate ranking utility, or publication-grade efficacy for enzyme engineering decisions. The prospective independent benchmark remains incomplete (209/300 records, 28/30 families). No model predictions have been generated for the prospective pool.
