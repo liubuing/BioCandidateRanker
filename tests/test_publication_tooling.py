@@ -3,6 +3,8 @@
 These tools decide what may be deposited and what may be claimed, so the tests
 focus on the guards: a blocked corpus must not ship, a gate must not silently
 pass, and an untracked draft must not look recorded.
+
+中文：发表治理工具测试：阻塞语料不得发布、门槛不得静默通过、未跟踪草稿不得看似已记录。
 """
 
 from __future__ import annotations

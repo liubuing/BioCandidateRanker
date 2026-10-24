@@ -5,6 +5,10 @@ source of truth; driver summary.json files may cover only a subset of seeds afte
 incremental runs), recomputes the BioCandidateRanker ESM-2 reference numbers from its
 checkpoint metrics, and writes a manuscript-ready comparison table with the frozen split
 identity. Governed by configs/sota_homology_cold_comparison_protocol.json.
+
+中文：把 Mode B SOTA 对比结果聚合为一份汇总收据：以磁盘上逐种子
+test_metrics.json 为事实来源（驱动器 summary.json 在增量运行后可能只覆盖
+部分种子），重算 ESM-2 参照数字并写出对比表。
 """
 
 from __future__ import annotations
@@ -32,7 +36,9 @@ def mean_sd(values: list[float]) -> dict:
 
 
 def collect_seed_metrics(run_dir: Path) -> dict[int, dict]:
-    """Read every seed's test_metrics.json present under a run directory."""
+    """Read every seed's test_metrics.json present under a run directory.
+中文：读取运行目录下存在的每个种子的 test_metrics.json。
+"""
     metrics: dict[int, dict] = {}
     for path in sorted(run_dir.glob("seed*/test_metrics.json")):
         seed = int(path.parent.name.removeprefix("seed"))
@@ -41,7 +47,9 @@ def collect_seed_metrics(run_dir: Path) -> dict[int, dict]:
 
 
 def main() -> None:
-    """Aggregate per-seed metrics into the comparison receipt and print the table."""
+    """Aggregate per-seed metrics into the comparison receipt and print the table.
+中文：把逐种子指标聚合为对比收据并打印表格。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=SOTA_ROOT / "summary.json")
     args = parser.parse_args()

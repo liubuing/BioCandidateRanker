@@ -1,6 +1,8 @@
 """Pins the ranker model contract: masked multitask Gaussian/MSE losses with
 uncertainty heads, protein chunking, encoder and fusion-mode variants, config
 validation, pairwise ranking loss behavior, and classical feature baselines.
+
+中文：钉住排序器模型契约：掩码多任务高斯/MSE 损失与不确定性头、蛋白分块、编码器与融合模式变体、配置校验、成对排序损失、经典特征基线。
 """
 
 import unittest

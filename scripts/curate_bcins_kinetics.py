@@ -9,6 +9,14 @@ and homology-audit.json.
 The source is exclusion-only fail-closed: every reported kcat is an apparent 5-minute
 endpoint without substrate-saturation evidence, the exact His6-TEV assay constructs are
 unresolved, and the native-coordinate homology prescreen cannot cure those gates.
+
+中文：整理 DOI 10.1111/febs.70308 的 Streptomyces clavuligerus 1,8-桉叶素合酶（bCinS）
+动力学。接受/排除逻辑要点：该来源仅作 fail-closed 排除——每条报告的 kcat 均为 5 分钟
+表观端点值且无底物饱和证据，精确的 His6-TEV 测定构建体未解决，天然坐标同源预筛也无法
+治愈这些门控。证据写入 artifacts/external/temporal-absolute-kinetics/europepmc-PMC12958101：
+excluded_records.csv（与 candidate_records.csv 相同副本，全部 11 条表观 kcat 行）、
+native_coordinate_homology_queries.fasta（WT 与突变体 B5GMG2 序列）、provenance.json
+与 homology-audit.json。
 """
 from __future__ import annotations
 
@@ -88,7 +96,10 @@ REPORTED_VALUES = [
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+
+    中文：把 ``path`` 文件流式送入 SHA-256 并返回十六进制摘要。
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -97,7 +108,10 @@ def sha256(path: Path) -> str:
 
 
 def acquire() -> None:
-    """Download the article, supplement archive, sequence, structure, and PubChem files into RAW."""
+    """Download the article, supplement archive, sequence, structure, and PubChem files into RAW.
+
+    中文：把文章、补充材料压缩包、序列、结构与 PubChem 文件下载到 RAW。
+    """
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in DOWNLOADS.items():
         path = RAW / name
@@ -112,7 +126,10 @@ def acquire() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the single-letter sequence of a protein FASTA, rejecting any non-residue character."""
+    """Return the single-letter sequence of a protein FASTA, rejecting any non-residue character.
+
+    中文：返回蛋白 FASTA 的单字母序列，遇到任何非残基字符即拒绝。
+    """
     sequence = "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if not line.startswith(">")
@@ -124,7 +141,10 @@ def read_fasta(path: Path) -> str:
 
 def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...]) -> str:
     """Apply 1-based (position, expected, replacement) point mutations, failing on a wrong
-    wild-type residue."""
+    wild-type residue.
+
+    中文：施加 1 起始的（位置、期望残基、替换残基）点突变，野生型残基不符则失败。
+    """
     result = sequence
     for position, expected, replacement in changes:
         if result[position - 1] != expected:
@@ -135,7 +155,10 @@ def mutate(sequence: str, changes: tuple[tuple[int, str, str], ...]) -> str:
 
 def verify_and_build_sequences() -> dict[str, str]:
     """Validate raw evidence and DOI/license, then build the native-coordinate WT and variant
-    sequences."""
+    sequences.
+
+    中文：校验原始证据与 DOI/许可，然后构建天然坐标的 WT 与变体序列。
+    """
     required = [*DOWNLOADS, "FEBS-293-1341-s001.pdf"]
     missing = [name for name in required if not (RAW / name).is_file()]
     if missing:
@@ -174,7 +197,10 @@ def verify_and_build_sequences() -> dict[str, str]:
 
 def write_fasta(path: Path, sequences: dict[str, str]) -> None:
     """Write the homology-query FASTA (80-column wrapped) with the explicit not-the-assay-construct
-    header."""
+    header.
+
+    中文：写出同源查询 FASTA（80 列换行），头部显式声明"非测定构建体"。
+    """
     with path.open("w", encoding="ascii", newline="\n") as handle:
         for sequence_id, sequence in sequences.items():
             handle.write(
@@ -186,7 +212,10 @@ def write_fasta(path: Path, sequences: dict[str, str]) -> None:
 
 def command(executable: str, *args: str) -> list[str]:
     """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
-    invocation."""
+    invocation.
+
+    中文：构造 ``executable`` 的 argv，把 ``wsl:<distro>:<binary>`` 句柄映射为 wsl 调用。
+    """
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -194,7 +223,10 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
-    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires.
+
+    中文：把 Windows 路径转换为 WSL mmseqs 二进制所需的 /mnt/<drive>/... 形式。
+    """
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -202,7 +234,10 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def run_checked(args: list[str]) -> str:
-    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit."""
+    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit.
+
+    中文：运行 ``args`` 并返回其输出，退出码非零时抛出 RuntimeError。
+    """
     completed = subprocess.run(args, capture_output=True, text=True, check=False)
     if completed.returncode:
         raise RuntimeError(f"Command failed: {' '.join(args)}\n{completed.stderr}")
@@ -211,7 +246,10 @@ def run_checked(args: list[str]) -> str:
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust the queries against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+
+    中文：对查询在冻结参考库上运行 easy-search/easy-linclust；返回（hits、clusters、version）。
+    """
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -244,12 +282,18 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 def sequence_id(variant: str) -> str:
     """Return the native-coordinate sequence id for a variant label (e.g. "F74A" ->
-    "bcins-native-f74a")."""
+    "bcins-native-f74a").
+
+    中文：返回变体标签对应的天然坐标序列 id（如 "F74A" -> "bcins-native-f74a"）。
+    """
     return "bcins-native-" + variant.lower().replace("-", "-")
 
 
 def substrate_structure(code: str) -> tuple[int, str]:
-    """Return the (PubChem CID, isomeric SMILES) recorded for a substrate code."""
+    """Return the (PubChem CID, isomeric SMILES) recorded for a substrate code.
+
+    中文：返回底物代号对应的（PubChem CID、异构 SMILES）。
+    """
     cid = SUBSTRATES[code][1]
     item = json.loads((RAW / f"pubchem-{code}-{cid}.json").read_text(encoding="utf-8"))[
         "PropertyTable"
@@ -259,7 +303,10 @@ def substrate_structure(code: str) -> tuple[int, str]:
 
 def excluded_records(hit_queries: set[str]) -> list[dict[str, object]]:
     """Build one excluded row per reported apparent kcat, stamping saturation/construct gates and
-    any frozen-mmseqs hit."""
+    any frozen-mmseqs hit.
+
+    中文：为每条报告的表观 kcat 构建一条排除行，标注饱和/构建体门控及冻结 mmseqs 命中。
+    """
     rows = []
     for index, (variant, substrate, product_scope, value, error) in enumerate(REPORTED_VALUES, 1):
         cid, smiles = substrate_structure(substrate)
@@ -317,7 +364,10 @@ def excluded_records(hit_queries: set[str]) -> list[dict[str, object]]:
 
 def write_outputs(sequences: dict[str, str], hits: Path, clusters: Path, version: str) -> None:
     """Write the exclusion CSVs, provenance.json, and homology-audit.json, hash-bound to the raw
-    and homology outputs."""
+    and homology outputs.
+
+    中文：写出排除 CSV、provenance.json 与 homology-audit.json，并与原始及同源输出哈希绑定。
+    """
     fasta = SOURCE / "native_coordinate_homology_queries.fasta"
     hit_lines = [line for line in hits.read_text(encoding="utf-8").splitlines() if line]
     hit_queries = {line.split("\t", 1)[0] for line in hit_lines}
@@ -406,7 +456,10 @@ def write_outputs(sequences: dict[str, str], hits: Path, clusters: Path, version
 
 def main() -> None:
     """Run the download/verify/homology/write pipeline; raw files are only fetched under
-    --download."""
+    --download.
+
+    中文：运行 download/verify/homology/write 流水线；原始文件仅在 --download 下抓取。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

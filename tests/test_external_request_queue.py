@@ -1,6 +1,9 @@
 """Pins the outbound external-request artifacts: nothing is ever recorded as
 sent (zero messages, null sent_at/message_reference) and the response tracker
-stays in sync with the request queue."""
+stays in sync with the request queue.
+
+中文：钉住外发请求工件：零消息已发（sent_at/message_reference 全空）、响应追踪器与请求队列保持同步。
+"""
 import csv
 import json
 from pathlib import Path

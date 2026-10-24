@@ -1,6 +1,8 @@
 """Pins the record schema and file-manifest contract: canonicalized immutable
 records, bounded campaign fields, and SHA256 manifests that verify JSON, CSV,
 and zipped experiment containers without mutating the source.
+
+中文：钉住记录模式与文件清单契约：规范化不可变记录、有界 campaign 字段、SHA256 清单可校验 JSON/CSV/zip 而不改源。
 """
 
 import hashlib

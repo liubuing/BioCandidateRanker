@@ -15,6 +15,10 @@ smoke, so the trained pathway is the fba_context one.
 Claim boundary: the checkpoints are surrogates of simulations. They are not
 experimental flux models, they do not replace the GEM outside the sampled
 scenario distribution, and they make no scientific claim about real cells.
+
+中文：把基因组尺度 FBA 能力蒸馏进排序器架构：推理不再依赖 cobra，由培养基与
+基因场景（8 维向量）直接预测生长。在仿真网格上训练排序器检查点并冻结；
+对训练包络之外的查询显式告警。
 """
 
 from __future__ import annotations
@@ -178,7 +182,9 @@ def _scenario_vector(
 
     The vector is 8 wide for every model; what the slots mean is declared in
     SCENARIO_FEATURE_IDS_BY_MODEL, and the target selector is always last.
-    """
+    
+中文：把一个 (场景, 目标) 对编码为模型的 8 维输入向量。
+"""
     if target not in TARGET_SELECTORS:
         raise ValueError(f"unknown target {target!r}; known: {list(TARGET_SELECTORS)}")
     if target not in MODEL_TARGETS.get(model_id, ()):
@@ -221,7 +227,9 @@ YEAST_BIOMASS_FLOOR_FRACTION = 0.1
 
 
 def build_scenarios(model_id: str) -> list[dict[str, Any]]:
-    """Enumerate the model's full grid: medium combos crossed with scenarios."""
+    """Enumerate the model's full grid: medium combos crossed with scenarios.
+中文：枚举模型的完整网格：培养基组合 × 场景。
+"""
     rows: list[dict[str, Any]] = []
     if model_id == "yeast_metatwin":
         for route, pox1_closed, objective in itertools.product(
@@ -283,7 +291,9 @@ def run_fba_grid(
     Bound changes are reverted between scenarios, so a single copy serves the
     whole sweep; each returned row carries the objective flux plus the scenario
     identity needed for training records.
-    """
+    
+中文：在同一个模型副本上求解网格内全部场景（边界改动间回滚）。
+"""
     if model_id not in MODEL_REGISTRY:
         raise ValueError(f"unknown model {model_id!r}; known: {sorted(MODEL_REGISTRY)}")
     from .fba_context import CORE_COFACTORS, add_fusion_pathways, cofactor_turnover
@@ -405,7 +415,9 @@ def _run_yeast_grid(
     resulting optimum: growth, the target demand flux, and the cofactor
     turnovers. Infeasible combinations are dropped and reported rather than
     guessed at.
-    """
+    
+中文：在酵母模型上求解蜂王酸场景网格（共享一个扩展副本）。
+"""
     from .fba_context import cofactor_turnover
     from .royal_jelly_acid import (
         BIOMASS_ID,
@@ -575,7 +587,9 @@ def assign_splits(rows: list[dict[str, Any]]) -> None:
     The hash sort pseudo-randomizes the order, so proportional slices of the
     sorted list are random samples; max(1, n//7) per minor partition keeps
     validation and test non-empty even on miniature grids.
-    """
+    
+中文：按场景（而非行）取约 72/14/14 的确定性切分。
+"""
     scenario_ids = sorted({row["scenario_id"] for row in rows})
     n_val = max(1, len(scenario_ids) // 7)
     n_test = max(1, len(scenario_ids) // 7)
@@ -603,7 +617,9 @@ def _per_target_metrics(
 
     Predictions are made through the ordinary validation loader; rows are
     matched back to their target through the provenance the record carries.
-    """
+    
+中文：测试集逐目标 RMSE，各自对照训练均值基线。
+"""
     import torch
 
     report: dict[str, Any] = {}
@@ -648,7 +664,9 @@ def _per_target_metrics(
 def _pooled_baseline_rmse(
     train_rows: list[dict[str, Any]], test_rows: list[dict[str, Any]]
 ) -> float:
-    """RMSE of predicting each target with its own train-set mean."""
+    """RMSE of predicting each target with its own train-set mean.
+中文：各目标用自身训练均值预测的 RMSE。
+"""
     if not test_rows:
         return float("nan")
     total = 0.0
@@ -668,7 +686,9 @@ def train_surrogate(
     epochs: int = 120,
     seed: int = 7,
 ) -> dict[str, Any]:
-    """Generate the grid, train a context-only ranker, evaluate, and freeze it."""
+    """Generate the grid, train a context-only ranker, evaluate, and freeze it.
+中文：生成网格、训练仅上下文排序器、评估并冻结。
+"""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     config_file = load_model_config(model_id)
@@ -853,7 +873,9 @@ def trained_grid_bounds(model_id: str) -> dict[str, tuple[float, float]]:
     silent: an E. coli medium (glucose 15) queried against the yeast surrogate
     returns a plausible-looking number that is nothing like the FBA answer. The
     endpoints report this so a caller can refuse or re-run with cobra.
-    """
+    
+中文：各模型代理训练时的 glucose/oxygen 包络。
+"""
     if model_id == "yeast_metatwin":
         return {
             "glucose": (min(YEAST_GLUCOSE_GRID), max(YEAST_GLUCOSE_GRID)),
@@ -868,7 +890,9 @@ def trained_grid_bounds(model_id: str) -> dict[str, tuple[float, float]]:
 def check_query_in_range(
     model_id: str, glucose: float, oxygen: float
 ) -> list[str]:
-    """Return a warning per axis that falls outside the trained envelope."""
+    """Return a warning per axis that falls outside the trained envelope.
+中文：对超出训练包络的每个轴返回告警。
+"""
     bounds = trained_grid_bounds(model_id)
     warnings = []
     for axis, value in (("glucose", glucose), ("oxygen", oxygen)):
@@ -890,7 +914,9 @@ def scenario_input_vector(
     This is the inference-side counterpart of run_fba_grid: the workbench uses
     it to feed a scenario into a surrogate checkpoint through the ordinary
     prediction endpoint.
-    """
+    
+中文：推理侧为单个场景构造 8 维 fba_context 输入。
+"""
     table = SCENARIOS_BY_MODEL.get(model_id)
     if table is None:
         raise ValueError(f"no scenario table for {model_id}")

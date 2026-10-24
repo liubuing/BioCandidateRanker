@@ -1,6 +1,9 @@
 """Pins paired-family analysis helpers: cluster-level metric weights match
 explicit row pooling, CSV alignment reorders and guards against label
-mismatch, and seed averaging is a mean over draws rather than an ensemble."""
+mismatch, and seed averaging is a mean over draws rather than an ensemble.
+
+中文：钉住配对家族分析辅助：簇级指标权重与显式行池化一致、CSV 对齐防标签错配、种子平均是对抽样的均值而非集成。
+"""
 import importlib.util
 from pathlib import Path
 import tempfile

@@ -1,6 +1,8 @@
 """Pins the RmlA kinetics curation verdict: internally inconsistent reported
 kcat values yield zero admitted records and a fail-closed unresolved construct,
 while the homology audit evidence is still fully recorded.
+
+中文：钉住 RmlA 动力学裁定：内部矛盾的 kcat 值零入选并 fail-closed，同源审计证据仍完整记录。
 """
 
 import csv

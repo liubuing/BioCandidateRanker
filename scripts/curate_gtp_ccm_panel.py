@@ -12,6 +12,9 @@ coupled forward rows and every pyruvate kinase row fail: unknown in-situ 1,3-BPG
 concentration and unresolved construct, respectively); qualified rows then face the
 frozen family-wise MMseqs2 gate and the exact-overlap audit against the 17,010-row
 development corpus.
+
+中文：整理纤维素梭菌激酶面板（XK/PGK/PK/AK，DOI 10.1038/s42003-025-07971-7）：
+饱和处置分流候选/排除；精确 NcoI/XhoI pET28a 产物；逐家族同源门与家族准入审计。
 """
 from __future__ import annotations
 
@@ -87,7 +90,9 @@ URLS.update({
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -97,7 +102,9 @@ def sha256(path: Path) -> str:
 
 def download() -> None:
     """Fetch every raw metadata/article/supplement/sequence/compound file into RAW, skipping
-    existing files."""
+    existing files.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -109,7 +116,9 @@ def download() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if line and not line.startswith(">")
@@ -132,7 +141,9 @@ def constructs() -> dict[str, str]:
 
 def validate_raw() -> dict[str, str]:
     """Check raw files, BioStudies accession, article markers, and PubChem identities; return the
-    construct sequences."""
+    construct sequences.
+中文：校验原始证据的完整性与哈希。
+"""
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"missing raw evidence: {missing}; run with --download")
@@ -161,13 +172,17 @@ def validate_raw() -> dict[str, str]:
 
 
 def wsl_path(path: Path) -> str:
-    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires.
+中文：把 Windows 路径映射为 WSL /mnt 路径。
+"""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive.rstrip(':').lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
-    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv.
+中文：组装 WSL mmseqs 命令行。
+"""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
@@ -189,7 +204,9 @@ def reset_wsl(path: Path) -> None:
 
 def run_homology(query: Path, threads: int) -> str:
     """Easy-search each family query against the frozen reference and cluster all constructs;
-    return the version."""
+    return the version.
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("frozen development reference is absent or changed")
     version = run_checked(mmseqs_command("version")).strip().splitlines()[-1]
@@ -239,7 +256,9 @@ def read_fasta_entries(path: Path) -> dict[str, str]:
 
 def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[str, int | str]:
     """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
-    corpus."""
+    corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise ValueError("frozen development corpus size changed")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -325,7 +344,9 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 def curate(*, acquire: bool, homology: bool, threads: int, development_corpus: Path) -> None:
     """Run the full pipeline: verify, audit, gate on saturation/homology, and write every evidence
-    artifact."""
+    artifact.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download()
     sequences = validate_raw()
@@ -478,7 +499,9 @@ def curate(*, acquire: bool, homology: bool, threads: int, development_corpus: P
 
 
 def main() -> None:
-    """Parse flags and dispatch to curate(); homology only reruns under --run-homology."""
+    """Parse flags and dispatch to curate(); homology only reruns under --run-homology.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--run-homology", action="store_true")

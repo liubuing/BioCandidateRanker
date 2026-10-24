@@ -1,6 +1,8 @@
 """Pins the simulated-flux data path: a missing model asset yields only a
 training blocker (never partial artifacts), and generated rows must carry the
 full FBA identity metadata with the label target excluded from the features.
+
+中文：钉住模拟通量数据路径：模型资产缺失只出训练阻塞器（绝不出半成品），生成行携带完整 FBA 身份元数据且目标反应不入特征。
 """
 
 import json

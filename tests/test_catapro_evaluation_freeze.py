@@ -1,4 +1,7 @@
-"""Changing a sealed checkpoint must fail before test prediction."""
+"""Changing a sealed checkpoint must fail before test prediction.
+
+中文：封印检查点被改动时，测试预测之前必须失败。
+"""
 import sys
 from pathlib import Path
 import pytest

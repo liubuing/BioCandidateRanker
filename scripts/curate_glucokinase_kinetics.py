@@ -9,6 +9,9 @@ the C325S and DS-S mutants), provenance.json, and homology-audit.json.
 Every row carries exact WT or mutation-derived sequences and is re-statused by the frozen
 MMseqs2 result; the audit records that all constructs hit the development corpus, which
 excludes the source from the temporal pool.
+
+中文：整理细菌葡萄糖激酶（PsGK/EcGK，DOI 10.1111/febs.70367，Dryad 存档）：
+12 行（4 构建体 x 1/25/40 C）；天然序列加 C325S 与 DS-S 突变；开发命中排除。
 """
 from __future__ import annotations
 
@@ -29,7 +32,9 @@ ATP_SMILES = (
 
 
 def read_fasta(path: Path) -> str:
-    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
+    """Return a validated uppercase protein FASTA sequence (headers stripped).
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     lines = path.read_text(encoding="ascii").splitlines()
     sequence = "".join(line.strip() for line in lines if not line.startswith(">"))
     if not sequence or not sequence.isalpha() or not sequence.isupper():
@@ -148,7 +153,9 @@ def homology_hit_ids() -> set[str] | None:
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -212,7 +219,9 @@ def write_homology_audit(records: list[dict[str, object]]) -> None:
 
 def write_outputs() -> None:
     """Build sequences/records, apply homology status, and write the CSV/FASTA/provenance/audit
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = build_sequences()
     records = build_records()
     hits = homology_hit_ids()

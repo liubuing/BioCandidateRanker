@@ -9,6 +9,9 @@ homology-audit.json.
 Fail-closed on constructs: an accession-derived catalytic sequence is never substituted
 for the exact assayed His6-tagged chain, so the four unreconstructible rows are terminally
 excluded; rows with an exact chain face the frozen MMseqs2 development-homology gate.
+
+中文：整理 PchB 论文的分枝酸变位酶对照行（DOI 10.1021/acs.biochem.5c00157）：
+Table 4 七行有限 CM kcat；终局未解析构建体审计；仅权威催化多肽入构建体表。
 """
 from __future__ import annotations
 
@@ -38,7 +41,9 @@ UNRESOLVED_IDS = {
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -47,7 +52,9 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
-    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
+    """Return a validated uppercase protein FASTA sequence (headers stripped).
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     sequence = "".join(
         line.strip() for line in path.read_text(encoding="ascii").splitlines()
         if line and not line.startswith(">")
@@ -186,7 +193,9 @@ def verify_sources() -> None:
 
 def write_outputs() -> None:
     """Verify sources, resolve construct/homology status per row, and write the full evidence
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     verify_sources()
     sequence_map = sequences()
     candidate_rows = records()

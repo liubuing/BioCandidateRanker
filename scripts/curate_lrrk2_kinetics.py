@@ -8,6 +8,9 @@ point mutations applied), provenance.json, and homology-audit.json.
 The kcat min-1 -> s-1 conversion is the only transformation. Rows start as
 pending_homology and are re-statused by the frozen MMseqs2 result against the
 development reference; MBP-RocCOR construct rows are out of scope.
+
+中文：整理全长人 LRRK2（Q5S007）GTPase kcat 行（DOI 10.7554/eLife.91083，Zenodo）：
+Table 1 七行（WT 与四个帕金森变体，含/不含 ATP 预孵）；全长天然序列施加点突变。
 """
 from __future__ import annotations
 
@@ -22,7 +25,9 @@ SOURCE = ROOT / "artifacts" / "external" / "temporal-absolute-kinetics" / "zenod
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -120,13 +125,17 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
     """Build sequences and records, apply homology status, and write the CSV/FASTA/provenance/audit
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = build_sequences()
     records = build_records()
     apply_homology_status(records)

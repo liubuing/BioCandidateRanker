@@ -7,6 +7,13 @@ context-only ranker on CPU. Labels are simulated FBA fluxes, never
 experimental measurements (see CLAIM_BOUNDARY). Any failure deletes partial
 outputs and leaves ``blocker.json`` as the only artifact: the pipeline is
 fail-closed.
+
+中文：受治理的模拟通量冒烟流水线：冻结的 FBA 网格、数据集生成与 CPU 训练。在
+十二个固定葡萄糖水平上以生物质目标求解酵母模型，写出 ``simulated_flux.jsonl``
+及带哈希身份（模型/求解器/目标/培养基）的切分与清单，然后在 CPU 上训练一个仅用
+上下文特征的微型排序器。标签是模拟的 FBA 通量，绝非实验测量值（见
+CLAIM_BOUNDARY）。任何失败都会删除已生成的部分输出，只留下 ``blocker.json``
+作为唯一工件：本流水线是 fail-closed 的。
 """
 
 from __future__ import annotations
@@ -148,7 +155,10 @@ def _record(row: dict) -> EnzymeSubstrateRecord:
 
 
 def read_simulated_flux_jsonl(path: str | Path) -> tuple[EnzymeSubstrateRecord, ...]:
-    """Read rows back into records, rejecting unsupported format versions and empty files."""
+    """Read rows back into records, rejecting unsupported format versions and empty files.
+
+    中文：把数据行读回记录，拒绝不支持的格式版本与空文件。
+    """
     records = []
     with Path(path).open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, 1):
@@ -169,6 +179,10 @@ def generate_dataset(model_path: str | Path, output_dir: str | Path) -> dict:
     Every condition must solve optimally with a positive target flux, and the
     source model is re-hashed afterwards: any mutation of the model file or a
     non-optimal condition aborts before anything is written.
+
+    中文：求解冻结的培养基网格，并写出数据集、切分与清单。每个条件都必须最优
+    求解且目标通量为正，事后还会对源模型重新哈希：模型文件被改动或任一条件
+    非最优，都会在写出任何内容之前中止。
     """
     source = Path(model_path).resolve()
     if not source.is_file():
@@ -279,7 +293,10 @@ def generate_dataset(model_path: str | Path, output_dir: str | Path) -> dict:
 
 
 def train_cpu_smoke(output_dir: str | Path, *, seed: int = 7) -> dict:
-    """Run one seeded CPU epoch over the generated dataset and freeze the smoke checkpoint."""
+    """Run one seeded CPU epoch over the generated dataset and freeze the smoke checkpoint.
+
+    中文：在生成的数据集上以固定种子跑一个 CPU epoch，并冻结冒烟检查点。
+    """
     output = Path(output_dir)
     records = read_simulated_flux_jsonl(output / "simulated_flux.jsonl")
     partitions = {name: [record for record in records if record.split == name]
@@ -355,6 +372,10 @@ def run_pipeline(model_path: str | Path, output_dir: str | Path, *, seed: int = 
     Fail-closed: partial outputs are deleted and a blocker describing the
     failure is written before the error is re-raised, so a failed run can never
     leave a half-valid dataset or checkpoint behind.
+
+    中文：依次运行数据生成与冒烟训练；一旦失败，只留下 ``blocker.json``。
+    fail-closed：先删除部分输出并写出描述失败的阻塞器，再重新抛出错误，因此
+    失败的运行绝不会留下半有效的数据集或检查点。
     """
     output = Path(output_dir)
     _clear_pipeline_outputs(output)

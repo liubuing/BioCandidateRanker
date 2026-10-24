@@ -8,6 +8,13 @@ Sabath ancestral-sequence state. Writes source-review-20261004/{
 g6pd-reference-variants.fasta, g6pd-variant-hits.tsv, variant-mmseqs.log,
 review-audit.json}; protected hashes are re-verified before and after and
 accepted_additions stays 0.
+
+中文：本脚本汇总来源层面的资格并审计 G6PD 参考变异：按发表年份与直接 kcat 端点对
+Fordyce 门户研究分类（门户元数据年份只是筛查线索，不是已核实日期），构建六条 in-silico
+G6PD 参考变异并经 WSL 用钉住版本的 MMseqs2 筛查，同时记录门户缺失许可与 Sabath 祖先
+序列状态。写出 source-review-20261004/{g6pd-reference-variants.fasta,
+g6pd-variant-hits.tsv, variant-mmseqs.log, review-audit.json}；保护哈希在前后各复验一次，
+accepted_additions 保持 0。治理角色：fail-closed 来源评审审计收据。
 """
 import collections
 import hashlib
@@ -19,14 +26,23 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/external/temporal-absolute-kinetics/source-review-20261004'
 REF=ROOT/'artifacts/homology-final/unique_proteins.fasta'
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 def linux(p):
-    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation."""
+    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation.
+
+    中文：把 Windows 路径映射为 WSL 的 /mnt/d/ 等价路径，供 MMseqs 调用使用。
+    """
     return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Screen portal studies and G6PD variants, then write the review audit."""
+    """Screen portal studies and G6PD variants, then write the review audit.
+
+    中文：筛查门户研究与 G6PD 变异，随后写出评审审计。
+    """
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'

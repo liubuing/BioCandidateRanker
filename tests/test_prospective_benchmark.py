@@ -2,6 +2,8 @@
 a frozen prediction deposit that must cover the full candidate cross product,
 and a final label join that reports per-campaign metrics, counts censored rows,
 refuses a second receipt, and rejects roster edits.
+
+中文：钉住前瞻基准生命周期：与标签无关的就绪门、冻结预测存证须覆盖候选全积、唯一标签合并出收据且拒绝第二次与名册改动。
 """
 
 import csv

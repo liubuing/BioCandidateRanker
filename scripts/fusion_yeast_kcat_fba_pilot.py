@@ -21,6 +21,11 @@ prediction, not a validated production forecast.
 The external project is opened read-only; the candidate reaction definitions
 are re-constructed here from its target workflow config, whose SHA256 is
 recorded in the output for provenance.
+
+中文：GECKO 式试点：酵母 10H2DA 参考案例上的 kcat 约束 FBA——BCR/Yeast-MetaTwin
+融合的第一个闭环：复现外部锚点（生物量下限 10%、最大化目标，9 月 2 日报告为
+0.274011），再以 GECKO 形式 ub = kcat·E·3600 施加 BCR 未校准 log10(kcat) 预测的
+酶容量上界并扫描酶水平，报告维持无约束最优所需的最小酶投入。一切均为模拟。
 """
 
 from __future__ import annotations
@@ -80,7 +85,10 @@ def sha256(path: Path) -> str:
 
 
 def load_kcat_predictions() -> dict[str, float]:
-    """Load stored log10(kcat) predictions and return them as s^-1 values."""
+    """Load stored log10(kcat) predictions and return them as s^-1 values.
+
+    中文：载入存储的 log10(kcat) 预测并以 s^-1 返回。
+    """
     payload = json.loads(PREDICTIONS.read_text(encoding="utf-8"))
     kcat: dict[str, float] = {}
     for row in payload["predictions"]:
@@ -92,7 +100,10 @@ def load_kcat_predictions() -> dict[str, float]:
 
 
 def load_sequence_lengths() -> dict[str, int]:
-    """Count residues per candidate FASTA for enzyme mass estimates."""
+    """Count residues per candidate FASTA for enzyme mass estimates.
+
+    中文：从候选 FASTA 数残基以估算酶分子量。
+    """
     lengths = {}
     for fasta in sorted(SEQUENCES.glob("*.fasta")):
         lines = fasta.read_text().splitlines()
@@ -113,7 +124,10 @@ def build_candidate_extension(model, target_config: dict) -> None:
 
 
 def solve_target(model) -> dict[str, float | str]:
-    """Biomass-floor + target-maximization protocol of the external validation."""
+    """Biomass-floor + target-maximization protocol of the external validation.
+
+    中文：外部验证的生物量下限 + 目标最大化协议。
+    """
     work = model.copy()
     growth_max = float(work.slim_optimize())
     if growth_max <= 0:
@@ -157,7 +171,10 @@ def solve_kcat_constrained(model, kcat: dict[str, float], constraint_map: dict[s
 
 
 def main() -> int:
-    """Run the anchor solve, enzyme-cost scan, and constrained scenarios; write results."""
+    """Run the anchor solve, enzyme-cost scan, and constrained scenarios; write results.
+
+    中文：跑锚点求解、酶代价扫描与约束场景；写结果。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", default="artifacts/fusion-yeast-pilot")
     args = parser.parse_args()

@@ -7,13 +7,18 @@ states bitwise (model tensors, sampler RNG, torch RNG, iteration, best score).
 Writes ``result.json`` on success. Governance role: integration test of
 crash-resume determinism only -- CPU scope, with CUDA nondeterminism explicitly
 excluded from the claim.
+
+中文：真实上游 CPU 训练：连续运行 vs epoch-0 中断重启的对比，断言恢复态
+逐位一致。
 """
 from pathlib import Path
 import os,subprocess,sys,json
 ROOT=Path(__file__).resolve().parents[1];BASE=ROOT/'artifacts/catpred-mode-b'
 
 def main():
-    """Run the interrupt/resume scenarios and assert bitwise-equal recovery states."""
+    """Run the interrupt/resume scenarios and assert bitwise-equal recovery states.
+中文：跑中断/恢复场景并断言逐位一致的恢复状态。
+"""
     import torch
     out=BASE/'recovery-test-v3';out.mkdir(exist_ok=True)
     env=os.environ.copy();env.update(CATPRED_RECOVERY_ID='recovery-test-v1',CATPRED_CACHE_PATH=str(BASE/'cache'),OMP_NUM_THREADS='1',MKL_NUM_THREADS='1')

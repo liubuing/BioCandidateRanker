@@ -112,7 +112,9 @@ implementation has advanced through maintenance releases:
   flagged 467 findings the pinned gate does not. Frozen file scope unchanged from v8.
 - `software-implementation-v10` (2026-10-23): documentation pass; English module docstrings and targeted comments across src/, scripts/ and tests/ with zero behavior change (AST-verified), frozen scope inherited from v9.
 
-The closed baseline is `configs/software_implementation_release_v10.json`; v1 through v9
+- `software-implementation-v11` (2026-10-23): bilingual documentation pass; Chinese translations appended to the English docstrings across src/, scripts/ and tests/ with zero behavior change (AST-verified on all 216 files), frozen scope inherited from v10.
+
+The closed baseline is `configs/software_implementation_release_v11.json`; v1 through v10
 remain as historical records.
 
 Calibration coverage is partial: `artifacts/uncertainty-calibration-v2/grouped-cv.json`

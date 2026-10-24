@@ -6,6 +6,8 @@ copies that project's plugin_runtime package, so a contract change there fails
 here instead of at the platform.
 
 Skipped when the platform checkout is absent.
+
+中文：Yeast-MetaTwin 平台插件契约测试：对平台真实 schema 与 catalog 模块（非桩）执行，staging 夹具复制其 plugin_runtime 包。
 """
 
 from __future__ import annotations

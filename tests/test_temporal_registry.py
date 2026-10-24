@@ -2,6 +2,8 @@
 before rows count, pending or malformed sources fail closed, finalized
 zero-candidate sources are reported without blocking, and the CLI exits
 non-zero while a blocker stands.
+
+中文：钉住时间池注册表：证据须终审且哈希匹配才计数、待定或畸形源 fail-closed、零候选终审源不阻塞、阻塞期间 CLI 非零退出。
 """
 
 import csv

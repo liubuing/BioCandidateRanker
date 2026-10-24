@@ -9,6 +9,9 @@ raw-file-hashes.json, homology/homology_hits.tsv, and homology-audit.json.
 Each exact construct is gated by the frozen MMseqs2 result and the exact-overlap audit
 against the hash-pinned 17,010-row development corpus; author-called incorrect Km values,
 half-reaction endpoints, and simulations are excluded.
+
+中文：整理铜绿假单胞菌 NQO（Q9I4V0）WT/P78G（DOI 10.1021/acs.biochem.5c00559）：
+Table 1 两行全局 ping-pong kcat；Q9I4V0(1-328)+His6 产物由 PDB 6E2A 佐证。
 """
 from __future__ import annotations
 
@@ -61,12 +64,16 @@ STRUCTURES = {
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
-    """Fetch raw evidence files and extract the SI PDF from the supplement archive if needed."""
+    """Fetch raw evidence files and extract the SI PDF from the supplement archive if needed.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -84,7 +91,9 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -94,7 +103,9 @@ def read_fasta(path: Path) -> str:
 
 def validate_raw() -> tuple[dict[str, str], dict[str, tuple[int, str]]]:
     """Check metadata/article/PDF/UniProt/PDB/PubChem evidence; return (construct sequences,
-    substrate structures)."""
+    substrate structures).
+中文：校验原始证据的完整性与哈希。
+"""
     metadata = json.loads((RAW / "biostudies-metadata.json").read_text(encoding="utf-8"))
     if metadata.get("accno") != "S-EPMC12781114":
         raise ValueError("Unexpected BioStudies accession")
@@ -144,7 +155,9 @@ def exact_overlap(
     constructs: dict[str, str], structures: dict[str, tuple[int, str]], development_corpus: Path
 ) -> dict[str, object]:
     """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
-    corpus."""
+    corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or changed size")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -167,13 +180,17 @@ def exact_overlap(
 
 
 def wsl_path(path: Path) -> str:
-    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires.
+中文：把 Windows 路径映射为 WSL /mnt 路径。
+"""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive.rstrip(':').lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
-    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv.
+中文：组装 WSL mmseqs 命令行。
+"""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
@@ -187,7 +204,9 @@ def reset_wsl(path: Path) -> None:
 
 def run_mmseqs(query: Path) -> str:
     """Easy-search/easy-linclust ``query`` against the frozen reference inside WSL; return the
-    verified version."""
+    verified version.
+中文：运行钉住的 WSL MMseqs2 同源搜索。
+"""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is absent or changed")
     version = subprocess.run(mmseqs_command("version"), check=True, capture_output=True, text=True).stdout.strip()
@@ -220,7 +239,9 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 def curate(*, acquire: bool, run_homology: bool, development_corpus: Path) -> None:
     """Verify evidence, run overlap/homology audits, and write the candidate/exclusion/audit
-    bundle."""
+    bundle.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download_raw()
     constructs, structures = validate_raw()

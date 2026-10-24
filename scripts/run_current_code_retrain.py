@@ -10,6 +10,10 @@ is written only after every seed finishes. Governance: an exclusive msvcrt
 file lock serialises runs; a completed receipt short-circuits that seed while
 an incomplete receipt fails closed and demands a manual recovery audit; the
 held-out test partition is never evaluated.
+
+中文：跑三个冻结的当前代码训练作业（Windows），不做测试评估：协议钉住
+本 runner 自身 SHA256、全部冻结输入、训练源码树、预训练权重与种子集；
+已有完成收据则短路，中断运行禁止静默重启。
 """
 from pathlib import Path
 import hashlib, json, os, subprocess, sys, time, msvcrt
@@ -28,7 +32,9 @@ def write(path,data):
     tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8');os.replace(tmp,path)
 
 def main():
-    """Verify the freeze and run one training job per protocol seed, fail-closed throughout."""
+    """Verify the freeze and run one training job per protocol seed, fail-closed throughout.
+中文：校验冻结后按协议种子逐个训练，全程 fail-closed。
+"""
     BASE.mkdir(exist_ok=True)
     # Single-byte non-blocking lock: a second concurrent retrain on this
     # machine would race the per-seed receipts, so refuse to start.

@@ -7,6 +7,12 @@ archive integrity.
 
 The page is self-contained: no network access, no build step, no dependencies.
 Open it directly from disk.
+
+中文：本脚本把各治理工具的输出合并为一个单文件交互式就绪面板，回答“还有什么在阻断
+投稿”：板块覆盖头条阻断项、前瞻池门、语料库再分发条款、外部外联与归档完整性。读取
+发布归档清单、前瞻池看板、许可审计与外联状态等 JSON 产物以及 manuscript/ 目录，写出
+默认 artifacts/dashboard/readiness-dashboard.html。治理角色：只读的提交就绪仪表盘
+（阻断项汇总视图，不改变任何治理状态；--redact-paths 可脱敏本地路径供分享）。
 """
 
 from __future__ import annotations
@@ -52,14 +58,20 @@ REDACTION = "<redacted-local-path>"
 
 
 def load_json(path: Path) -> dict[str, Any] | None:
-    """Load a JSON file, returning None when it does not exist."""
+    """Load a JSON file, returning None when it does not exist.
+
+    中文：加载 JSON 文件，不存在时返回 None。
+    """
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def check_declared_deliverables(root: Path) -> list[dict[str, Any]]:
-    """Check manuscript/ for each declared deliverable's file-name globs."""
+    """Check manuscript/ for each declared deliverable's file-name globs.
+
+    中文：按文件名 glob 检查 manuscript/ 中每个声明的交付物是否存在。
+    """
     results = []
     for item in DECLARED_DELIVERABLES:
         found: list[str] = []
@@ -77,7 +89,10 @@ def check_declared_deliverables(root: Path) -> list[dict[str, Any]]:
 
 
 def find_placeholders(root: Path) -> list[dict[str, Any]]:
-    """Scan manuscript Markdown for unfilled bracketed submission placeholders."""
+    """Scan manuscript Markdown for unfilled bracketed submission placeholders.
+
+    中文：扫描稿件 Markdown 中未填写的方括号投稿占位符。
+    """
     findings: list[dict[str, Any]] = []
     for path in sorted((root / MANUSCRIPT_DIR).glob("*.md")):
         text = path.read_text(encoding="utf-8")
@@ -94,14 +109,20 @@ def find_placeholders(root: Path) -> list[dict[str, Any]]:
 
 
 def redact(text: str) -> str:
-    """Replace absolute local paths so a shared dashboard cannot leak identity."""
+    """Replace absolute local paths so a shared dashboard cannot leak identity.
+
+    中文：替换绝对本地路径，使可分享的面板不泄漏作者身份。
+    """
     text = re.sub(r"[A-Za-z]:\\\\?[^\"'\s,;)]{3,}", REDACTION, text)
     text = re.sub(r"/(?:home|Users)/[A-Za-z0-9._-]+[^\"'\s,;)]*", REDACTION, text)
     return text
 
 
 def collect_blockers(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every unresolved item that stands between the project and a deposit."""
+    """Every unresolved item that stands between the project and a deposit.
+
+    中文：汇总项目与公开发布之间所有未解决的阻断项。
+    """
     blockers: list[dict[str, Any]] = []
 
     licenses = data.get("licenses") or {}
@@ -215,7 +236,10 @@ def collect_blockers(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def build_payload(root: Path, redact_paths: bool) -> dict[str, Any]:
-    """Load every source artifact and derive the blocker list for the dashboard."""
+    """Load every source artifact and derive the blocker list for the dashboard.
+
+    中文：加载全部来源产物并为面板推导阻断项列表。
+    """
     data: dict[str, Any] = {
         "sources_present": {},
     }
@@ -264,7 +288,10 @@ def build_payload(root: Path, redact_paths: bool) -> dict[str, Any]:
 
 
 def render(payload: dict[str, Any]) -> str:
-    """Render the self-contained single-file HTML dashboard around the JSON payload."""
+    """Render the self-contained single-file HTML dashboard around the JSON payload.
+
+    中文：围绕 JSON 负载渲染自包含的单文件 HTML 面板。
+    """
     embedded = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     # A closing script tag inside the payload would terminate the block early.
     embedded = embedded.replace("</", "<\\/")
@@ -623,7 +650,10 @@ paint();
 
 
 def main() -> int:
-    """Assemble the payload and write the standalone dashboard HTML."""
+    """Assemble the payload and write the standalone dashboard HTML.
+
+    中文：组装负载并写出独立面板 HTML。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

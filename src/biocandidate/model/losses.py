@@ -5,6 +5,10 @@ or per task) rather than by batch size, and accept an evidence-weight vector
 that scales each row's contribution. The ranking loss is restricted to
 same-campaign pairs with unequal labels so only comparable candidates are
 contrasted.
+
+中文：带缺失标签掩码、证据加权与排序的训练损失。回归损失按有监督条目数
+（总体或逐任务）而非 batch 大小归一化，并接受逐行证据权重；排序损失只取
+同 campaign 且标签不等的对，保证只对比可比候选。
 """
 from __future__ import annotations
 
@@ -25,7 +29,9 @@ def _same_campaign_pairs(
     Each campaign's rows are scanned once, so peak memory is linear in the number of
     pairs actually formed instead of quadratic in the batch size. When ``max_pairs`` is
     set, a deterministic random subset is selected afterwards.
-    """
+    
+中文：不用稠密矩阵枚举可比的同 campaign 对（峰值内存线性）。
+"""
     device = scores.device
     best_rows: list[int] = []
     second_rows: list[int] = []
@@ -66,7 +72,9 @@ def pairwise_logistic_ranking_loss(
     Pairs are enumerated campaign-wise without dense matrices, so peak memory is linear in
     the number of pairs. ``max_pairs`` caps the number of pairs with a deterministic
     subsample; ``None`` keeps exhaustive enumeration.
-    """
+    
+中文：同 campaign 无序不等标签对上的 logistic 排序损失。
+"""
     if scores.ndim != 1 or labels.ndim != 1 or campaign_ids.ndim != 1:
         raise ValueError("scores, labels, and campaign_ids must be one-dimensional")
     if scores.shape != labels.shape or scores.shape != campaign_ids.shape:
@@ -104,7 +112,9 @@ def masked_multitask_gaussian_loss(
 ) -> tuple[torch.Tensor, torch.Tensor] | tuple[
     torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
 ]:
-    """Heteroscedastic regression loss with missing-label and evidence masks."""
+    """Heteroscedastic regression loss with missing-label and evidence masks.
+中文：带缺失标签与证据掩码的异方差回归损失。
+"""
     if (
         mean.shape != labels.shape
         or log_variance.shape != labels.shape
@@ -135,7 +145,9 @@ def masked_multitask_mse_loss(
 ) -> tuple[torch.Tensor, torch.Tensor] | tuple[
     torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
 ]:
-    """Fixed-variance regression loss with missing-label and evidence masks."""
+    """Fixed-variance regression loss with missing-label and evidence masks.
+中文：带缺失标签与证据掩码的固定方差回归损失。
+"""
     if mean.shape != labels.shape or label_mask.shape != labels.shape:
         raise ValueError("predictions, labels, and mask must have identical shapes")
     mask = label_mask.to(mean.dtype)

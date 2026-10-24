@@ -7,6 +7,9 @@ Reads the prior batch register from ``batch_public_kinetics_20261004`` output
 with license screens and kinetics-table mentions. Governance role: acquisition
 and screening only -- ``accepted_additions`` stays 0 and no predictions are
 generated; curation decisions belong to the per-source curate_* scripts.
+
+中文：第二批显式挑选的 20 个良性酶学一次文献线索：读首批批次登记册，
+重取全文并筛查，写出 batch2 登记审计。
 """
 import concurrent.futures as cf
 import json
@@ -20,7 +23,9 @@ SELECTED=['PMC13396203','PMC12770603','PMC12896513','PMC12960341','PMC12734981',
           'PMC11199699','PMC13358373','PMC12817654','PMC10572201','PMC11372007']
 
 def main():
-    """Re-screen the 20 selected PMC leads and write the batch2 register audit."""
+    """Re-screen the 20 selected PMC leads and write the batch2 register audit.
+中文：重筛 20 个选定 PMC 线索并写 batch2 登记审计。
+"""
     OUT.mkdir(exist_ok=True)
     prior=BASE/'public-batch-20261004/batch-register.json'
     original=json.loads(prior.read_text(encoding='utf-8'))

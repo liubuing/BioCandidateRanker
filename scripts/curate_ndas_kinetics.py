@@ -9,6 +9,9 @@ provenance.json, and homology-audit.json.
 
 The heteromeric-complex rule excludes a record when either required component chain hits
 the frozen development reference; otherwise the row joins the homology-cold pool.
+
+中文：整理 NdasCDO 环二肽氧化酶 A2B2 复合体（DOI 10.1038/s41467-025-56127-y）：
+补充表 S3 八行；标签 A 链与天然 B 链分开做同源搜索，避免标签稀释判定。
 """
 from __future__ import annotations
 
@@ -51,12 +54,16 @@ KINETICS = [
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
-    """Return a validated uppercase protein FASTA sequence (headers stripped)."""
+    """Return a validated uppercase protein FASTA sequence (headers stripped).
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     sequence = "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -204,7 +211,9 @@ def write_fasta(path: Path, records: dict[str, str], descriptions: dict[str, str
 
 def write_outputs() -> None:
     """Build constructs and records, apply homology status, and write the
-    CSV/FASTA/provenance/audit bundle."""
+    CSV/FASTA/provenance/audit bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     constructs, homology_queries = build_sequences()
     records = build_records()
     apply_homology_status(records)

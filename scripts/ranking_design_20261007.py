@@ -11,6 +11,9 @@ label-free Spearman rank-null simulation under independent uniform ranks).
 Governance role: read-only decision aid -- external labels and predictions are
 never read, the workbook is never modified, no minimum group size is frozen and
 no significance gate is created.
+
+中文：只读的工作簿结构审计与无标签秩零模拟：读存储的 A. comosus 动力学
+工作簿与 20261006 排名 campaign 评审，写出结构审计与设计模拟工件。
 """
 import hashlib
 import json
@@ -28,7 +31,9 @@ def sha(p):
 
 
 def main():
-    """Audit the workbook layout and run the label-free design simulations."""
+    """Audit the workbook layout and run the label-free design simulations.
+中文：审计工作簿布局并跑无标签设计模拟。
+"""
     OUT.mkdir(exist_ok=True)
     p = ROOT/'artifacts/external/temporal-absolute-kinetics/edmond-S0HJ48/raw/Kinetic_Acomosus_and_variant.xlsx'
     original_hash = sha(p)

@@ -1,6 +1,8 @@
 """Pins the ACS Omega 3c02835 curation verdict: all eleven reported rows are
 retained as evidence yet fail closed (zero admitted records), with per-family
 construct and homology decisions recorded row by row.
+
+中文：钉住 ACS Omega 3c02835 策展裁定：11 行全部保留为证据但零入选，逐行记录构建体与同源决策。
 """
 
 import csv

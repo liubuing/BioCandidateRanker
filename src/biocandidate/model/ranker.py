@@ -4,6 +4,10 @@ Protein, molecular graph, and context tokens are fused either by late
 concatenation or by task-query cross-attention. Each task owns an MLP head
 that emits a mean plus an optional heteroscedastic log variance; disabled
 modalities are zeroed out while keeping the graph structure intact.
+
+中文：BioCandidateRanker 架构：多模态融合与逐任务头。蛋白、分子图与上下文
+token 经晚拼接或任务查询交叉注意力融合；每个任务一个 MLP 头输出均值与可选
+异方差对数方差；禁用模态置零但保持图结构完整。
 """
 from __future__ import annotations
 
@@ -21,7 +25,9 @@ from .encoders import (
 
 
 class BioCandidateRanker(nn.Module):
-    """Task-query fusion over protein, molecular graph, and host context."""
+    """Task-query fusion over protein, molecular graph, and host context.
+中文：蛋白、分子图与宿主上下文之上的任务查询融合模型。
+"""
 
     def __init__(self, config: ModelConfig) -> None:
         super().__init__()
@@ -80,7 +86,9 @@ class BioCandidateRanker(nn.Module):
         )
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        """Map a collator batch to per-task mean / log-variance predictions."""
+        """Map a collator batch to per-task mean / log-variance predictions.
+中文：把 collator 批映射为逐任务 均值/对数方差 预测。
+"""
         protein_tokens, protein_mask = self.protein(
             batch["sequence_tokens"], batch["sequence_mask"])
         batch_size = protein_tokens.shape[0]

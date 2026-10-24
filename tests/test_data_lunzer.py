@@ -1,6 +1,8 @@
 """Pins the Lunzer kinetic-landscape adapter: the reader requires the complete
 frozen 512-genotype panel, reference positions match the declared wildtype, and
 the audit/evaluation CLI commands are registered.
+
+中文：钉住 Lunzer 动力学景观适配器：要求完整冻结 512 基因型面板、参考位与声明野生型一致、审计/评估 CLI 已注册。
 """
 
 import tempfile

@@ -5,6 +5,11 @@ interface so the local Transformer, frozen ESM-2, and a mean-embedding
 ablation are interchangeable. Molecules run through a sparse message-passing
 encoder over the collator's graph tensors; hashed context ids plus an optional
 FBA vector become the context tokens of the fusion layer.
+
+中文：喂给候选排序器的蛋白、分子与宿主上下文编码器。蛋白骨干共享统一的
+(tokens, mask) -> (chunk tokens, chunk mask) 接口，使局部 Transformer、冻结
+ESM-2 与均值嵌入消融可互换；分子走稀疏消息传递；哈希上下文加可选 FBA 向量
+构成上下文 token。
 """
 from __future__ import annotations
 
@@ -16,7 +21,9 @@ import torch.nn.functional as F
 
 
 class ProteinChunkEncoder(nn.Module):
-    """Local Transformer with O(L * chunk_size) sequence attention."""
+    """Local Transformer with O(L * chunk_size) sequence attention.
+中文：O(L*chunk_size) 复杂度的局部 Transformer 序列注意力。
+"""
 
     def __init__(self, d_model: int, num_heads: int, layers: int,
                  chunk_size: int, dropout: float) -> None:
@@ -62,7 +69,9 @@ class ProteinChunkEncoder(nn.Module):
 
 
 class GlobalMeanProteinEncoder(nn.Module):
-    """Position-free amino-acid embedding mean used as a low-capacity ablation."""
+    """Position-free amino-acid embedding mean used as a low-capacity ablation.
+中文：无位置氨基酸嵌入均值，作为低容量消融。
+"""
 
     def __init__(self, d_model: int) -> None:
         super().__init__()
@@ -84,7 +93,9 @@ class ESM2ProteinEncoder(nn.Module):
     tokens use the project vocabulary (0=pad, 1=unknown, 2-21=ACDEFGHIKLMNPQRSTVWY).
     Internally remaps to ESM-2 vocabulary, runs the frozen backbone, and pools
     per-residue embeddings into chunk-level tokens.
-    """
+    
+中文：冻结 ESM-2 骨干 + 分块池化投影到 d_model。
+"""
 
     # Project vocab order: A C D E F G H I K L M N P Q R S T V W Y (indices 2-21)
     # ESM-2 standard alphabet indices (from esm.constants.restype_order):
@@ -229,7 +240,9 @@ class ESM2ProteinEncoder(nn.Module):
 
 
 class SparseMessageLayer(nn.Module):
-    """One round of degree-normalized sparse message passing with a GRU update."""
+    """One round of degree-normalized sparse message passing with a GRU update.
+中文：一轮度归一化稀疏消息传递，GRU 更新。
+"""
 
     def __init__(self, d_model: int, dropout: float) -> None:
         super().__init__()
@@ -258,7 +271,9 @@ class SparseMessageLayer(nn.Module):
 
 
 class SparseMoleculeEncoder(nn.Module):
-    """Embed atoms and bonds, run sparse message passing, mean-pool to one token per graph."""
+    """Embed atoms and bonds, run sparse message passing, mean-pool to one token per graph.
+中文：嵌入原子与键、稀疏消息传递、均值池化为每图一个 token。
+"""
 
     def __init__(self, d_model: int, layers: int, dropout: float) -> None:
         super().__init__()
@@ -296,7 +311,9 @@ class SparseMoleculeEncoder(nn.Module):
 
 
 class ContextEncoder(nn.Module):
-    """Embed hashed context fields plus the optional FBA vector as extra attention tokens."""
+    """Embed hashed context fields plus the optional FBA vector as extra attention tokens.
+中文：嵌入哈希上下文字段，可选 FBA 向量作为额外注意力 token。
+"""
 
     def __init__(self, buckets: int, fields: int, fba_context_dim: int,
                  d_model: int) -> None:

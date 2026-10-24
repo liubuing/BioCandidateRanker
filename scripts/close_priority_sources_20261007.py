@@ -6,6 +6,12 @@ homology screen (deposition-derived reference plus in-silico variants, not
 confirmed constructs) and a polymer-substrate scope exclusion. The frozen
 protocol hash is asserted at import time and every precomputed MMseqs hit line
 is re-checked against the pinned thresholds; accepted_additions stays 0.
+
+中文：本脚本在不确定准入记录、不运行预测的情况下记录来源级决定，把 2026-10-07 的优先
+来源跟进收口为 priority-source-followup-20261007/closeout.json：一次 FtsQ/FLS 参考同源
+性筛查（deposition 推导的参考加 in-silico 变异，并非已确认构建体）与一项聚合物底物
+范围排除。冻结协议哈希在 import 时断言，每条预计算 MMseqs 命中行都按钉住阈值复检；
+accepted_additions 保持 0。治理角色：fail-closed 收口审计收据。
 """
 from pathlib import Path
 import hashlib
@@ -16,7 +22,10 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/external/priority-source-followup-20261007'
 
 def sha(path):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 protocol = ROOT / 'configs/temporal_absolute_kinetics_protocol.json'

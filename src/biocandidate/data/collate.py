@@ -4,6 +4,11 @@ Tokenizes sequences, converts substrate SMILES into sparse molecular graphs,
 hashes organism/EC/enzyme/reaction context into fixed bucket ids, and packs
 sparse multi-task labels (``labels`` plus ``label_mask``) with evidence-tier
 weights. The returned key set is the input contract of the ranker model.
+
+中文：把 EnzymeSubstrateRecord 行批整理（collate）为模型张量。负责序列分词、
+底物 SMILES 转稀疏分子图、把 organism/EC/enzyme/reaction 上下文哈希为固定
+桶 id，并按证据层级权重打包稀疏多任务标签（labels 与 label_mask）。返回的
+键集合即 ranker 模型的输入契约。
 """
 from __future__ import annotations
 
@@ -22,7 +27,9 @@ AMINO_ACIDS = "ACDEFGHIKLMNPQRSTVWY"
 
 
 class AminoAcidTokenizer:
-    """Fixed project vocabulary: 0=pad, 1=unknown, 2-21 map onto the 20 canonical acids."""
+    """Fixed project vocabulary: 0=pad, 1=unknown, 2-21 map onto the 20 canonical acids.
+    中文：固定项目词表：0=pad，1=未知，2-21 依序映射到 20 种标准氨基酸。
+    """
 
     pad_id = 0
     unknown_id = 1
@@ -39,7 +46,9 @@ class AminoAcidTokenizer:
         return tuple(self._ids.get(amino_acid, self.unknown_id) for amino_acid in sequence.upper())
 
     def pad(self, sequences: Sequence[str]) -> tuple[torch.Tensor, torch.Tensor]:
-        """Encode sequences and right-pad them into rectangular token and mask tensors."""
+        """Encode sequences and right-pad them into rectangular token and mask tensors.
+        中文：编码序列并右侧填充为矩形的 token 与 mask 张量。
+        """
         encoded = [self.encode(sequence) for sequence in sequences]
         width = max((len(item) for item in encoded), default=0)
         tokens = torch.full((len(encoded), width), self.pad_id, dtype=torch.long)
@@ -53,7 +62,9 @@ class AminoAcidTokenizer:
 
 @dataclass(frozen=True, slots=True)
 class MolecularGraph:
-    """Sparse molecular graph: integer atom/bond features and a COO edge index."""
+    """Sparse molecular graph: integer atom/bond features and a COO edge index.
+    中文：稀疏分子图：整数化原子/键特征与 COO 边索引。
+    """
 
     atom_features: torch.Tensor
     edge_index: torch.Tensor
@@ -68,6 +79,9 @@ def smiles_to_sparse_graph(smiles: str) -> MolecularGraph:
     hybridization, total Hs); bond features are (type, conjugated, in-ring)
     with both directions stored per bond. The result is shared across batches
     via the cache and must not be mutated by callers.
+    中文：把单组分 SMILES 转换为带缓存的稀疏图。原子特征为（原子序数、度、
+    形式电荷、芳香性、杂化方式、总氢数）；键特征为（类型、是否共轭、是否在
+    环上），每条键按两个方向存储。结果经缓存跨批次共享，调用者不得修改。
     """
     Chem = require_rdkit()
     molecule = Chem.MolFromSmiles(smiles)
@@ -112,7 +126,9 @@ def _hash_id(value: str, buckets: int) -> int:
 
 
 class EnzymeSubstrateCollator:
-    """Collate records into the tensor batch consumed by ``BioCandidateRanker``."""
+    """Collate records into the tensor batch consumed by ``BioCandidateRanker``.
+    中文：把记录整理为 BioCandidateRanker 所消费的张量批次。
+    """
 
     def __init__(
         self,

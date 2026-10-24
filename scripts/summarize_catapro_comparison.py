@@ -9,6 +9,9 @@ without modifying it) plus the Chinese report
 reporting -- no inference is performed, existing artifacts are never
 overwritten, and the report states explicitly that the project has not been
 shown to beat the modern baseline and that this is not external validation.
+
+中文：审计已存预测并把 CataPro 追加进新的、不覆盖既有结果的对比束：核验
+全部哈希，从逐种子预测 CSV 重算指标并写对比报告。
 """
 from pathlib import Path
 import csv,json,hashlib,sys
@@ -21,7 +24,9 @@ def read(p):return json.loads(p.read_text(encoding='utf-8'))
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    """Verify saved CataPro predictions and write the comparison bundle and report."""
+    """Verify saved CataPro predictions and write the comparison bundle and report.
+中文：核验已存 CataPro 预测并写对比束与报告。
+"""
     out=ROOT/'artifacts/catapro-mode-b/internal-test'
     result=read(out/'summary.json')
     freeze=read(ROOT/'configs/catapro_internal_test_freeze.json')

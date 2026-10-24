@@ -7,6 +7,12 @@ and no computed labels) into staged-measurements.csv, and classifies each
 fulltext source. Writes public-batch-20261004/curation-audit.json with
 accepted_additions=0: ECB-method fits are marked non-independent, apparent
 parameters are held for review, and no-hit components stay pending.
+
+中文：本脚本记录人工核查过的来源单元格与组分筛查处置：复验 batch-register.json 记录的
+保护哈希，把组分查询对开发参考集筛查，把人工核查的来源 kcat 单元格（仅精确表格值；无
+读图估计、无计算标签）staged 进 staged-measurements.csv，并对每篇全文分类。写出
+public-batch-20261004/curation-audit.json，其中 accepted_additions=0：ECB 方法拟合标记为
+非独立、表观参数挂起待审、无命中的组分保持 pending。治理角色：策展审计收据。
 """
 import csv
 import hashlib
@@ -18,13 +24,22 @@ from Bio import SeqIO
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/external/temporal-absolute-kinetics/public-batch-20261004'
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 def read(name):
-    """Load a JSON file from the batch output folder."""
+    """Load a JSON file from the batch output folder.
+
+    中文：从批次输出目录加载 JSON 文件。
+    """
     return json.loads((OUT/name).read_text(encoding='utf-8'))
 def main():
-    """Stage source cells, classify sources, and write the curation audit receipt."""
+    """Stage source cells, classify sources, and write the curation audit receipt.
+
+    中文：暂存来源单元格、分类各来源并写出策展审计收据。
+    """
     batch=read('batch-register.json')
     for rel,h in batch['protected_hashes'].items():assert sha(ROOT/rel)==h
     ref=ROOT/'artifacts/homology-final/unique_proteins.fasta'

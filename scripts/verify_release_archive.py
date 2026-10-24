@@ -9,6 +9,9 @@ Checks performed:
   4. the archive records the source-manifest hash of the release it claims.
 
 Exits non-zero when any check fails, so this can gate a deposit.
+
+中文：对照内嵌清单与发布冻结校验发布归档：逐成员核对大小与 SHA256、
+无未列出成员、无缺失成员、无本地路径泄露。
 """
 
 from __future__ import annotations
@@ -39,7 +42,9 @@ def verify_archive(
     archive_path: Path,
     release_manifest_path: Path | None,
 ) -> list[str]:
-    """Verify one archive against its embedded manifest; the returned list is empty iff valid."""
+    """Verify one archive against its embedded manifest; the returned list is empty iff valid.
+中文：对照内嵌清单校验一个归档；返回列表为空即有效。
+"""
     issues: list[str] = []
 
     if not archive_path.is_file():
@@ -131,7 +136,9 @@ def verify_archive(
 
 
 def main() -> int:
-    """Verify the archive and exit nonzero when any recorded check fails."""
+    """Verify the archive and exit nonzero when any recorded check fails.
+中文：校验归档，任何记录检查失败即非零退出。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
     parser.add_argument("--root", type=Path, default=Path("."))

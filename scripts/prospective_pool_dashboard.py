@@ -3,6 +3,10 @@
 Reads the live readiness audit and the frozen release thresholds, then reports
 per-gate shortfalls, per-family saturation, and what each resolution path would
 require. This is a decision aid: it never scores records or generates predictions.
+
+中文：汇总冻结的前瞻池就绪门与各条路线选项：读最新就绪审计与冻结发布
+阈值，报告逐门缺口、逐家族饱和度与各解决路径所需投入。决策辅助，绝不
+给记录打分或生成预测。
 """
 
 from __future__ import annotations
@@ -42,7 +46,9 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def family_table(audit: dict[str, Any], cap: int) -> list[dict[str, Any]]:
-    """Build the per-family saturation rows against the per-family cap."""
+    """Build the per-family saturation rows against the per-family cap.
+中文：按家族上限构建逐家族饱和行。
+"""
     counts = audit.get("family_record_counts_before_cap", {})
     rows = []
     for family, records in sorted(counts.items()):
@@ -62,7 +68,9 @@ def evaluate_gates(audit: dict[str, Any], thresholds: dict[str, Any]) -> list[di
 
     The audit is the measurement of record; the release manifest is only a
     fallback for counts the audit does not carry.
-    """
+    
+中文：以审计为测量记录，对照冻结阈值评估各门。
+"""
     counts = audit.get("counts", {})
     gates = []
     for audit_key, manifest_key, required_key, label in GATES:
@@ -88,7 +96,9 @@ def evaluate_gates(audit: dict[str, Any], thresholds: dict[str, Any]) -> list[di
 
 
 def source_projection(audit: dict[str, Any], gates: list[dict[str, Any]]) -> dict[str, Any]:
-    """Estimate how many additional accepted sources the unmet gates imply."""
+    """Estimate how many additional accepted sources the unmet gates imply.
+中文：估算未达门还需多少个被接受的来源。
+"""
     counts = audit.get("counts", {})
     sources = counts.get("accepted_sources") or 0
     records = counts.get("records_after_global_family_cap") or 0
@@ -227,7 +237,9 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    """Evaluate the readiness gates and emit the JSON (and optional Markdown) report."""
+    """Evaluate the readiness gates and emit the JSON (and optional Markdown) report.
+中文：评估就绪门并输出 JSON（与可选 Markdown）报告。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--audit", type=Path, default=DEFAULT_AUDIT)

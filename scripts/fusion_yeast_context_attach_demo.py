@@ -15,6 +15,11 @@ Reads the governed FBA context from ``biocandidate.fba_context`` and the task-1
 candidate list under ``artifacts/10h2da-yeast-prediction``; writes
 ``artifacts/fusion-yeast-pilot/context_attached_prediction_demo.json`` with raw
 versus context-attached kcat values and their shifts.
+
+中文：演示第二条融合接缝：注册进 fba_context 的 Yeast-MetaTwin 模型把 8 维受治理
+向量接入工作台预测路径。主张边界：全部已发布检查点均未用通量标签训练，该输入通路
+未经训练——附加上下文只为证明管线连通，并非经科学验证的输入；原始（无上下文）
+预测同时保存以供对照。
 """
 
 from __future__ import annotations
@@ -35,7 +40,10 @@ TASK1 = ROOT / "artifacts/10h2da-yeast-prediction/task1_10h2da_pathway.json"
 
 
 def main() -> int:
-    """Run raw and FBA-attached predictions and record the demonstration artifact."""
+    """Run raw and FBA-attached predictions and record the demonstration artifact.
+
+    中文：跑原始与附加 FBA 的预测并记录演示工件。
+    """
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

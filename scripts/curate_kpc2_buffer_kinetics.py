@@ -9,6 +9,9 @@ homology-audit.json, and provenance.json.
 Exclusion-only fail-closed: rows are direct nonlinear Michaelis-Menten fits, but the exact
 TEV-cleaved assay chain is unresolved (no insert boundary or residual scar reported), and
 the sequence-resolved mature catalytic component hits the frozen development reference.
+
+中文：整理野生型 KPC-2 beta-内酰胺酶缓冲液系列（DOI 10.1128/aac.01069-25）：
+25 行直接有限值全部排除（TEV 疤痕未解析 + 同源），产出空候选表与阻塞证据。
 """
 from __future__ import annotations
 
@@ -87,13 +90,17 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> list[dict[str, object]]:
     """Fetch raw files, probe the BioStudies API, and return structured acquisition attempt
-    records."""
+    records.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     attempts = []
     for name, url in URLS.items():
@@ -120,7 +127,9 @@ def fasta_sequence(path: Path) -> str:
 
 def validate_raw() -> tuple[str, str]:
     """Check article/supplement markers, precursor and structure identities, and the frozen
-    reference; return (mature, tagged)."""
+    reference; return (mature, tagged).
+中文：校验原始证据的完整性与哈希。
+"""
     xml = (RAW / "PMC12959137-fullText.xml").read_text(encoding="utf-8")
     markers = (DOI, "creativecommons.org/licenses/by/4.0", "pET28a", "TEV protease", "removal of the His-tag", "nonlinear Michaelis", "at least two independent replicates")
     missing = [marker for marker in markers if marker not in xml]
@@ -178,7 +187,9 @@ def run_checked(arguments: list[str]) -> str:
 
 def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust ``query`` against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs2 {version!r} differs from frozen version")
@@ -208,7 +219,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 def curate(acquire: bool, mmseqs: str, threads: int) -> None:
     """Verify evidence, run the homology gate first, then write the exclusion-only evidence
-    bundle."""
+    bundle.
+中文：执行完整策展流程并写出证据束。
+"""
     attempts = download_raw() if acquire else []
     mature, tagged = validate_raw()
     SOURCE.mkdir(parents=True, exist_ok=True)

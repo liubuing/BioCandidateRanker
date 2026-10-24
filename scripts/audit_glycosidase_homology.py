@@ -8,6 +8,14 @@ audit-queries.fasta, homology-audit.json, excluded-measurements.csv,
 source-decisions.json}: all seven angh3/bgap measurements are re-labelled
 excluded_development_homology, no record is accepted, and the frozen protocol
 and prior audit hashes must be unchanged.
+
+中文：本脚本在不出预测的前提下审计参考序列与文章支持的构建体解读：重建 AnGH3（737 残基
+deposited 翻译 vs 去除 19 残基信号肽）与 BGA3P（deposited 参考 vs 文章 I2V）两种解读，
+再把全部四条查询序列经 WSL 用钉住版本的 MMseqs2 对开发参考集筛查。写出
+discovery-20261003/{audit-queries.fasta, homology-audit.json,
+excluded-measurements.csv, source-decisions.json}：全部 7 条 angh3/bgap 测量被改标为
+excluded_development_homology，不接受任何记录，冻结协议与先前审计哈希必须不变。
+治理角色：fail-closed 同源性排除审计收据。
 """
 import hashlib
 import csv
@@ -23,15 +31,24 @@ REF = ROOT / 'artifacts/homology-final/unique_proteins.fasta'
 VERSION = '5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def linux(p):
-    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation."""
+    """Map a Windows path to its WSL /mnt/d/ equivalent for the MMseqs invocation.
+
+    中文：把 Windows 路径映射为 WSL 的 /mnt/d/ 等价路径，供 MMseqs 调用使用。
+    """
     return '/mnt/d/' + p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Screen both construct interpretations per enzyme and record the exclusion decision."""
+    """Screen both construct interpretations per enzyme and record the exclusion decision.
+
+    中文：对每个酶筛查两种构建体解读并记录排除决定。
+    """
     assert sha(REF) == '69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
     protected = [ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes = {str(p.relative_to(ROOT)):sha(p) for p in protected}

@@ -7,6 +7,12 @@ and asserting the exact disposition counts. Writes
 campaign-audit-complete-20261005/closeout.json; the pool stays unchanged,
 evaluation_ready stays false everywhere, and the frozen protocol and prior
 pool hashes are re-verified.
+
+中文：本脚本在不打分、不改动池的情况下为全部剩余元数据桶分类：用一张仅基于已发表实验
+设计元数据（绝不使用响应幅值）的固定逐源处置表收口剩余 18 个候选桶，按记录的 SHA256
+复读各来源候选行并断言精确的处置计数。写出
+campaign-audit-complete-20261005/closeout.json；池保持不变、处处 evaluation_ready=false，
+冻结协议与先前池哈希被复验。治理角色：候选组评审收口审计收据。
 """
 import csv
 import hashlib
@@ -20,12 +26,18 @@ OUT = BASE / 'campaign-audit-complete-20261005'
 
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
-    """Apply the disposition table to every queued bucket and write the closeout."""
+    """Apply the disposition table to every queued bucket and write the closeout.
+
+    中文：把处置表应用到每个排队桶并写出收尾收据。
+    """
     initial = json.loads((BASE / 'campaign-audit-20261005/closeout.json').read_text())
     inventory = json.loads((ROOT / 'artifacts/research-scope-20261005-v2/ranking-metadata-feasibility.json').read_text())
     groups = {(g['source_id'], g['substrate_id']): g for g in inventory['groups'] if g['distinct_sequence_signatures'] >= 3}

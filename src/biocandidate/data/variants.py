@@ -1,4 +1,7 @@
-"""Construction of variant sequences from one-letter substitution notation."""
+"""Construction of variant sequences from one-letter substitution notation.
+
+中文：从单字母替换记法构造变体序列。
+"""
 
 from __future__ import annotations
 
@@ -13,6 +16,8 @@ def apply_substitutions(reference_sequence: str, notation: str) -> str:
 
     Fails on non-canonical references, malformed notation, out-of-range or
     duplicated positions, and reference-residue mismatches.
+    中文：应用以连字符分隔的替换（A23G-T45S；WT 返回参考序列）。对非规范参考
+    序列、畸形记法、越界或重复位点以及参考残基不符等情况一律报错。
     """
     sequence = "".join(reference_sequence.split()).upper()
     if not sequence or any(residue not in "ACDEFGHIKLMNPQRSTVWY" for residue in sequence):

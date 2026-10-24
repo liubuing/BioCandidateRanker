@@ -18,6 +18,9 @@ PubChem structure identifier accepted by the frozen registry. Any
 development-corpus hit on the conservative exact zymogen queries likewise
 forces the blocker. Governance role: fail-closed -- zero candidate records, a
 ``curation_blocked`` blocker is always emitted, and no model predictions run.
+
+中文：整理 VaPAL2 天冬酰胺酰内肽酶动力学（DOI 10.1016/j.jbc.2026.111301）：
+下载校验存档，由补充材料（引物表与 Data S1）重建精确 His6 表达 zymogen 后筛查；三行 kcat 全部不入选。
 """
 from __future__ import annotations
 
@@ -82,7 +85,9 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
-    """Fetch pinned article assets, reusing local copies, and record the acquisition log."""
+    """Fetch pinned article assets, reusing local copies, and record the acquisition log.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     attempts = []
     for name, url in DOWNLOADS.items():
@@ -437,7 +442,9 @@ def run_frozen_homology(query: Path) -> dict[str, object]:
 
 
 def main() -> None:
-    """Gate the VaPAL2 source: acquire, validate, screen homology, and emit the blocker."""
+    """Gate the VaPAL2 source: acquire, validate, screen homology, and emit the blocker.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser(description="Acquire and gate VaPAL2 absolute kinetics")
     parser.add_argument("--no-download", action="store_true")
     args = parser.parse_args()

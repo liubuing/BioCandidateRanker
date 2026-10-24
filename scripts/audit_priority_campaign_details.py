@@ -6,6 +6,13 @@ against recorded SHA256s, and attaches source-grounded overlays (conditions,
 calibration, fitting, repeat/error status, range and scale flags). Writes
 campaign-detail-20261005/closeout.json with accepted_additions=0 and
 evaluation_ready=false everywhere; labels and label magnitudes stay untouched.
+
+中文：本脚本保存有来源依据的测定元数据覆盖层，绝不修改已接受标签：从先前收尾
+（campaign-audit-complete-20261005）重新推导两个候选组，按记录的 SHA256 复读其
+candidate_records.csv 行，并附上有来源依据的覆盖层（条件、校准、拟合、重复/误差状态、
+量程与尺度标记）。写出 campaign-detail-20261005/closeout.json，其中
+accepted_additions=0 且处处 evaluation_ready=false；标签与标签幅值保持不动。治理角色：
+审计收据（数值一致性仅作质量控制检查，不作选择依据）。
 """
 import csv
 import hashlib
@@ -19,12 +26,18 @@ OUT = BASE / 'campaign-detail-20261005'
 
 
 def sha(path):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
-    """Audit two campaign groups and write their detail closeout."""
+    """Audit two campaign groups and write their detail closeout.
+
+    中文：审计两个候选组并写出其明细收尾收据。
+    """
     prior = json.loads((BASE / 'campaign-audit-complete-20261005/closeout.json').read_text())
     groups = []
     for source, substrate in [('biostudies-S-EPMC12645435', 'pubchem:135398641'),

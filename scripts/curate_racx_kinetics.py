@@ -8,6 +8,9 @@ and homology-audit.json.
 After frozen MMseqs2 homology exclusion, the first FAMILY_CAP records in source-table and
 source-row order are accepted (a rule that never inspects kinetic values); narrative-vs-table
 kcat/Km discrepancies are retained and flagged, never silently corrected.
+
+中文：整理 RacX 赖氨酸消旋酶（Halocola ammonii DA487T，DOI 10.1128/aem.02015-25）：
+23 行（Table 1 的 15 行 WT 底物行 + Table 3 的 8 行变体行）；SI 来源 WT 序列加六个点突变；冻结同源后分流。
 """
 from __future__ import annotations
 
@@ -42,7 +45,9 @@ SUBSTRATES = {
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -172,7 +177,9 @@ def apply_selection_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -180,7 +187,9 @@ def sha256(path: Path) -> str:
 
 def write_outputs() -> None:
     """Build sequences and records, apply selection status, and write the
-    CSV/FASTA/provenance/audit bundle."""
+    CSV/FASTA/provenance/audit bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = build_sequences()
     records = build_records()
     apply_selection_status(records)

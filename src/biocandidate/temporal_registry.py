@@ -5,6 +5,10 @@ default because source-local MMseqs clusters are not necessarily globally distin
 The opt-in ``source-local-additive`` policy sums source-local clusters, but refuses to
 report a count when a multicomponent source does not declare catalytic (rather than
 component) families.
+
+中文：前瞻时间策展池的 fail-closed 注册表。默认不报家族数：源内 MMseqs 簇
+未必全局唯一；可选的 source-local-additive 策略会累加源内簇，但多组件源未
+声明催化组件时拒绝报告计数。
 """
 
 from __future__ import annotations
@@ -25,7 +29,9 @@ TERMINAL_ZERO_DISPOSITION_WORDS = ("block", "complete", "exclude", "not_run")
 
 
 def finalized_accepted_sources(root: Path, protocol_path: Path) -> list[dict[str, Any]]:
-    """Return accepted rows only from sources passing the registry's fail-closed checks."""
+    """Return accepted rows only from sources passing the registry's fail-closed checks.
+中文：只返回通过注册表 fail-closed 检查的源的接受行。
+"""
     report = build_registry(root, protocol_path)
     finalized = {
         source["source_id"]
@@ -165,7 +171,9 @@ def build_registry(
     *,
     family_policy: str = "none",
 ) -> dict[str, Any]:
-    """Reconcile source CSVs and homology audits into a readiness report."""
+    """Reconcile source CSVs and homology audits into a readiness report.
+中文：把各源 CSV 与同源审计对账为就绪报告。
+"""
     if family_policy not in FAMILY_POLICIES:
         raise ValueError(f"family_policy must be one of {FAMILY_POLICIES}")
 
@@ -395,7 +403,9 @@ def build_registry(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Build the registry report; exit 0 only if the readiness gate passes."""
+    """Build the registry report; exit 0 only if the readiness gate passes.
+中文：构建注册表报告；就绪门通过才以 0 退出。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root",

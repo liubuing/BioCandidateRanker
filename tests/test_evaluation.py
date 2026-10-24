@@ -1,6 +1,8 @@
 """Pins evaluation aggregation: deterministic campaign seed summaries with
 bootstrap CIs and None-safe undefined metrics, paired fusion differences,
 regression baseline summaries, and standardized-RMSE uncertainty calibration.
+
+中文：钉住评估聚合：确定性 campaign 种子汇总与 bootstrap CI、None 安全的未定义指标、配对融合差值、标准化 RMSE 校准。
 """
 
 import unittest

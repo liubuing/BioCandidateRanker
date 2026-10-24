@@ -5,6 +5,9 @@ homology-cold data and writes ``artifacts/catpred-mode-b/smoke-data`` with
 partition CSVs, ``protein_records.json.gz``, and a ``receipt.json`` of source
 and output hashes. Governance role: pipeline plumbing only -- no test rows are
 touched and no performance claim is implied.
+
+中文：导出确定性的开发专用 CatPred 管线冒烟数据（冻结顺序的前 32 训练行
+与 8 验证行），写冒烟束与收据。
 """
 from pathlib import Path
 import csv, gzip, hashlib, json
@@ -13,7 +16,9 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/catpred-mode-b/smoke-data'
 
 def main():
-    """Write the smoke bundles and receipt for the development plumbing check."""
+    """Write the smoke bundles and receipt for the development plumbing check.
+中文：为开发管线检查写冒烟束与收据。
+"""
     OUT.mkdir(exist_ok=True)
     records={}; receipt={'purpose':'Development plumbing check only; no test rows, no performance claim', 'partitions':{}}
     for partition, count in [('train',32),('validation',8)]:

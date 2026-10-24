@@ -6,6 +6,9 @@ patience stop (epoch >= 5); otherwise records ``training-complete.json`` with
 checkpoint identity and re-invokes ``run_esm2_modality_diagnostic.py`` to run
 the remaining variants. Governance role: supervised continuation helper only --
 no training parameters are read or changed here.
+
+中文：首个交互运行退出后续跑冻结的模态诊断：等待训练 PID，非零退出、
+检查点缺失或早于最早合理耐心停止点即 fail-closed，然后继续诊断。
 """
 
 from __future__ import annotations
@@ -26,7 +29,9 @@ FIRST = ROOT / "artifacts" / "esm2-modality-diagnostic" / "protein-only-seed7"
 
 
 def identity(path: Path) -> dict[str, int | str]:
-    """Return size and SHA-256 identity for a produced checkpoint file."""
+    """Return size and SHA-256 identity for a produced checkpoint file.
+中文：返回产出检查点文件的大小与 SHA-256 身份。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
@@ -35,7 +40,9 @@ def identity(path: Path) -> dict[str, int | str]:
 
 
 def main() -> None:
-    """Wait for the first run, validate its outcome, then continue the diagnostic."""
+    """Wait for the first run, validate its outcome, then continue the diagnostic.
+中文：等待首个运行、验证其结果，然后继续诊断。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--pid", type=int, required=True)
     arguments = parser.parse_args()

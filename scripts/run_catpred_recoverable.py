@@ -1,4 +1,7 @@
-"""Single-lock queue of independently seeded members with epoch recovery."""
+"""Single-lock queue of independently seeded members with epoch recovery.
+
+中文：带 epoch 恢复的独立种子成员单锁队列。
+"""
 from pathlib import Path
 import os,sys,json,hashlib,subprocess,time,fcntl
 ROOT=Path(__file__).resolve().parents[1];BASE=ROOT/'artifacts/catpred-mode-b'

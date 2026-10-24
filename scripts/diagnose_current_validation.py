@@ -9,6 +9,9 @@ metrics (length and canonicality strata), SD-coverage, and seed-disagreement
 statistics. Governance role: descriptive diagnosis only -- checkpoints,
 selected epochs, and test predictions are never modified or re-selected, and a
 pre-existing ``report.json`` aborts the run (fail-closed).
+
+中文：对验证数据做只读模型诊断；不改变任何检查点选择。读取冻结重训协议、
+完成训练清单与三个种子检查点，在 1,640 行同源冷验证集上分层诊断。
 """
 from pathlib import Path
 import csv,json,hashlib,os,sys
@@ -25,7 +28,9 @@ from biocandidate.data.homology import apply_split_manifest
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(Path(p).read_text(encoding='utf-8'))
 def metrics(p,y,sd):
-    """Compute RMSE/MAE/bias, SD coverage, and constant-free Gaussian NLL for one stratum."""
+    """Compute RMSE/MAE/bias, SD coverage, and constant-free Gaussian NLL for one stratum.
+中文：计算单层的 RMSE/MAE/偏差、SD 覆盖与常数无关高斯 NLL。
+"""
     e=p-y
     return {'n':len(y),'rmse':float(np.sqrt(np.mean(e**2))),'mae':float(np.mean(abs(e))),
         'bias':float(e.mean()),'mean_sd':float(sd.mean()),'coverage_1sigma':float(np.mean(abs(e)<=sd)),
@@ -33,7 +38,9 @@ def metrics(p,y,sd):
         'gaussian_nll_without_constant':float(np.mean(.5*(e/sd)**2+np.log(sd)))}
 
 def main():
-    """Verify all frozen inputs, then diagnose the three seed checkpoints on validation."""
+    """Verify all frozen inputs, then diagnose the three seed checkpoints on validation.
+中文：校验全部冻结输入后，对三个种子检查点做验证集诊断。
+"""
     if (OUT/'report.json').exists():raise FileExistsError(OUT/'report.json')
     OUT.mkdir(exist_ok=True)
     protocol=read(ROOT/'configs/current_code_retrain_protocol.json');os.environ['TORCH_HOME']=protocol['torch_home']

@@ -23,6 +23,11 @@ model assumptions. Nothing here is an experimental flux measurement, and no
 checkpoint shipped with this project was trained with flux labels, so attaching
 these features to prediction is an engineering integration, not a scientifically
 validated input.
+
+中文：面向多模态排序器的基因组尺度 FBA 上下文特征。导入代谢模型技术栈并将其
+暴露为受治理的模型输入：iML1515 模型、以生物量为目标的 FBA、以反应边界实现
+的敲除与过表达、培养基 glucose 15 / oxygen 20 等（对应 Wang 等 D-泛酸论文
+设定），最终产出 8 维受治理上下文向量。
 """
 
 from __future__ import annotations
@@ -209,7 +214,9 @@ CLAIM_BOUNDARY = (
 
 
 def signed_log10(value: float) -> float:
-    """Signed log10(1 + |v|): keeps sign and zero, bounds the dynamic range."""
+    """Signed log10(1 + |v|): keeps sign and zero, bounds the dynamic range.
+中文：带符号 log10(1+|v|)：保留符号与零，压缩动态范围。
+"""
     if not math.isfinite(value):
         raise ValueError(f"flux must be finite, got {value}")
     magnitude = math.log10(1.0 + abs(value))
@@ -223,7 +230,9 @@ class Modification:
     The paper realizes knockouts by setting reaction bounds to zero and
     overexpression by constraining a reaction to a proportion of its baseline
     flux; both are reproduced here.
-    """
+    
+中文：论文语汇中的一次基因改动（敲除/过表达等）。
+"""
 
     kind: str  # "knockout" | "overexpression"
     target: str  # gene name/id for knockout, reaction id for overexpression
@@ -291,7 +300,9 @@ def _require_model(model_id: str) -> None:
 
 
 def verify_model_file(model_path: Path, expected: dict[str, Any]) -> None:
-    """Raise unless the model file's SHA256 and size match the tracked config."""
+    """Raise unless the model file's SHA256 and size match the tracked config.
+中文：模型文件的 SHA256 与大小和受跟踪配置不符即抛错。
+"""
     digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
     if digest != expected["sha256"]:
         raise ValueError(
@@ -303,7 +314,9 @@ def verify_model_file(model_path: Path, expected: dict[str, Any]) -> None:
 
 
 def load_model(model_id: str, model_path: str | Path | None = None, *, verify: bool = True):
-    """Load a registered model and verify it against the tracked config."""
+    """Load a registered model and verify it against the tracked config.
+中文：加载已注册模型并对照受跟踪配置校验。
+"""
     import cobra
 
     _require_model(model_id)
@@ -330,7 +343,9 @@ def add_fusion_pathways(model) -> list[str]:
     fluxes, so baseline behaviour is unchanged. Idempotent: identifiers that
     already exist are skipped, so a reused model object cannot be corrupted by
     duplicate entities with split mass balance.
-    """
+    
+中文：精氨酸项目合成通路层的移植。
+"""
     import cobra
 
     existing_metabolites = {m.id for m in model.metabolites}
@@ -436,7 +451,9 @@ def cofactor_turnover(
 
     Cofactor pools themselves are not reported: FBA gives fluxes, not
     concentrations, and no metabolite-level measurement is bundled here.
-    """
+    
+中文：每个辅因子的总周转量及主导反应（内量净产为零，故报毛值）。
+"""
     report: dict[str, Any] = {}
     for label, metabolite_id in cofactor_metabolites.items():
         if metabolite_id not in model.metabolites:
@@ -489,7 +506,9 @@ def oxidative_burden(
     respiration and oxidases, and produces peroxide that its peroxiredoxins and
     catalase must clear, so the gross figures are the ones with engineering
     meaning.
-    """
+    
+中文：氧耗与过氧化氢产出及责任反应；按方向而非净值报告。
+"""
     report: dict[str, Any] = {}
     for label, metabolite_id in oxidant_metabolites.items():
         if metabolite_id not in model.metabolites:
@@ -534,7 +553,9 @@ def _least_squares(xs: list[float], ys: list[float]) -> tuple[float, float, floa
     R^2 is reported because a "marginal cost" is only a meaningful single number
     when the response is close to linear in the product level; a poor fit means
     the cost is regime-dependent and the slope should not be quoted alone.
-    """
+    
+中文：简单线性拟合的斜率、截距与 R^2。
+"""
     count = len(xs)
     if count < 2:
         return float("nan"), float("nan"), float("nan")
@@ -576,7 +597,9 @@ def marginal_cofactor_cost(
     imposed here: fixing the product flux at a level already determines how much
     growth is possible, and keeping a floor as well would make the curve a
     constrained slice rather than the trade-off itself.
-    """
+    
+中文：多产一单位目标产物的辅因子周转代价（边际口径）。
+"""
     base = model.copy()
     if context is not None:
         context(base)
@@ -696,7 +719,9 @@ def compartmental_copies(model, metabolite_id: str) -> dict[str, str]:
     ("NADPH", "NADH", "ATP" repeated per compartment). The declared id anchors
     identity; only its own name is expanded, so an unrelated metabolite that
     merely shares a substring cannot leak in.
-    """
+    
+中文：按 compartment 列出一个化学物种的全部区室拷贝。
+"""
     reference = model.metabolites.get_by_id(metabolite_id)
     name = (reference.name or "").strip()
     if not name:
@@ -720,7 +745,9 @@ def cofactor_turnover_by_compartment(
     cytosol: the royal-jelly-acid route is peroxisomal and consumes the
     peroxisomal NADPH copy, so a cytosolic-only figure describes a pool the route
     never touches. Each compartment is labelled active when it carries flux.
-    """
+    
+中文：按区室拆分的辅因子周转。
+"""
     report: dict[str, Any] = {}
     for label, anchor_id in cofactor_metabolites.items():
         copies = compartmental_copies(model, anchor_id)
@@ -763,7 +790,9 @@ def enzyme_capacity_scan(
     `reference_flux` (typically the reaction's flux at the unconstrained optimum)
     lets the knee be expressed as a multiple of the demand, which is the number
     an experimentalist can compare against a measured or predicted kcat.
-    """
+    
+中文：目标最大通量随某一反应通量上限的扫描。
+"""
     base = model.copy()
     if context is not None:
         context(base)
@@ -867,7 +896,9 @@ def run_fba_context(
     Fusion presets add the synthetic pathway layer and its scenario caps
     before solving. Glucose/oxygen default to the registered per-model values
     when omitted.
-    """
+    
+中文：运行 FBA 并返回 8 维受治理上下文向量（每次运行用独立副本）。
+"""
     if model_id not in MODEL_REGISTRY:
         raise ValueError(f"unknown model {model_id!r}; known: {model_ids()}")
     spec = MODEL_REGISTRY[model_id]

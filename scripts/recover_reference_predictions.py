@@ -8,6 +8,9 @@ per-seed prediction CSVs with receipts under
 ``artifacts/paired-family-analysis``. Governance role: post-hoc fixed-checkpoint
 replay only -- no fitting, no selection, and existing receipts are re-verified
 instead of recomputed.
+
+中文：仅为对齐分析而回放冻结 ESM2 检查点以恢复对齐预测：重建 1,646 行
+内部测试分区，逐种子回放并写对齐预测文件。
 """
 from pathlib import Path
 import csv,json,hashlib,sys
@@ -26,7 +29,9 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(Path(p).read_text(encoding='utf-8'))
 
 def main():
-    """Verify pins, replay each seed checkpoint, and write aligned predictions."""
+    """Verify pins, replay each seed checkpoint, and write aligned predictions.
+中文：校验钉住项，逐种子回放检查点并写对齐预测。
+"""
     protocol=read(ROOT/'configs/paired_family_analysis_protocol.json')
     for entry in protocol['frozen_files']:
         if sha(ROOT/entry['path'])!=entry['sha256']:raise ValueError('Frozen file changed: '+entry['path'])

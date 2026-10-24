@@ -11,6 +11,9 @@ Exclusion-only fail-closed: O2 is an obligate cosubstrate and no assay demonstra
 oxygen saturation, so every reported kcat is an apparent donor-substrate parameter. The
 script also runs the exact-overlap check against the frozen UniKP development corpus and
 the frozen MMseqs2 homology prescreen on the exact mature construct.
+
+中文：整理 CjmCO 多铜氧化酶（B3PHM6，DOI 10.1021/acs.biochem.6c00183）：27 行全部排除
+（ABTS、Fe(II) 及 25 行 Table S2 DMP），产出排除记录、空候选表、构建体/结构映射与阻塞证据。
 """
 from __future__ import annotations
 
@@ -106,7 +109,9 @@ DMP_ROWS = (
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -116,7 +121,9 @@ def sha256(path: Path) -> str:
 
 def download() -> None:
     """Fetch article/supplement/sequence/compound files and record negative structure-API lookups
-    as evidence."""
+    as evidence.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         request = urllib.request.Request(url, headers={"User-Agent": "BioCandidateRanker/1.0"})
@@ -143,7 +150,9 @@ def download() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(line.strip() for line in path.read_text(encoding="ascii").splitlines() if not line.startswith(">"))
 
 
@@ -216,7 +225,9 @@ def verify_raw() -> tuple[str, str]:
 
 def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
     """Count exact sequence and sequence+SMILES overlaps of ``mature`` against the hash-pinned
-    17,010-row corpus."""
+    17,010-row corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or has changed size")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -239,7 +250,9 @@ def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust ``fasta`` against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -286,7 +299,9 @@ def excluded_records() -> list[dict[str, object]]:
 
 def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
     """Verify raw evidence, run overlap/homology audits, and write the exclusion-only evidence
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     sequence, mature = verify_raw()
     overlap = exact_overlap(mature, development_corpus)
@@ -366,7 +381,9 @@ def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
 
 def main() -> None:
     """Run the download/verify/audit pipeline for the CjmCO source; every reported row stays
-    excluded."""
+    excluded.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

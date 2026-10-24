@@ -8,6 +8,9 @@ four XaPobA mutants), raw-file-hashes.json, provenance.json, and homology-audit.
 Exclusion-only fail-closed: the article states NADPH did not saturate up to 0.25 mM and
 reports no O2 concentration control for this obligate-oxygen monooxygenase, so no apparent
 kcat becomes a candidate label. Deposited sequences are used without inventing tag residues.
+
+中文：整理 clade-F PobA 黄素单加氧酶（DOI 10.1016/j.jbc.2023.105508）：
+Tables 1-2 全部 12 行有限表观 kcat 排除（NADPH/O2 饱和未证），空候选表。
 """
 from __future__ import annotations
 
@@ -92,12 +95,16 @@ ACCEPTED_FIELDS = [
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -252,7 +259,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_outputs() -> None:
-    """Verify evidence, build sequences/exclusions, and write the exclusion-only evidence bundle."""
+    """Verify evidence, build sequences/exclusions, and write the exclusion-only evidence bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     verify_raw_evidence()
     sequences = load_sequences()
     exclusions = build_exclusions()

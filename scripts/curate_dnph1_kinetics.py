@@ -10,6 +10,9 @@ The exact assayed product is reconstructed as TEV-cleaved "G + full-length O4359
 (vector provenance from the prior PMC10483697 paper). Rows are re-statused by the frozen
 MMseqs2 result, and the exact-overlap audit runs against the hash-pinned 17,010-row
 UniKP development corpus.
+
+中文：整理人 DNPH1（O43598，DOI 10.1042/BCJ20253400）：补充表 S2 的四行稳态 kcat
+（WT 与 H56A/E55Q 于 pH 7.0/8.5），TEV 剪切的 G+native 构建体，附重叠与同源审计。
 """
 from __future__ import annotations
 
@@ -90,7 +93,9 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -99,7 +104,9 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
-    """Download every raw evidence URL with retry/backoff, skipping files already present."""
+    """Download every raw evidence URL with retry/backoff, skipping files already present.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -121,7 +128,9 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -312,7 +321,9 @@ def exact_overlap_audit(
     sequences: dict[str, str], development_corpus: Path
 ) -> dict[str, object]:
     """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
-    corpus."""
+    corpus.
+中文：与冻结开发语料做精确重叠审计并绑定语料哈希。
+"""
     if not development_corpus.is_file():
         raise FileNotFoundError(f"Frozen development corpus is absent: {development_corpus}")
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
@@ -343,7 +354,9 @@ def exact_overlap_audit(
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
     """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
-    invocation."""
+    invocation.
+中文：组装 WSL mmseqs 命令行。
+"""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, command = executable.split(":", 2)
@@ -372,7 +385,9 @@ def run_checked(command: list[str]) -> str:
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust ``fasta`` against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -435,7 +450,9 @@ def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path
 
 def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
     """Verify, audit overlap and homology, and write the full candidate/mapping/audit evidence
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     sequences = build_sequences()
     verify_raw(sequences)
@@ -620,7 +637,9 @@ def write_blocker(exc: Exception) -> None:
 
 def main() -> None:
     """Run the pipeline, clearing any stale blocker on success and writing blocker-evidence.json on
-    any failure."""
+    any failure.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

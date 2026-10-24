@@ -7,6 +7,8 @@ the other for enzyme-bound ones - and these tests pin the bridge: the bill's
 physics, the content table that encodes it, the FMN floor that survives the
 model's degenerate kinase vertex, and the burden ratios that formalise the
 experimental observation as a number.
+
+中文：辅基账本测试：调和"通量口径 FAD 周转近零"与"实验需要 FAD"的真实矛盾——一个说通量携带辅因子，一个说酶结合辅因子。
 """
 
 from __future__ import annotations

@@ -5,6 +5,12 @@ mutation positions, each measured with NAD and NADP. Kinetics stay in ln
 space end to end: ln kcat is derived as ``ln Km + ln(kcat/Km)`` and exposed to
 the model as log10. Reading is fail-closed on any drift from the frozen
 512-genotype / 1024-observation structure.
+
+中文：冻结的 Lunzer et al. 2005 大肠杆菌 IDH 特异性景观适配器。Dryad TSV
+（下方绑定 SHA256）提供六个突变位点上 4^6 = 512 种基因型，每种分别以 NAD 与
+NADP 测定。动力学全程保持 ln 空间：ln kcat 由 ln Km + ln(kcat/Km) 推导，并以
+log10 暴露给模型。任何偏离冻结的 512 基因型 / 1024 观测结构的漂移都会使读取
+fail-closed（拒绝）。
 """
 from __future__ import annotations
 
@@ -69,7 +75,9 @@ def _variant_sequence(genotype: str) -> str:
 
 
 def read_lunzer_tsv(path: str | Path) -> tuple[LunzerObservation, ...]:
-    """Read the frozen landscape into one observation per (genotype, cofactor) pair."""
+    """Read the frozen landscape into one observation per (genotype, cofactor) pair.
+    中文：读取冻结景观，每个（基因型，辅因子）对生成一条观测。
+    """
     source = Path(path)
     try:
         text = source.read_text(encoding="utf-8-sig")
@@ -134,7 +142,9 @@ def read_lunzer_tsv(path: str | Path) -> tuple[LunzerObservation, ...]:
 
 
 def cofactor_counts(observations: Sequence[LunzerObservation]) -> dict[str, int]:
-    """Count observations per cofactor."""
+    """Count observations per cofactor.
+    中文：统计每种辅因子的观测数量。
+    """
     return {
         cofactor: sum(item.cofactor == cofactor for item in observations)
         for cofactor in COFACTORS

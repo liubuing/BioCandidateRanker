@@ -5,6 +5,11 @@ graphs, zeroed FBA context) at lengths 256-2048, times median forward latency
 and peak CUDA memory for the configured device, and writes the results JSON to
 artifacts/scaling.json by default. Performance probe only: it touches no
 governed data and its outputs feed no evaluation claims.
+
+中文：本脚本在多个序列长度上测量 BioCandidateRanker 的前向推理延迟：在 256-2048 长度上
+构建确定性合成批次（随机 token、固定 24 原子线性图、全零 FBA 上下文），对配置的设备测量
+中位前向延迟与峰值 CUDA 内存，默认把结果 JSON 写到 artifacts/scaling.json。治理角色：
+仅性能探针——不触碰任何受治理数据，其输出不支撑任何评估声明。
 """
 
 from __future__ import annotations
@@ -21,7 +26,10 @@ from biocandidate import BioCandidateRanker, ModelConfig
 
 
 def synthetic_batch(batch_size: int, length: int, device: torch.device) -> dict[str, torch.Tensor]:
-    """Build one synthetic model input dict of the given batch size and sequence length."""
+    """Build one synthetic model input dict of the given batch size and sequence length.
+
+    中文：按给定批大小与序列长度构建一个合成模型输入字典。
+    """
     atoms_per_graph = 24
     atom_count = batch_size * atoms_per_graph
     graph_batch = torch.arange(batch_size).repeat_interleave(atoms_per_graph)
@@ -44,7 +52,10 @@ def synthetic_batch(batch_size: int, length: int, device: torch.device) -> dict[
 
 
 def main() -> None:
-    """Run the sequence-length sweep and write the timing report."""
+    """Run the sequence-length sweep and write the timing report.
+
+    中文：运行序列长度扫描并写出计时报告。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="artifacts/scaling.json")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")

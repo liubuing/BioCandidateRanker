@@ -5,6 +5,12 @@ kinetics JSONL), the canonical record schema, homology/cold-split tooling, and
 SHA256 manifest verification. Source assets are bound to frozen SHA256
 identities and adapters emit explicit accept/reject audits, so callers never
 silently train on unverified or unexplained data.
+
+中文：BioCandidateRanker 数据层的公共门面。统一再导出受治理的数据集适配器
+（UniKP、Lunzer、EnzEngDB、规范化动力学 JSONL）、规范化记录 schema、
+同源聚类与冷切分工具，以及 SHA256 清单校验。源资产全部绑定冻结的 SHA256
+身份，适配器输出显式的接受/拒绝审计，调用者绝不会在未校验或无解释的数据上
+静默训练。
 """
 
 from ._rdkit import RDKitUnavailableError

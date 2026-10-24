@@ -15,6 +15,9 @@ Endpoints (all JSON unless noted):
 
 Local-only by design: the server binds to 127.0.0.1 and the governance actions
 are an allowlist, not a shell.
+
+中文：交互工作台服务器：通过冻结检查点跑真实 kcat 预测、浏览检查点及其
+验证指标、执行只读治理脚本；仅绑定本机。
 """
 
 from __future__ import annotations
@@ -63,7 +66,9 @@ def _safe_load_globals():
     weights_only loading rejects. training.load_checkpoint is part of the
     frozen release manifest, so the shim lives here instead. Only stdlib-free
     trusted types are allowed: no arbitrary class from the checkpoint resolves.
-    """
+    
+中文：放行 torch 2.6+ 默认拒绝的全局量（旧检查点内嵌 torch 对象所需）。
+"""
     import numpy as np
     import torch
     from torch.torch_version import TorchVersion
@@ -80,7 +85,9 @@ def _safe_load_globals():
 
 
 class ModelCache:
-    """Load checkpoints on demand and keep a small pool of live models."""
+    """Load checkpoints on demand and keep a small pool of live models.
+中文：按需加载检查点并维护小的活模型池。
+"""
 
     def __init__(self, root: Path, device: str, capacity: int = 2):
         self.root = root
@@ -91,7 +98,9 @@ class ModelCache:
         self.lock = threading.Lock()
 
     def get(self, relative: str):
-        """Return the cached model for a checkpoint, loading it on first use or mtime change."""
+        """Return the cached model for a checkpoint, loading it on first use or mtime change.
+中文：返回检查点的缓存模型，首次使用或 mtime 变化时加载。
+"""
         import torch
         from biocandidate.training import load_checkpoint
 
@@ -113,14 +122,18 @@ class ModelCache:
         return model, checkpoint
 
     def resolve(self, relative: str) -> Path:
-        """Refuse anything outside the repository or outside the checkpoint set."""
+        """Refuse anything outside the repository or outside the checkpoint set.
+中文：拒绝仓库之外或检查点集合之外的任何路径。
+"""
         candidate = self.resolve_data(relative)
         if candidate.suffix != CHECKPOINT_SUFFIX:
             raise ValueError("model path must point at a checkpoint file")
         return candidate
 
     def resolve_data(self, relative: str) -> Path:
-        """Any repository file: checkpoints, calibration artifacts, and so on."""
+        """Any repository file: checkpoints, calibration artifacts, and so on.
+中文：任意仓库文件：检查点、校准工件等。
+"""
         candidate = (self.root / relative).resolve()
         if not candidate.is_relative_to(self.root):
             raise ValueError("path must stay inside the repository")
@@ -130,7 +143,9 @@ class ModelCache:
 
 
 def list_models(root: Path) -> list[dict[str, Any]]:
-    """Summarize every checkpoint without loading it onto the accelerator."""
+    """Summarize every checkpoint without loading it onto the accelerator.
+中文：不把检查点载入加速器即汇总其信息。
+"""
     import torch
 
     models: list[dict[str, Any]] = []
@@ -188,7 +203,9 @@ def list_models(root: Path) -> list[dict[str, Any]]:
 
 
 def parse_candidates(payload: Any) -> list[dict[str, Any]]:
-    """Validate and normalize the candidate list from a request body."""
+    """Validate and normalize the candidate list from a request body.
+中文：校验并规范化请求体中的候选列表。
+"""
     if isinstance(payload, dict):
         rows = payload.get("candidates")
     else:
@@ -237,7 +254,9 @@ def run_prediction(
     re-expressed here rather than refactored; a test pins the two together.
     An optional fba_payload attaches governed FBA context features produced by
     biocandidate.fba_context.
-    """
+    
+中文：镜像 cli.predict_command 的内存流程与结果形状（cli.py 属冻结发布）。
+"""
     import torch
     from biocandidate.data import FBAFeatureMetadata, EnzymeSubstrateRecord
 
@@ -407,7 +426,9 @@ def run_prediction(
 
 
 def fba_scenario_vector(root: Path, body: dict[str, Any]) -> dict[str, Any]:
-    """Encode one scenario as a surrogate's fba_context input."""
+    """Encode one scenario as a surrogate's fba_context input.
+中文：把一个场景编码为代理的 fba_context 输入。
+"""
     from biocandidate import fba_surrogate
 
     # Defaults come from the model registry, not from a re-export: the yeast
@@ -427,7 +448,9 @@ def fba_scenario_vector(root: Path, body: dict[str, Any]) -> dict[str, Any]:
 
 
 def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
-    """Predict growth for one scenario through a distilled surrogate checkpoint."""
+    """Predict growth for one scenario through a distilled surrogate checkpoint.
+中文：通过蒸馏代理检查点预测一个场景的生长。
+"""
     from biocandidate import fba_surrogate
 
     model_id = str(body.get("model_id", "iML1515"))
@@ -475,7 +498,9 @@ def fba_surrogate_predict(root: Path, body: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_governance(root: Path, action: str) -> dict[str, Any]:
-    """Execute one allowlisted governance script and return its JSON output."""
+    """Execute one allowlisted governance script and return its JSON output.
+中文：执行一个白名单治理脚本并返回其 JSON 输出。
+"""
     if action not in GOVERNANCE_ACTIONS:
         known = ", ".join(sorted(GOVERNANCE_ACTIONS))
         raise ValueError(f"unknown governance action {action!r}; known: {known}")
@@ -507,7 +532,9 @@ _FBA_LOCK = threading.Lock()
 
 
 def _fba_model(model_id: str, root: Path):
-    """Load each registered GEM once; cobra models are reused via context managers."""
+    """Load each registered GEM once; cobra models are reused via context managers.
+中文：每个注册 GEM 只加载一次；cobra 模型经上下文管理器复用。
+"""
     from biocandidate import fba_context
 
     with _FBA_LOCK:
@@ -522,7 +549,9 @@ def _fba_model(model_id: str, root: Path):
 
 
 def fba_status(root: Path) -> dict[str, Any]:
-    """Report availability, hashes, presets, and surrogate coverage per GEM model."""
+    """Report availability, hashes, presets, and surrogate coverage per GEM model.
+中文：逐 GEM 模型报告可用性、哈希、预设与代理覆盖。
+"""
     from biocandidate import fba_context
 
     models = {}
@@ -589,7 +618,9 @@ def fba_status(root: Path) -> dict[str, Any]:
 
 
 def fba_run(root: Path, body: dict[str, Any]) -> dict[str, Any]:
-    """Run the governed FBA context for one registered model and scenario body."""
+    """Run the governed FBA context for one registered model and scenario body.
+中文：为一个注册模型与场景请求运行受治理 FBA 上下文。
+"""
     from biocandidate import fba_context
 
     model_id = str(body.get("model_id", "iML1515"))
@@ -720,7 +751,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    """Bind the local-only workbench server and serve until interrupted."""
+    """Bind the local-only workbench server and serve until interrupted.
+中文：绑定仅本机的工作台服务并服务至中断。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--host", default="127.0.0.1")

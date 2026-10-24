@@ -3,6 +3,13 @@
 Record-level carry-forward is distinct from final benchmark readiness. Existing
 source audits supply primary-evidence decisions; this run verifies their inputs
 and applies the subsequently documented campaign quality holds.
+
+中文：本脚本对全部 209 条历史池记录做逐记录对账，不训练、不打分、不改标签：由既有来源
+审计提供一手证据决定；本运行复核其输入哈希并应用随后记录在案的候选组质量挂起。记录级
+carry-forward 不同于最终基准就绪。写出
+artifacts/external/pool-quality-register-20261005/ 下的 records.json、groups.json、
+sources.json、repeated-pairs.json、summary.json 与 RECORDS_CN.md。治理角色：逐记录质量
+处置登记册（只读对账，池本身保持不变）。
 """
 import csv
 import hashlib
@@ -18,17 +25,26 @@ OUT = ROOT / 'artifacts/external/pool-quality-register-20261005'
 
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def read(p):
-    """Load a UTF-8 (optionally BOM-prefixed) JSON file."""
+    """Load a UTF-8 (optionally BOM-prefixed) JSON file.
+
+    中文：加载 UTF-8（可带 BOM 前缀）的 JSON 文件。
+    """
     return json.loads(p.read_text(encoding='utf-8-sig'))
 
 
 def coverage(rows):
-    """Count records, sources, families, substrates and unique sequence signatures."""
+    """Count records, sources, families, substrates and unique sequence signatures.
+
+    中文：统计记录数、来源数、家族数、底物数与唯一序列签名数。
+    """
     return dict(records=len(rows), sources=len({r['source_id'] for r in rows}),
                 families=len({r['global_family_id'] for r in rows}),
                 substrates=len({r['substrate_id'] for r in rows}),
@@ -36,7 +52,10 @@ def coverage(rows):
 
 
 def main():
-    """Re-verify every input hash and write the 209-record quality register."""
+    """Re-verify every input hash and write the 209-record quality register.
+
+    中文：复验每个输入哈希并写出 209 条记录的质量登记册。
+    """
     OUT.mkdir(parents=True, exist_ok=True)
     protocol_path = ROOT / 'configs/temporal_absolute_kinetics_protocol.json'
     protocol = read(protocol_path)

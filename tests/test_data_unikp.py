@@ -1,6 +1,8 @@
 """Pins the UniKP JSON adapter: track-row filtering with a full audit trail,
 log10 conversion, duplicate/conflict detection, mean aggregation of replicate
 pair measurements, and read-only access to the source file.
+
+中文：钉住 UniKP JSON 适配器：行过滤带完整审计、log10 转换、重复/冲突检测、重复测量的均值聚合、源文件只读。
 """
 
 import json

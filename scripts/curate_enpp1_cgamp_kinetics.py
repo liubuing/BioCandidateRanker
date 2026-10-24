@@ -10,6 +10,9 @@ blocker-evidence.json, and homology-audit.json.
 Acceptance requires the exact SI-derived construct, direct Briggs-Haldane saturation fits,
 and no MMseqs2 hit for either the mature chain or its ENPP1(99-925) catalytic component;
 the component rule blocks Fc-coverage dilution from escaping the development-homology gate.
+
+中文：整理人 ENPP1-Fc 构建 770（DOI 10.1016/j.jbc.2026.113078）：Table 2 两行
+（2'3'-cGAMP 与 pApG）按冻结同源门分流候选/排除；组件级同源规则防 Fc 稀释。
 """
 from __future__ import annotations
 
@@ -80,7 +83,9 @@ KINETICS = (
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -90,7 +95,9 @@ def sha256(path: Path) -> str:
 
 def download_raw() -> None:
     """Fetch article/supplement/sequence/compound/product files and unpack docx/pdf supplement
-    members."""
+    members.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -178,7 +185,9 @@ def validate_evidence() -> tuple[str, str, str]:
 
 def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
     """Count exact sequence and per-substrate SMILES overlaps against the hash-pinned 17,010-row
-    corpus."""
+    corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE or sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("Frozen development corpus is absent or changed")
     rows = json.loads(development_corpus.read_text(encoding="utf-8"))
@@ -201,7 +210,9 @@ def exact_overlap(mature: str, development_corpus: Path) -> dict[str, object]:
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
     """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
-    invocation."""
+    invocation.
+中文：组装 WSL mmseqs 命令行。
+"""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, binary = executable.split(":", 2)
@@ -226,7 +237,9 @@ def run_checked(command: list[str]) -> str:
 
 def run_homology(query: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust ``query`` against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs2 {version!r} differs from frozen version")
@@ -253,7 +266,9 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 def curate(acquire: bool, mmseqs: str, threads: int, development_corpus: Path) -> None:
     """Run the full pipeline: verify, audit overlap and homology, then write the row set and all
-    audits."""
+    audits.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download_raw()
     precursor, mature, component = validate_evidence()

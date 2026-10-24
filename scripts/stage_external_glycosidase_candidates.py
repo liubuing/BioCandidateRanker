@@ -11,6 +11,9 @@ gates, protected-file hashes, and artifact hashes.
 Governance role: fail-closed staging -- no accepted additions, no predictions,
 mature-construct and substrate-structure gates explicitly unresolved, and
 protected config/audit hashes re-verified before writing the receipt.
+
+中文：复现一次"仅暂挂"的文献提取，绝不新增接受记录：读两个糖苷酶来源
+（AnGH3、BgaP）与受保护的全局审计计数器，暂存测量与参考 FASTA 并写收据。
 """
 import csv
 import hashlib
@@ -27,7 +30,9 @@ def digest(path):
 
 
 def main():
-    """Stage pending measurements and the reference FASTA; write the receipt."""
+    """Stage pending measurements and the reference FASTA; write the receipt.
+中文：暂挂测量与参考 FASTA；写收据。
+"""
     protected = [ROOT / 'configs/temporal_absolute_kinetics_protocol.json',
                  ROOT / 'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before = {str(p.relative_to(ROOT)): digest(p) for p in protected}

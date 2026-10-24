@@ -6,6 +6,8 @@ project's Yeast-MetaTwin model — so the tests cover the seams: the registry
 contract, the paper's modification semantics, the synthetic fusion layer, the
 yeast registration, and (when a checkpoint is present) the shape the ranker
 consumes.
+
+中文：基因组尺度 FBA 上下文融合测试：iML1515（泛酸论文）、iJO1366（精氨酸项目）、Yeast-MetaTwin 酵母模型三栈接缝的契约覆盖。
 """
 
 from __future__ import annotations

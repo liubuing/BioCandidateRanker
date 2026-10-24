@@ -8,6 +8,9 @@ homology-audit.json.
 Rows pass only the frozen saturation gate (constant cosubstrate >=5x its Km and an
 interpretable variable-substrate fit); survivors are re-statused by the frozen MMseqs2
 result against the development reference.
+
+中文：整理蕨类羟基肉桂酰转移酶（NbHCT1/3/8，DOI 10.1111/tpj.70837）：
+Table 2-4 的 24 行（含饱和排除）；GenBank 天然编码序列；仅冻结饱和门放行。
 """
 from __future__ import annotations
 
@@ -91,7 +94,9 @@ CONDITIONS = {
 
 
 def parse_fasta(path: Path) -> dict[str, str]:
-    """Parse a multi-record FASTA, keying each sequence by the NbHCT gene matched in its header."""
+    """Parse a multi-record FASTA, keying each sequence by the NbHCT gene matched in its header.
+中文：解析 FASTA 为标识符到序列的映射。
+"""
     records: dict[str, str] = {}
     key = ""
     for line in path.read_text(encoding="ascii").splitlines():
@@ -104,13 +109,17 @@ def parse_fasta(path: Path) -> dict[str, str]:
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
     """Write the construct FASTA, candidate records with saturation/homology status, provenance,
-    and homology audit."""
+    and homology audit.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = parse_fasta(SOURCE / "raw" / "fern-HCT-cds-aa.fasta")
     fasta = SOURCE / "construct_sequences.fasta"
     with fasta.open("w", encoding="ascii", newline="\n") as handle:

@@ -9,6 +9,9 @@ homology-commands.txt, blocker.json, and homology-audit.json.
 Exclusion-only fail-closed: fixed 1.6 mM NADPH saturation is never demonstrated, and
 NaPinZ/SlPinZ sequences or accessions are unavailable (nearest homologs are recorded as
 audit leads only, never substituted).
+
+中文：整理细菌松脂醇/落叶松脂醇还原酶 PinZ（DOI 10.1002/pro.70436）：
+八行 Table 1 表观 kcat 全部排除（NADPH 饱和与序列可得性问题），空候选表。
 """
 from __future__ import annotations
 
@@ -80,12 +83,16 @@ AA3 = {
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -129,7 +136,9 @@ def pubchem_pair(stem: str) -> tuple[str, str, str]:
 
 def validate_sources() -> None:
     """Fail closed unless raw files, article markers, and the exact DATA S1/coordinate sequence all
-    corroborate."""
+    corroborate.
+中文：校验各来源证据的完整性。
+"""
     required = (
         "PMC12817470-fullText.xml",
         "PRO-35-e70436-s001.zip",
@@ -256,7 +265,9 @@ def raw_hashes() -> dict[str, dict[str, object]]:
 
 def write_outputs() -> None:
     """Validate sources, write the exclusion-only artifacts, and produce the homology audit from
-    the pinned MMseqs outputs."""
+    the pinned MMseqs outputs.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     validate_sources()
     exclusions = build_exclusions()
 

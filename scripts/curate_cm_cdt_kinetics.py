@@ -9,6 +9,9 @@ provenance.json, and homology-audit.json.
 A direct row is admitted only when the 100 uM maximum varied substrate reaches 5x the
 fitted Km; survivors are re-statused by the frozen MMseqs2 result (hit -> excluded_homology,
 else homology-cold). Sequential coupled CM+CDT apparent kcat values are never candidates.
+
+中文：整理双功能 CM-CDT/CDT-CM 融合分枝酸酶（DOI 10.1016/j.jbc.2023.105161）：
+直接单活性行入候选，耦合/无活性/重复与亚饱和行入排除；由 SI DNA 与引物重建 13 个精确无信号肽测定构建体。
 """
 from __future__ import annotations
 
@@ -192,7 +195,9 @@ CODON_TABLE = {
 
 def download_raw() -> None:
     """Fetch article/supplement/PDB/PubChem files with retry/backoff and extract mmc1.pdf from the
-    archive."""
+    archive.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in DOWNLOADS.items():
         path = RAW / name
@@ -217,7 +222,9 @@ def download_raw() -> None:
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -559,7 +566,9 @@ def homology_hits(path: Path) -> set[str]:
 
 
 def write_outputs() -> None:
-    """Verify raw evidence, gate on saturation and homology, and write the full evidence bundle."""
+    """Verify raw evidence, gate on saturation and homology, and write the full evidence bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     verify_raw()
     sequences, full_by_code = build_sequences()
     records, exclusions = build_records(sequences)
@@ -760,7 +769,9 @@ def verify_outputs(
 
 
 def main() -> None:
-    """Run the download/verify/write pipeline for the CM-CDT fusion source."""
+    """Run the download/verify/write pipeline for the CM-CDT fusion source.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args()

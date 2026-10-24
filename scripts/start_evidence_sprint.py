@@ -13,6 +13,9 @@ Governance role: discovery bookkeeping -- every record stays
 ``accepted_additions`` stays 0, batch leads with incompatible licenses are
 excluded from direct import, and protected config/audit hashes are re-verified
 before the register is written.
+
+中文：仅元数据/来源筛查，不训练、不给候选打分：写 EstSit01 收口，跑两个
+钉住的 Europe PMC 查询，筛查返回元数据并下载注册结果。
 """
 import hashlib
 import json
@@ -27,13 +30,17 @@ OUT=BASE/'evidence-sprint-20261003'
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def fetch(url,path):
-    """Return cached bytes for a URL, downloading to path on first use."""
+    """Return cached bytes for a URL, downloading to path on first use.
+中文：返回 URL 的缓存字节，首次使用时下载到 path。
+"""
     if not path.exists():
         path.write_bytes(urllib.request.urlopen(url,timeout=30).read())
     return path.read_bytes()
 
 def main():
-    """Write the closeout, run pinned searches, screen full texts, and register results."""
+    """Write the closeout, run pinned searches, screen full texts, and register results.
+中文：写收口、跑钉住查询、筛查全文并注册结果。
+"""
     OUT.mkdir(exist_ok=True)
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in protected}

@@ -11,6 +11,9 @@ Governance role: overlay-only review -- no numeric response or model score
 enters the dispositions, ``final_evaluation_ready_groups`` and
 ``accepted_additions`` stay 0, absolute record statuses and labels are
 unchanged, and no predictions are generated.
+
+中文：评审 26 个元数据组/106 行，保持历史池与门槛不变：核验冻结质量登记册
+的每个证据哈希与协议哈希后，按来源逐组处置并写覆盖层。
 """
 import hashlib
 import json
@@ -32,7 +35,9 @@ def read(p):
 
 
 def main():
-    """Verify the frozen register, apply per-source dispositions, and write the overlay."""
+    """Verify the frozen register, apply per-source dispositions, and write the overlay.
+中文：核验冻结登记册，按来源处置并写覆盖层。
+"""
     previous = read(PREVIOUS / 'summary.json')
     for file, digest in previous['evidence_sha256'].items():
         assert sha(ROOT / file) == digest, file

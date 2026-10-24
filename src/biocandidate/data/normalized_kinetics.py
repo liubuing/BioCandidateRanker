@@ -6,6 +6,12 @@ units are converted through positive-value log transforms), evidence must be
 ``direct`` with non-empty provenance, and activity/flux labels are rejected
 outright: this adapter accepts absolute kinetics only. Any malformed row fails
 the entire read instead of being skipped.
+
+中文：绝对动力学 JSONL 数据集的严格 v1 适配器。每行必须声明 schema_version: 1，
+并携带以规范化动力学任务为键的标签。数值统一规范化到 log10 单位（线性源单位
+经正值 log 变换转换），证据必须为 direct 且带非空出处，activity/flux 标签被
+显式拒绝：本适配器只接受绝对动力学。任何畸形行都会使整个读取失败，而不是被
+跳过。
 """
 from __future__ import annotations
 
@@ -135,6 +141,9 @@ def read_normalized_kinetics_jsonl(path: PathLike) -> NormalizedKineticsReadResu
     Each row has ``schema_version: 1``, model input fields, and a non-empty ``labels``
     object keyed by canonical model task. Label objects contain ``value``, ``unit``,
     ``evidence: \"direct\"``, and a non-empty ``provenance`` object.
+    中文：把严格 v1 绝对动力学 JSONL 读为稀疏模型记录。每行包含 schema_version: 1、
+    模型输入字段，以及以规范化模型任务为键的非空 labels 对象；标签对象含 value、
+    unit、evidence: "direct" 与非空 provenance 对象。
     """
     records = []
     try:

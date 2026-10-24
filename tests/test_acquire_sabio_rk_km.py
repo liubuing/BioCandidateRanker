@@ -3,6 +3,8 @@
 Requires the prepared acquisition workspace under artifacts/; checks that the
 blocker JSON proves no training outputs were emitted and that 404 redirects
 were recorded once without being retried.
+
+中文：钉住 Sabio-RK Km 受治理采集的 fail-closed 阻塞器工件：证明零训练输出、404 只记录一次不重试。
 """
 
 import importlib.util

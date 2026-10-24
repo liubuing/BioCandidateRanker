@@ -15,6 +15,9 @@ non-rate-limiting, and the Cys-Gly row because the Cd-ninhydrin method reports
 an implausible 20 mM enzyme concentration. Governance role: fail-closed --
 ``candidate_records.csv`` stays schema-only, a ``blocked_fail_closed`` blocker
 record is emitted, and no model predictions are run.
+
+中文：整理表皮葡萄球菌 ShPepV 肽酶动力学（DOI 10.1016/j.jbc.2024.107928）：
+读 BioStudies 存档与 UniSave 记录；全部八行因耦合检测容量与酶浓度问题排除并出阻塞证据。
 """
 from __future__ import annotations
 
@@ -151,7 +154,9 @@ def verify_raw() -> str:
 
 
 def mmseqs_command(executable: str, *arguments: str) -> list[str]:
-    """Build argv for a native executable or a wsl:<distro>:<binary> spec."""
+    """Build argv for a native executable or a wsl:<distro>:<binary> spec.
+中文：组装 WSL mmseqs 命令行。
+"""
     if not executable.startswith("wsl:"):
         return [executable, *arguments]
     _, distribution, binary = executable.split(":", 2)
@@ -175,7 +180,9 @@ def run_checked(command: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
-    """Run pinned easy-search and easy-linclust; return hit/cluster paths and version."""
+    """Run pinned easy-search and easy-linclust; return hit/cluster paths and version.
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(mmseqs_command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -203,7 +210,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def write_outputs(mmseqs: str, threads: int) -> None:
-    """Verify evidence, run homology, and write exclusions, blocker, provenance, audit."""
+    """Verify evidence, run homology, and write exclusions, blocker, provenance, audit.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     native = verify_raw()
     sequences = {variant: mutate(native, changes) + TAG for variant, changes in MUTATIONS.items()}

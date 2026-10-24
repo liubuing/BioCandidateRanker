@@ -3,6 +3,8 @@
 The dashboard is the page a human reads before deciding whether to deposit, so
 the tests cover the two ways it can lie: by dropping a blocker, and by embedding
 payload data that escapes its script block.
+
+中文：就绪仪表盘生成器测试：覆盖其两种说谎方式——丢掉阻塞器、嵌入逃出 script 块的负载数据。
 """
 
 from __future__ import annotations

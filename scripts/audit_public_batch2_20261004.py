@@ -6,6 +6,13 @@ status to the 20 new fulltexts, and re-verifies the previous batch receipts and
 both global audits. The only 3 accepted additions originate from the already
 pending AaCSE1 source, not the new batch (new_batch_source_acceptances=0).
 Writes public-batch2-20261004/batch-closeout.json; no predictions are run.
+
+中文：本脚本收口第二批来源筛查，保持筛查与接受新增相互分离：读取
+public-batch2-20261004/batch-register.json、参考查询与预计算的开发同源性命中，为 20 篇
+新全文逐源给出 hold 或 review 状态，并复核上一批收据与两份全局审计。仅有的 3 条接受
+新增来自先前已挂起的 AaCSE1 来源而非本批（new_batch_source_acceptances=0）。写出
+public-batch2-20261004/batch-closeout.json；不运行任何预测。治理角色：公开批次审计
+收据（保护哈希复验、fail-closed 收口）。
 """
 import hashlib,json
 from pathlib import Path
@@ -14,10 +21,16 @@ ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/'artifacts/external/temporal-absolute-kinetics'
 OUT=BASE/'public-batch2-20261004'
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
-    """Record batch-two source reviews and write the batch closeout."""
+    """Record batch-two source reviews and write the batch closeout.
+
+    中文：记录第二批来源评审并写出批次收尾收据。
+    """
     batch=json.loads((OUT/'batch-register.json').read_text(encoding='utf-8'))
     seqs={r.id:str(r.seq) for r in SeqIO.parse(OUT/'reference-queries.fasta','fasta')}
     hits={k:[] for k in seqs}

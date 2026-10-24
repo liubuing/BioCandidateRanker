@@ -13,6 +13,9 @@ Table 3 kcat values against reported mass-specific activities, and writes
 ``construct-review.json``. Governance role: fail-closed evidence audit -- every
 row is re-marked ``held_for_measurement_consistency_review``, ``accepted_additions``
 stays 0, labels are never rescaled, and protected hashes are re-verified.
+
+中文：为证据审计重建"报告的标准载体"解释；不主张对实验质粒的独立测序。
+重建构建体、筛查同源、审计一致性，全部行保持暂挂。
 """
 import csv
 import hashlib
@@ -37,7 +40,9 @@ def fasta(p):return ''.join(p.read_text().splitlines()[1:])
 def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Rebuild constructs, screen homology, audit consistency, and hold all rows."""
+    """Rebuild constructs, screen homology, audit consistency, and hold all rows.
+中文：重建构建体、筛查同源、审计一致性并暂挂全部行。
+"""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'

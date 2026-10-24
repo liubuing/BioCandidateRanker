@@ -11,6 +11,9 @@ source report or any artifact consumed by evaluations.
 Usage:
     python scripts/export_docx_report.py --source docs/PROJECT_STATUS_REPORT_20261012_CN.md
     python scripts/export_docx_report.py --source a.md --target b.docx
+
+中文：把仓库内任意 markdown 报告导出为 DOCX，复用手稿导出器的标题/表格/
+列表/引用/行内强调处理，保证与手稿导出一致。
 """
 
 from __future__ import annotations
@@ -24,7 +27,9 @@ CONVERTER = ROOT / "scripts/export_manuscript_docx.py"
 
 
 def load_converter():
-    """Load scripts/export_manuscript_docx.py as a module by file path."""
+    """Load scripts/export_manuscript_docx.py as a module by file path.
+中文：按文件路径把 export_manuscript_docx.py 作为模块加载。
+"""
     spec = importlib.util.spec_from_file_location("manuscript_docx_export", CONVERTER)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

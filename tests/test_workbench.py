@@ -4,6 +4,8 @@ The workbench runs real model inference, so its tests focus on the guards that
 keep a browser request equivalent to the CLI it mirrors: candidate validation,
 path confinement, the governance allowlist, and — when a checkpoint is present
 locally — numerical agreement with predict_command.
+
+中文：交互工作台服务器测试：聚焦让浏览器请求等价于其镜像 CLI 的守卫——候选校验、路径限制、治理白名单与本地检查点数值一致性。
 """
 
 from __future__ import annotations

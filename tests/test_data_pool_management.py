@@ -2,6 +2,8 @@
 reused hashes, immutable frozen snapshots, budget-gated and full verification,
 review-queue bookkeeping, and layer assignment that quarantines unregistered
 sources.
+
+中文：钉住数据池存储治理：增量证据快照与哈希复用、冻结快照不可变、预算门控与全量校验、未注册源隔离。
 """
 
 import os

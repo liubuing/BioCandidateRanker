@@ -7,6 +7,14 @@ artifacts/external/temporal-absolute-kinetics/campaign-audit-20261005. Every
 quoted evidence paragraph must come from the hash-verified source XML;
 dispositions never use response magnitudes, accepted_additions stays 0, and
 all 18 remaining buckets are queued unreviewed.
+
+中文：本脚本做有证据支撑的候选组评审，保留全部原始池决策：读取
+artifacts/research-scope-20261005/ranking-metadata-feasibility.json、三篇已评审 PMC
+全文 XML 与冻结时间协议，写出
+artifacts/external/temporal-absolute-kinetics/campaign-audit-20261005/ 下的
+campaign-source-evidence.json 与 closeout.json。每段引用的证据段落必须来自哈希校验过的
+源 XML；处置绝不使用响应幅值，accepted_additions 保持 0，其余 18 个桶全部排队未审。
+治理角色：冻结协议下的审计收据（协议与先前池哈希均被复核）。
 """
 import hashlib
 import json
@@ -19,12 +27,18 @@ OUT = BASE / 'campaign-audit-20261005'
 
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
-    """Review three campaign groups against full-text evidence and write the closeout."""
+    """Review three campaign groups against full-text evidence and write the closeout.
+
+    中文：依据全文证据评审三个候选组并写出收尾收据。
+    """
     inventory = ROOT / 'artifacts/research-scope-20261005/ranking-metadata-feasibility.json'
     groups = [g for g in json.loads(inventory.read_text())['groups'] if g['distinct_sequence_signatures'] >= 3]
     reviews = {

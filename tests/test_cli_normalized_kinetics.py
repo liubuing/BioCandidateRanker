@@ -1,6 +1,8 @@
 """Pins the normalized-kinetics CLI surface: parser defaults, explicit task
 selection, and an end-to-end train/evaluate smoke run that fails closed on a
 sparse partition with zero train observations.
+
+中文：钉住归一化动力学 CLI 面：解析器默认值、显式任务选择、端到端训练/评估冒烟，零观测分区 fail-closed。
 """
 
 import json

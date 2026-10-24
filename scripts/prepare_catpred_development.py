@@ -10,6 +10,9 @@ hashes plus ESM cache-size estimates.
 
 Governance role: fail-closed preparation -- the test partition is never read
 or exported, and an existing receipt aborts a rerun.
+
+中文：只为 CatPred 导出冻结的训练/验证数据与长度压力试点束（含哈希收据），
+绝不导出测试数据。
 """
 from pathlib import Path
 import csv, gzip, hashlib, json
@@ -20,7 +23,9 @@ BASE=ROOT/'artifacts/catpred-mode-b'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    """Export the development and length-pilot bundles with hash receipts."""
+    """Export the development and length-pilot bundles with hash receipts.
+中文：导出开发束与长度试点束并附哈希收据。
+"""
     source_rows={}
     for partition in ['train','validation']:
         source=ROOT/f'artifacts/external/sota-homology-cold/data/{partition}.csv'

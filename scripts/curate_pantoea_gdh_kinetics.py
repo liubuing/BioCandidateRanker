@@ -10,6 +10,9 @@ homology-audit.json.
 
 A Table 2 row qualifies only when every fixed cosubstrate is >=5x its measured Km in the
 matching cofactor/direction assay; survivors face the frozen MMseqs2 gate.
+
+中文：整理菠萝泛菌谷氨酸脱氢酶 GdhPa（DOI 10.1371/journal.pone.0328289）：
+唯一通过饱和门的 Table 2 行（NADP+ 变化的氧化脱氨）入候选，其余九行按辅底物失败细节排除。
 """
 from __future__ import annotations
 
@@ -77,7 +80,9 @@ KM = {
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -86,7 +91,9 @@ def read_fasta(path: Path) -> str:
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -204,7 +211,9 @@ def homology_hit_ids() -> set[str]:
 
 def write_outputs() -> None:
     """Verify the deposit, gate on saturation, and write the
-    candidate/exclusion/FASTA/provenance/audit bundle."""
+    candidate/exclusion/FASTA/provenance/audit bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     metadata = json.loads((RAW / "metadata.json").read_text(encoding="utf-8"))
     deposited_files = metadata["section"]["files"]
     for deposited in deposited_files:

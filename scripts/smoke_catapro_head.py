@@ -7,6 +7,9 @@ and runs one forward/backward/step plus an eval pass on random tensors. Writes
 
 Governance role: plumbing smoke test only -- synthetic inputs, no dataset, no
 checkpoint, and no real predictions; the limitation is recorded in the output.
+
+中文：仅在合成张量上演练经审查、钉住的 CataPro 头：按钉住 SHA-256 校验并
+加载 training/kcat/model.py，跑一次前向/反向/步进冒烟。
 """
 from pathlib import Path
 import hashlib

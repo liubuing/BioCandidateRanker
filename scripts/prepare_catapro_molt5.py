@@ -9,6 +9,9 @@ Writes ``download-receipt.json`` with per-file hashes and sizes.
 Governance role: reproducible model-asset acquisition only -- the revision and
 weight hash are frozen constants, and a mismatched existing weight aborts
 instead of being replaced.
+
+中文：按钉住 revision 下载官方 MolT5 文件到工作区并记录哈希，供 CataPro
+Mode B 特征缓存使用。
 """
 from pathlib import Path
 import hashlib,json,os

@@ -2,6 +2,9 @@
 
 This module freezes identities and audits protocol state. It does not train a model,
 invent candidates or labels, or permit scoring before all readiness gates pass.
+
+中文：前瞻候选排序基准的 fail-closed 治理：冻结身份并审计协议状态。不训练
+模型、不发明候选或标签；全部就绪门通过之前不允许任何评分。
 """
 
 from __future__ import annotations
@@ -81,7 +84,9 @@ def audit_readiness(
     family_audit_path: Path,
     model_freeze_path: Path,
 ) -> dict[str, Any]:
-    """Audit and freeze a pre-label candidate roster; never compute model metrics."""
+    """Audit and freeze a pre-label candidate roster; never compute model metrics.
+中文：审计并冻结标签前候选名册；绝不计算模型指标。
+"""
     protocol = _load_object(protocol_path)
     registry = _load_object(campaign_registry_path)
     family_audit = _load_object(family_audit_path)
@@ -306,7 +311,9 @@ def freeze_prediction_deposit(
     model_freeze_path: Path,
     predictions_path: Path,
 ) -> dict[str, Any]:
-    """Validate and freeze a complete blind deposit without reading labels."""
+    """Validate and freeze a complete blind deposit without reading labels.
+中文：在不读标签的前提下校验并冻结完整的盲预测存证。
+"""
     readiness = _verify_readiness(
         readiness_path,
         protocol_path,
@@ -364,7 +371,9 @@ def final_evaluation(
     labels_path: Path,
     output_path: Path,
 ) -> dict[str, Any]:
-    """Perform the only label join and atomically claim the final receipt path."""
+    """Perform the only label join and atomically claim the final receipt path.
+中文：执行唯一一次标签合并并原子性占用最终收据路径。
+"""
     readiness = _load_object(readiness_path)
     deposit = _load_object(deposit_path)
     if readiness.get("ready") is not True:
@@ -497,7 +506,9 @@ def _write_new(path: Path, payload: dict[str, Any]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Dispatch one of audit-freeze, deposit-freeze, or evaluate-once."""
+    """Dispatch one of audit-freeze, deposit-freeze, or evaluate-once.
+中文：分发 audit-freeze / deposit-freeze / evaluate-once 之一。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     common = argparse.ArgumentParser(add_help=False)

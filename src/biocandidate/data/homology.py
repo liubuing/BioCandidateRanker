@@ -5,6 +5,11 @@ Sequences are clustered at the governed 30% identity / 80% coverage thresholds
 assignment operates on whole clusters only, so no homolog pair is ever split
 across train/validation/test. Split manifests record the MMseqs2 parameters
 and the data source identity so runs can replay or reject stale manifests.
+
+中文：MMseqs2 同源聚类与同源冷切分分配。序列按受治理的 30% 序列一致性 / 80%
+覆盖率阈值（--cov-mode 0 要求 query 与 target 双侧都被覆盖）聚类，切分只以整个
+聚类为单位分配，因此任何同源对都不会被拆到 train/validation/test 两侧。切分
+清单记录 MMseqs2 参数与数据源身份，运行方可重放或拒绝过期清单。
 """
 from __future__ import annotations
 
@@ -19,12 +24,16 @@ from .schema import EnzymeSubstrateRecord
 
 
 def sequence_id(sequence: str) -> str:
-    """Stable content address ("seq_" + first 24 hex chars of the SHA256 digest)."""
+    """Stable content address ("seq_" + first 24 hex chars of the SHA256 digest).
+    中文：稳定的内容寻址（"seq_" + SHA256 摘要前 24 个十六进制字符）。
+    """
     return "seq_" + hashlib.sha256(sequence.encode("ascii")).hexdigest()[:24]
 
 
 def write_unique_fasta(records: Sequence[EnzymeSubstrateRecord], path: str | Path) -> dict[str, str]:
-    """Write deduplicated sequences to FASTA; returns the identifier-to-sequence mapping."""
+    """Write deduplicated sequences to FASTA; returns the identifier-to-sequence mapping.
+    中文：把去重后的序列写入 FASTA；返回标识符到序列的映射。
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     sequences = {sequence_id(record.sequence): record.sequence for record in records}
@@ -48,6 +57,9 @@ def run_mmseqs_easy_cluster(
     ``min_identity`` and ``coverage`` are the governed homology thresholds
     (0.3 / 0.8); coverage uses ``--cov-mode 0``, meaning both cluster members
     must cover that fraction of the alignment.
+    中文：用 MMseqs2 linclust 对 FASTA 聚类并返回聚类 TSV 路径。min_identity 与
+    coverage 是受治理的同源阈值（0.3 / 0.8）；覆盖率使用 --cov-mode 0，即两个
+    聚类成员都必须覆盖该比例的比对区域。
     """
     executable_text = str(executable)
     wsl_parts = executable_text.split(":", 2) if executable_text.startswith("wsl:") else None
@@ -113,7 +125,9 @@ def run_mmseqs_easy_search(
     coverage: float = 0.8,
     threads: int = 4,
 ) -> Path:
-    """Search a query FASTA against a target FASTA; returns the top-hit TSV path."""
+    """Search a query FASTA against a target FASTA; returns the top-hit TSV path.
+    中文：用 query FASTA 对 target FASTA 做搜索；返回 top-hit TSV 路径。
+    """
     executable_text = str(executable)
     wsl_parts = executable_text.split(":", 2) if executable_text.startswith("wsl:") else None
     if wsl_parts:
@@ -164,6 +178,8 @@ def read_mmseqs_clusters(path: str | Path) -> dict[str, str]:
 
     Raises if any member appears under two representatives, which would make
     cold-split assignment ambiguous.
+    中文：把 createtsv 聚类 TSV 读成成员到代表序列的映射。若任一成员出现在两个
+    代表之下则抛错，否则同源冷切分分配会产生歧义。
     """
     member_to_representative: dict[str, str] = {}
     with Path(path).open("r", encoding="utf-8") as handle:
@@ -189,6 +205,9 @@ def assign_homology_splits(
 
     Clusters are processed largest-first with a seed-hashed tie-break, so the
     result is deterministic and a homology cluster never straddles two splits.
+    中文：按贪心填充把整个 MMseqs2 聚类分配到 train/validation/test。聚类按
+    从大到小处理并以种子哈希打破并列，因此结果确定，且同源聚类绝不横跨两个
+    切分。
     """
     if abs(sum(ratios) - 1.0) > 1e-9 or any(value < 0 for value in ratios):
         raise ValueError("ratios must be non-negative and sum to one")
@@ -227,7 +246,9 @@ def assign_homology_splits(
 
 def write_split_manifest(records: Sequence[EnzymeSubstrateRecord], clusters: Mapping[str, str],
                          path: str | Path, *, parameters: dict) -> None:
-    """Persist per-row split assignments plus the parameters that produced them."""
+    """Persist per-row split assignments plus the parameters that produced them.
+    中文：持久化逐行切分分配及生成这些分配所用的参数。
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     split_counts: dict[str, int] = {}
@@ -258,6 +279,9 @@ def apply_split_manifest(records: Sequence[EnzymeSubstrateRecord], path: str | P
     Fails closed on unsupported formats, duplicate or invalid rows, source rows
     absent from the records, accepted rows missing from the manifest, and any
     declared ``source_identity`` that does not match the supplied data source.
+    中文：从清单重放切分分配，并校验版本与覆盖情况。对不支持的格式、重复或非法
+    行、记录中不存在的源行、清单缺失的已接受行，以及声明的 source_identity 与
+    所供数据源不符等情况一律 fail-closed（拒绝）。
     """
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("format_version") != 1:

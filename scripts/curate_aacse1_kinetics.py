@@ -9,6 +9,14 @@ Acceptance requires a documented vector reconstruction (deposited PV962689.1 CDS
 primer-end matches, Novagen pET-15b leader) and a homology-cold pool: MMseqs2 easy-search
 against the frozen development reference must return zero hits. The alternative ECB fit of
 the same shikimate measurements is withheld as non-independent evidence.
+
+中文：整理 DOI 10.1007/s00425-025-04915-7（PMC12774947）中 3 条直接测定的 AaCSE1 kcat 数据。
+接受逻辑要点：要求有据可查的载体重建（已保藏 PV962689.1 CDS、引物两端精确匹配、
+Novagen pET-15b 前导肽），且构成同源冷池——对冻结开发参考库的 MMseqs2 easy-search 必须
+零命中；同一批 shikimate 测定的备选 ECB 拟合作为非独立证据被扣留。证据写入
+artifacts/external/temporal-absolute-kinetics/europepmc-PMC12774947：candidate_records.csv
+（3 条接受行）、provenance.json（注意事项与扣留项）、homology-audit.json 以及重建的
+construct_sequences.fasta。
 """
 import csv, hashlib, json, shutil, subprocess, sys
 from pathlib import Path
@@ -26,13 +34,19 @@ REF=ROOT/'artifacts/homology-final/unique_proteins.fasta'
 DOI='10.1007/s00425-025-04915-7'
 VERSION='5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 def sha(p):
-    """Return the SHA-256 hex digest of the file at ``p``."""
+    """Return the SHA-256 hex digest of the file at ``p``.
+
+    中文：返回文件 ``p`` 的 SHA-256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
     """Reconstruct the AaCSE1 construct, audit homology, and write the evidence bundle
-    fail-closed."""
+    fail-closed.
+
+    中文：重建 AaCSE1 构建体、完成同源审计，并以 fail-closed 方式写出证据包。
+    """
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit-20261004/readiness-audit.json']
     before={str(p):sha(p) for p in protected}
     RAW.mkdir(parents=True,exist_ok=True)

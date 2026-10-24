@@ -15,6 +15,9 @@ non-construct homology query. Governance role: fail-closed curation --
 ``candidate_records.csv`` is always schema-only, the optional MMseqs2 search
 runs only against the SHA-256-pinned development reference with the frozen
 mmseqs version, and no model predictions are produced.
+
+中文：整理链霉菌 L-天冬酰胺酶动力学（DOI 10.1371/journal.pone.0336433）：
+取全文、NCBI OPC79493.1 序列与 PubChem 天冬酰胺记录；唯一测定因标签构建序列不完整而排除。
 """
 from __future__ import annotations
 
@@ -82,7 +85,9 @@ def read_fasta(path: Path) -> str:
 
 
 def validate_raw() -> tuple[str, int, str]:
-    """Validate downloaded evidence; return the sequence plus PubChem CID and SMILES."""
+    """Validate downloaded evidence; return the sequence plus PubChem CID and SMILES.
+中文：校验原始证据的完整性与哈希。
+"""
     xml = (RAW / "PMC12594388-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI,
@@ -111,7 +116,9 @@ def validate_raw() -> tuple[str, int, str]:
 
 
 def wsl_path(path: Path) -> str:
-    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations."""
+    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations.
+中文：把 Windows 路径映射为 WSL /mnt 路径。
+"""
     resolved = path.resolve()
     drive = resolved.drive.rstrip(":").lower()
     if not drive:
@@ -120,7 +127,9 @@ def wsl_path(path: Path) -> str:
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
-    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec."""
+    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec.
+中文：组装 WSL mmseqs 命令行。
+"""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
@@ -136,7 +145,9 @@ def reset_wsl_workspace(path: Path) -> None:
 
 
 def run_mmseqs(query: Path) -> None:
-    """Run the pinned easy-search and linclust pipeline against the frozen reference."""
+    """Run the pinned easy-search and linclust pipeline against the frozen reference.
+中文：运行钉住的 WSL MMseqs2 同源搜索。
+"""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -188,7 +199,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
-    """Run the full curation flow: acquire, validate, optional homology, outputs."""
+    """Run the full curation flow: acquire, validate, optional homology, outputs.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download_raw()
     sequence, cid, smiles = validate_raw()

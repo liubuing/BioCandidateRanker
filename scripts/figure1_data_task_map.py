@@ -8,6 +8,9 @@ each claim visible in one panel.
 Writes a dependency-free SVG plus a markdown legend, so the figure can be
 reviewed in git without a plotting toolchain. Corpus positions are recorded
 constants, not measurements; the JSON summary carries the claim boundary.
+
+中文：生成图 1（数据与任务地图）：把项目读取的每个语料画在"序列新颖度 x
+标签端点"两轴上，直观呈现结果能否迁移。
 """
 
 from __future__ import annotations
@@ -157,7 +160,9 @@ def _escape(text: str) -> str:
 
 
 def build_svg(corpora: tuple[dict[str, Any], ...]) -> str:
-    """One lane per corpus: collisions are impossible, so every label stays legible."""
+    """One lane per corpus: collisions are impossible, so every label stays legible.
+中文：每语料一条泳道，标签互不碰撞、全部可读。
+"""
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" '
         f'viewBox="0 0 {WIDTH} {HEIGHT}" font-family="Helvetica, Arial, sans-serif">',
@@ -273,7 +278,9 @@ def build_svg(corpora: tuple[dict[str, Any], ...]) -> str:
 
 
 def build_legend(corpora: tuple[dict[str, Any], ...]) -> str:
-    """Render the per-corpus table and reading guidance as Markdown."""
+    """Render the per-corpus table and reading guidance as Markdown.
+中文：把逐语料表格与阅读指引渲染为 Markdown。
+"""
     lines = ["# Figure 1 legend", ""]
     lines.append("| Corpus | Task | Records | Use | License | Note |")
     lines.append("|---|---|---:|---|---|---|")
@@ -293,7 +300,9 @@ def build_legend(corpora: tuple[dict[str, Any], ...]) -> str:
 
 
 def main() -> int:
-    """Write the SVG figure, its legend, and the optional JSON summary."""
+    """Write the SVG figure, its legend, and the optional JSON summary.
+中文：写 SVG 图、图例与可选 JSON 汇总。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

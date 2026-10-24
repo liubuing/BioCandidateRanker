@@ -1,4 +1,7 @@
-"""Run three frozen current-code training jobs, without test evaluation (Windows)."""
+"""Run three frozen current-code training jobs, without test evaluation (Windows).
+
+中文：跑三个冻结的当前代码训练作业（选择规则对比用），不做测试评估（Windows）。
+"""
 from pathlib import Path
 import hashlib, json, os, subprocess, sys, time, msvcrt
 

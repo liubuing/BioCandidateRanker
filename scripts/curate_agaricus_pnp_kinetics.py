@@ -9,6 +9,14 @@ The exact assayed sequence is the deposited codon-optimized construct WEP24514.1
 (EF + native residues 2-304 + C-terminal His6). The row is accepted only when MMseqs2
 against the frozen development reference returns zero hits; any hit forces
 excluded_homology, and a missing frozen executable leaves the row pending_homology.
+
+中文：整理 DOI 10.3390/jof11040268 的 Agaricus bisporus 嘌呤核苷磷酸化酶（AbPNP）数据行。
+接受/排除逻辑要点：精确测定序列取已保藏的密码子优化构建体 WEP24514.1（EF + 天然残基
+2-304 + C 端 His6）；仅当对冻结开发参考库的 MMseqs2 检索零命中时接受该行，任何命中都强制
+excluded_homology，冻结可执行文件缺失时该行保持 pending_homology。证据写入
+artifacts/external/temporal-absolute-kinetics/europepmc-PMC12028538：candidate_records.csv
+（一条 inosine kcat 行）、provenance.json、construct_sequences.fasta 与 homology-audit.json
+（冻结 mmseqs 运行不可用时为 prescreen-audit.json）。
 """
 from __future__ import annotations
 
@@ -55,12 +63,18 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+
+    中文：返回 ``path`` 文件的 SHA-256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
-    """Fetch each URL in URLS into RAW, leaving any already-downloaded file untouched."""
+    """Fetch each URL in URLS into RAW, leaving any already-downloaded file untouched.
+
+    中文：把 URLS 中的每个 URL 抓取到 RAW，已下载的文件保持不动。
+    """
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -71,7 +85,10 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+
+    中文：返回 FASTA 文件（去掉头部行）拼接后的序列字符串。
+    """
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -81,7 +98,10 @@ def read_fasta(path: Path) -> str:
 
 def validate_sources() -> tuple[str, str, int, str]:
     """Check article markers, construct composition, and PubChem identity; return (construct,
-    native, cid, smiles)."""
+    native, cid, smiles).
+
+    中文：校验文章标记、构建体组成与 PubChem 身份；返回（construct、native、cid、smiles）。
+    """
     xml = (RAW / "PMC12028538-fullText.xml").read_text(encoding="utf-8")
     required_article_text = (
         DOI,
@@ -110,7 +130,11 @@ def validate_sources() -> tuple[str, str, int, str]:
 
 def run_mmseqs(query_path: Path) -> None:
     """Easy-search and linclust ``query_path`` against the frozen reference; no-op if mmseqs is
-    absent (fail-closed downstream)."""
+    absent (fail-closed downstream).
+
+    中文：对 ``query_path`` 在冻结参考库上运行 easy-search 与 linclust；mmseqs 缺失时
+    不做任何操作（由下游 fail-closed 兜底）。
+    """
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     executable = shutil.which("mmseqs")
@@ -171,7 +195,10 @@ def run_mmseqs(query_path: Path) -> None:
 
 def write_outputs(*, acquire: bool = True) -> None:
     """Validate sources, run the homology gate, and write the candidate/provenance/audit evidence
-    files."""
+    files.
+
+    中文：校验数据来源、运行同源门控，并写出 candidate/provenance/audit 证据文件。
+    """
     if acquire:
         download_raw()
     construct, native, cid, smiles = validate_sources()

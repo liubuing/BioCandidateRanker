@@ -12,6 +12,10 @@ artifacts/paired-family-analysis/ and refuses to overwrite an existing report.
 Governance: strictly post-hoc -- aggregate test metrics were already observed,
 so this analysis performs no model selection, applies no multiplicity
 adjustment, and treats a CI crossing zero as non-evidence of equivalence.
+
+中文：内部测试指标的事后家族级配对 bootstrap：在冻结内部测试分区上对参考
+模型、CataPro Mode B、UniKP Mode B 重算 RMSE/MAE/Pearson，按序列家族重采样，
+输出配对差值与 95% 区间（协议种子 20260918，5,000 次抽样）。
 """
 from pathlib import Path
 import csv
@@ -31,7 +35,9 @@ def rows(path):
         return list(csv.DictReader(stream))
 
 def aligned(path, ids, labels, prediction_key, label_key):
-    """Return predictions re-ordered to the canonical IDs, verifying labels and finiteness."""
+    """Return predictions re-ordered to the canonical IDs, verifying labels and finiteness.
+中文：按规范 ID 重排预测，校验标签一致与有限性。
+"""
     data = rows(path)
     mapping = {r['pair_id']: r for r in data}
     if len(mapping) != len(data) or set(mapping) != set(ids):
@@ -45,7 +51,9 @@ def aligned(path, ids, labels, prediction_key, label_key):
     return p
 
 def metrics_by_draw(predictions, labels, groups, weights):
-    """Return draw x metric; each row of weights counts complete families."""
+    """Return draw x metric; each row of weights counts complete families.
+中文：返回 抽样x指标；每行权重计入完整家族。
+"""
     n_groups = weights.shape[1]
     result = []
     for prediction in predictions:

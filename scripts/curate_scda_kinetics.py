@@ -14,6 +14,9 @@ and CF-S77E from Figures 5C/6A) are emitted as candidate records with status
 homology hits, or ``accepted_homology_cold_pool`` otherwise. Author-reported
 kcat (min-1) is normalized to s-1 by /60. Governance role: fail-closed cold-pool
 curation -- readiness gate stays False and no model predictions are generated.
+
+中文：整理金黄色葡萄球菌 ScdA 亚硝酸还原酶动力学（DOI 10.1021/jacs.5c05573）：
+读 BioStudies 存档（XML/SI/图表/PDB 9J47/FASTA/PubChem）；四变体 pending_homology 按冻结同源分流。
 """
 from __future__ import annotations
 
@@ -186,7 +189,9 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
-    """Validate raw evidence, then write the FASTA, candidate CSV, provenance, and audit."""
+    """Validate raw evidence, then write the FASTA, candidate CSV, provenance, and audit.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     missing = [name for name in RAW_FILES if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw source files: {', '.join(missing)}")

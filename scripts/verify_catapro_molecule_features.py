@@ -7,6 +7,9 @@ the cached GPU-extracted features. Writes ``molecule-equivalence-check.json``
 with the max absolute error and a pass/fail verdict at the recorded 1e-4
 tolerance; a failure raises and leaves the recorded verdict in place.
 Governance role: cache-equivalence gate for the CataPro Mode B pipeline.
+
+中文：把缓存的 GPU 分子特征与钉住的上游 CPU 提取对比：仅用训练分区前 32 行
+（绝不用测试），核验 MolT5 嵌入与 MACCS 键一致性。
 """
 import json
 import numpy as np

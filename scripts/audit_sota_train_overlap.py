@@ -5,6 +5,13 @@ corpus subsumes this project's development corpus. This script quantifies that o
 exactly: how many frozen test pairs/sequences appear verbatim in each predictor's
 published training corpus. Governed by
 configs/sota_homology_cold_comparison_protocol.json.
+
+中文：本脚本审计已发表预测器训练语料与冻结测试划分之间的重叠：模式 A（原样发表的
+checkpoint）偏向泄漏，因为 UniKP/DLKcat 的训练语料涵盖本项目的开发语料；本脚本精确量化
+冻结测试的配对/序列在各预测器已发表训练语料中的逐字出现数量，写出
+artifacts/external/sota-homology-cold/overlap-audit.json。治理角色：由
+configs/sota_homology_cold_comparison_protocol.json 治理的泄漏审计收据，用于把模式 A 的
+数字限定为偏泄漏的上界参考。
 """
 
 from __future__ import annotations
@@ -19,12 +26,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> None:
-    """Quantify exact sequence/pair overlap and write the overlap-audit receipt."""
+    """Quantify exact sequence/pair overlap and write the overlap-audit receipt.
+
+    中文：量化精确的序列/配对重叠并写出重叠审计收据。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", type=Path, required=True,
                         help="UniKP/DLKcat published training corpus (raw JSON)")

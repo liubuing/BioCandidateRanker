@@ -9,6 +9,9 @@ FASTA, provenance.json, and homology-audit.json.
 Candidates keep author-reported log10(kcat) as the label; substrate I fails closed on a
 CID-0 PubChem identity lookup, and finalization requires pinned MMseqs2 output
 (pending_homology rows are rejected). --prepare-only stops before homology finalization.
+
+中文：整理 dPTE2 磷酸三酯酶 pH 分辨 kcat 行（DOI 10.1021/acs.biochem.5c00768）：
+底物 II-V 跨 pH 与 H55/H55piMH x Zn/Co 变体的 108 个有限 log10(kcat) 单元；CID-0 底物 fail-closed。
 """
 from __future__ import annotations
 
@@ -125,7 +128,9 @@ TABLES = {
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -374,7 +379,9 @@ def substrate_mapping_rows() -> list[dict[str, object]]:
 
 def write_outputs(*, prepare_only: bool) -> None:
     """Verify raw evidence and write artifacts; finalize audits only when the pinned homology
-    output exists."""
+    output exists.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     verify_raw()
     records = build_records()

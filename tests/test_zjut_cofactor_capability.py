@@ -11,6 +11,8 @@ Everything else added since - the flavin/thioester cofactors, the surfactant
 grids, the yeast model, compartment-resolved accounting - must not disturb these.
 This file pins them, so a future change that quietly breaks the ZJUT capability
 fails here instead of being discovered later.
+
+中文：保全浙江工业大学论文（Wang 等，大肠杆菌 D-泛酸）所需的辅因子能力：iML1515、生物量目标 FBA、敲除/过表达、glucose 15 / oxygen 20 等要求逐项钉住。
 """
 
 from __future__ import annotations

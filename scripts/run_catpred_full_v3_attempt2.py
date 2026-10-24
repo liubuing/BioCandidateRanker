@@ -1,4 +1,7 @@
-"""Run a frozen CatPred development ensemble; test data are never supplied."""
+"""Run a frozen CatPred development ensemble; test data are never supplied.
+
+中文：运行冻结的 CatPred 开发集成（v3 协议第 2 次尝试）；绝不提供测试数据。
+"""
 from pathlib import Path
 import argparse,hashlib,json,os,subprocess,sys,time
 

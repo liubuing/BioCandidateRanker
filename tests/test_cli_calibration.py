@@ -2,6 +2,8 @@
 prediction applies the calibrator to the matching task while emitting raw
 standard deviations and conformal intervals, and calibration artifacts are
 bound to their checkpoint identity (with grouped CV never touching test rows).
+
+中文：钉住校准 CLI 契约：拟合只读验证行、预测应用校准器同时输出原始标准差与保形区间、工件绑定检查点身份且分组 CV 不触碰测试行。
 """
 
 import json

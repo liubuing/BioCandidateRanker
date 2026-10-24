@@ -1,6 +1,8 @@
 """Pins the calibration contract: closed-form Gaussian scores, conformal
 interval construction (including tie and infinite-radius policies),
 deterministic grouped model selection, and tamper-evident artifact round trips.
+
+中文：钉住校准契约：闭式高斯评分、保形区间（含并列与无穷半径策略）、确定性分组选型与防篡改工件往返。
 """
 
 import json

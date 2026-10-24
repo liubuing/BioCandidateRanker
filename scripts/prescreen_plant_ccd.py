@@ -15,6 +15,9 @@ further ``held_unit_definition_conflict`` because the published nmol/min unit
 definition and Table 2 kcat cannot both follow the stated conversion -- values
 are audited, never corrected. Governance role: fail-closed prescreen with
 ``accepted_additions`` 0 and no predictions.
+
+中文：植物 CCD 来源的组件级开发同源预筛：筛查代表序列的催化组件、审计
+单位一致性并写同源审计。
 """
 import csv
 import hashlib
@@ -34,7 +37,9 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Screen CCD components, audit unit consistency, and write the homology audit."""
+    """Screen CCD components, audit unit consistency, and write the homology audit.
+中文：筛查 CCD 组件、审计单位一致性并写同源审计。
+"""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'

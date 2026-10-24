@@ -12,6 +12,9 @@ snapshots under ``snapshots/``.
 Governance role: index-only bookkeeping -- no files are moved or deleted, and
 ``--reviewed-source`` acknowledgements fail closed unless the source is fully
 hashed, resolved, and error-free.
+
+中文：存储盘点与有界增量证据索引维护，不移动文件：原位遍历 artifacts/ 与
+data/，按字节预算增量哈希证据、分层来源、做不可变证据快照并写报告束。
 """
 
 from __future__ import annotations
@@ -45,14 +48,18 @@ def encode(value: object) -> str:
 
 
 def source_id(path: str) -> str | None:
-    """Return the temporal-pool source name for a path, or None outside the pool."""
+    """Return the temporal-pool source name for a path, or None outside the pool.
+中文：返回路径对应的时间池来源名，池外返回 None。
+"""
     parts = Path(path).as_posix().split("/")
     prefix = POOL.split("/")
     return parts[len(prefix)] if parts[:len(prefix)] == prefix and len(parts) > 4 else None
 
 
 def storage_kind(path: str) -> str:
-    """Classify a path as cache, environment, evidence, or research output."""
+    """Classify a path as cache, environment, evidence, or research output.
+中文：把路径分类为缓存/环境/证据/研究输出。
+"""
     parts = set(Path(path).parts)
     if parts & CACHE_PARTS:
         return "cache"
@@ -64,7 +71,9 @@ def storage_kind(path: str) -> str:
 
 
 def scan(root: Path, output: Path, previous: dict, budget: int, verify: bool) -> tuple:
-    """Walk the tree, reuse or spend the hash budget, and return the file inventory."""
+    """Walk the tree, reuse or spend the hash budget, and return the file inventory.
+中文：遍历树、复用或消耗哈希预算，返回文件清单。
+"""
     files = []
     errors = []
     for folder in ("artifacts", "data"):
@@ -132,7 +141,9 @@ def scan(root: Path, output: Path, previous: dict, budget: int, verify: bool) ->
 
 
 def manage(root: Path, budget: int, verify: bool = False, reviewed: tuple = ()) -> dict:
-    """Build the index, layer sources, snapshot evidence, and write the report bundle."""
+    """Build the index, layer sources, snapshot evidence, and write the report bundle.
+中文：建索引、分层来源、快照证据并写报告束。
+"""
     root = root.resolve()
     output = root / OUTPUT
     output.mkdir(parents=True, exist_ok=True)
@@ -307,7 +318,9 @@ def manage(root: Path, budget: int, verify: bool = False, reviewed: tuple = ()) 
 
 
 def main() -> int:
-    """Run the inventory and print a summary; exit nonzero when scan errors exist."""
+    """Run the inventory and print a summary; exit nonzero when scan errors exist.
+中文：跑盘点并打印摘要；存在扫描错误时非零退出。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--hash-budget-mib", type=int, default=1024)

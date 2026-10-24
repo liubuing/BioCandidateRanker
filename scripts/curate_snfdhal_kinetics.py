@@ -16,6 +16,9 @@ reconstructed (NdeI/XhoI methods vs. EcoRI SI primer), and Fre/FAD/NADH/
 chloride/O2 saturation is never demonstrated. Governance role: fail-closed --
 zero candidate labels, a six-gate blocker record is emitted, and no model
 predictions are generated.
+
+中文：整理诺尔斯链霉菌 SnFDHal 色氨酸卤化酶（DOI 10.1007/s12010-025-05449-0）：
+下载校验全文与补充（SI Table 1 的 516-aa ORF）；三行 Table 1 kcat 因 30 分钟终点法质量守恒矛盾等六重门全排除。
 """
 from __future__ import annotations
 
@@ -75,7 +78,9 @@ def sha256(path: Path) -> str:
 
 
 def download_raw() -> None:
-    """Fetch the article XML, supplement archive, protein FASTA, and PubChem records."""
+    """Fetch the article XML, supplement archive, protein FASTA, and PubChem records.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -103,7 +108,9 @@ def download_raw() -> None:
 
 
 def validate_raw() -> None:
-    """Check article, supplement, and PubChem markers against pinned expectations."""
+    """Check article, supplement, and PubChem markers against pinned expectations.
+中文：校验原始证据的完整性与哈希。
+"""
     xml = (RAW / "PMC12894115-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI, "creativecommons.org/licenses/by/4.0/", "9.6 mM NADH", "100 µM FAD",
@@ -127,13 +134,17 @@ def validate_raw() -> None:
 
 
 def wsl_path(path: Path) -> str:
-    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations."""
+    """Map a Windows path to its /mnt/<drive> equivalent for WSL invocations.
+中文：把 Windows 路径映射为 WSL /mnt 路径。
+"""
     resolved = path.resolve()
     return f"/mnt/{resolved.drive[0].lower()}/{resolved.as_posix()[3:]}"
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
-    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec."""
+    """Build a wsl-wrapped mmseqs argv from the pinned <backend>:<distro>:<exe> spec.
+中文：组装 WSL mmseqs 命令行。
+"""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
@@ -146,7 +157,9 @@ def reset_wsl_workspace(path: Path) -> None:
 
 
 def run_mmseqs(query: Path) -> str:
-    """Search the disclosed ORF against the frozen reference with the pinned mmseqs."""
+    """Search the disclosed ORF against the frozen reference with the pinned mmseqs.
+中文：运行钉住的 WSL MMseqs2 同源搜索。
+"""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -177,7 +190,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
-    """Acquire, validate, screen homology, and write the fully blocked curation bundle."""
+    """Acquire, validate, screen homology, and write the fully blocked curation bundle.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download_raw()
     validate_raw()

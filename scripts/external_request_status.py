@@ -13,6 +13,9 @@ Read-only over the three records; writes nothing unless --markdown or --json-out
 is given (then a Markdown table and/or the JSON report). Governance role:
 outreach bookkeeping audit -- draft text is never treated as evidence of
 contact and no reply is treated as data.
+
+中文：对账外联三套记录（结构化队列、响应追踪 CSV、草稿文件）：任何已发送
+记录、收件人占位或状态分歧都作为问题列出。
 """
 
 from __future__ import annotations
@@ -51,7 +54,9 @@ def load_tracker(path: Path) -> dict[str, dict[str, str]]:
 
 
 def draft_recipient(path: Path) -> str | None:
-    """First recipient-looking line, which is how every draft in this repo opens."""
+    """First recipient-looking line, which is how every draft in this repo opens.
+中文：取草稿开头第一行疑似收件人的行。
+"""
     for line in path.read_text(encoding="utf-8").splitlines()[:6]:
         stripped = line.strip()
         for prefix in ("To:", "Recipient:"):
@@ -61,21 +66,27 @@ def draft_recipient(path: Path) -> str | None:
 
 
 def placeholder_recipient(value: str | None) -> bool:
-    """True when a recipient is missing or still carries an unfilled marker."""
+    """True when a recipient is missing or still carries an unfilled marker.
+中文：收件人缺失或仍带未填占位时为真。
+"""
     if not value:
         return True
     return any(marker in value for marker in UNFILLED_MARKERS)
 
 
 def states_agree(left: str | None, right: str | None) -> bool:
-    """True when two labels sit in the same compatible-state group."""
+    """True when two labels sit in the same compatible-state group.
+中文：两个状态标签处于同一兼容状态组时为真。
+"""
     if left == right:
         return True
     return any(left in group and right in group for group in COMPATIBLE_STATES)
 
 
 def reconcile(root: Path) -> dict[str, Any]:
-    """Cross-check queue, tracker, and drafts; return the report with all issues."""
+    """Cross-check queue, tracker, and drafts; return the report with all issues.
+中文：交叉核对队列/追踪器/草稿，返回带全部问题的报告。
+"""
     issues: list[str] = []
     queue_path = root / DEFAULT_QUEUE
     tracker_path = root / DEFAULT_TRACKER
@@ -182,7 +193,9 @@ def reconcile(root: Path) -> dict[str, Any]:
 
 
 def render_markdown(report: dict[str, Any]) -> str:
-    """Render the reconciliation report as a Markdown table plus issue list."""
+    """Render the reconciliation report as a Markdown table plus issue list.
+中文：把对账报告渲染为 Markdown 表格加问题清单。
+"""
     lines = ["# External request status", ""]
     lines.append(report["headline"])
     lines.append("")
@@ -211,7 +224,9 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    """Reconcile the outreach records and optionally emit Markdown/JSON reports."""
+    """Reconcile the outreach records and optionally emit Markdown/JSON reports.
+中文：对账外联记录，可选输出 Markdown/JSON 报告。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--markdown", type=Path, default=None)

@@ -1,6 +1,8 @@
 """Pins the normalized-kinetics JSONL adapter: unit conversion to canonical
 log10 molar quantities, sparse multi-task labels, and fail-closed rejection of
 wrong units, nonpositive values, indirect evidence, or missing provenance.
+
+中文：钉住归一化动力学 JSONL 适配器：单位换算到规范 log10 摩尔量、稀疏多任务标签、错误单位/非正值/间接证据/缺来源即拒绝。
 """
 
 import json

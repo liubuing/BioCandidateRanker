@@ -9,6 +9,9 @@ family_reference_sequences.fasta, provenance.json, and homology-audit.json.
 Records start as pending_homology and are re-statused by the frozen MMseqs2 result, then a
 per-MMseqs-family cap of 20 applies; Table 1 values are cross-checked against the article
 XML before anything is written.
+
+中文：整理肠道硫糖苷酶（WG/YG/F3-ORF26，DOI 10.1021/acsbiomedchemau.4c00088）：
+Table 1 全部 24 行直接饱和 kcat（WT 与点突变）；由存档 UniProt/GenBank 重建 21 个 SI 精确标签构建体。
 """
 from __future__ import annotations
 
@@ -140,7 +143,9 @@ ROWS = (
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -149,7 +154,9 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -474,7 +481,9 @@ def exclusion_records() -> list[dict[str, object]]:
 
 def write_outputs() -> None:
     """Build and verify everything, then write candidate/exclusion CSVs, both FASTAs, provenance,
-    and the homology audit."""
+    and the homology audit.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     constructs, native = build_sequences()
     verify_raw(constructs)

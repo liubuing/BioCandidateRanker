@@ -14,6 +14,9 @@ coverage) on every query force ``exclude_family_cold_source``; otherwise the
 source stays ``pending_exact_construct_and_remaining_gates``. Governance role:
 fail-closed prescreen -- the transcription is validated, never presented as a
 deposited sequence; ``accepted_additions`` stays 0 and no predictions run.
+
+中文：图转录祖先验证与仅排除的同源预筛（Sabath 等，DOI 10.1093/gbe/evae016）：
+转录 AncSBXMT 祖先序列、筛查同源并写排除审计。
 """
 import hashlib
 import json
@@ -41,7 +44,9 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def linux(p):return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Verify the transcription, screen homology, and write the exclusion audit."""
+    """Verify the transcription, screen homology, and write the exclusion audit.
+中文：验证转录、筛查同源并写排除审计。
+"""
     OUT.mkdir(exist_ok=True)
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}

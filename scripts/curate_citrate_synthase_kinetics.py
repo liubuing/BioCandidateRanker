@@ -11,6 +11,10 @@ Rows leave normalization as pending_homology and are re-statused by the frozen M
 result: a sequence-level hit against the development reference excludes the record,
 otherwise it is accepted into the homology-cold pool. Source anomalies are retained
 verbatim and flagged, never corrected.
+
+中文：整理两个开放来源的柠檬酸合酶 kcat 行：Edmond S0HJ48（DOI 10.1038/s41467-024-54408-6）
+与 PMC11041685（DOI 10.1038/s41586-024-07287-2）。构建体序列由补充材料 DOCX DNA 翻译（祖先/现存柠檬酸合酶及点突变/截短变体）；
+每来源产出 candidate_records.csv、construct_sequences.fasta、provenance.json 与 homology-audit.json。
 """
 from __future__ import annotations
 
@@ -319,7 +323,9 @@ def write_provenance(path: Path, payload: dict[str, object]) -> None:
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -405,7 +411,9 @@ def write_homology_audit(
 
 def main() -> None:
     """Build sequences and records for both sources, apply homology status, and write each source's
-    evidence bundle."""
+    evidence bundle.
+中文：解析参数并运行策展。
+"""
     sequences = build_sequences()
     edmond = edmond_records()
     fractal = fractal_records()

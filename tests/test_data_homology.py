@@ -1,6 +1,8 @@
 """Pins the homology-split contract: MMseqs clusters never straddle a split,
 split manifests round trip, and applying a manifest fails closed on source
 identity mismatch, duplicate or unknown rows, or invalid split names.
+
+中文：钉住同源切分契约：MMseqs 簇绝不跨切分、清单往返一致、源身份不符或重复/未知行即 fail-closed。
 """
 
 import json

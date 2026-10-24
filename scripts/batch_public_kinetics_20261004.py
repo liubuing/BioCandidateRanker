@@ -6,6 +6,13 @@ full-text XML with license and kinetics-table evidence, and records everything
 in public-batch-20261004/batch-register.json with accepted_additions=0. The
 CC-BY/CC0 license screen and table mentions are screening signals only; the
 frozen protocol and pool hashes must be identical before and after.
+
+中文：本脚本做可复现的公开来源发现，绝不修改已接受数据、绝不运行模型：执行八条预先
+声明的 Europe PMC 方向查询（首发 2023-01-01 至 2026-10-04，仅开放获取），对检索页与
+全文 XML 连同许可及动力学表格证据做快照，并把一切记入
+public-batch-20261004/batch-register.json，其中 accepted_additions=0。CC-BY/CC0 许可
+筛查与表格提及只是筛查信号；冻结协议与池哈希在前后必须一致。治理角色：发现批次审计
+收据（fail-closed，保护产物不可变动）。
 """
 import concurrent.futures as cf
 import hashlib
@@ -31,11 +38,17 @@ DIRECTIONS = {
 }
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def fetch(url, path):
-    """Download url into path once, then always serve the cached local bytes."""
+    """Download url into path once, then always serve the cached local bytes.
+
+    中文：把 url 下载到 path 一次，之后始终提供本地缓存字节。
+    """
     if not path.exists():
         req = urllib.request.Request(url, headers={'User-Agent': 'PublicKineticsEvidenceAudit/1.0'})
         data = urllib.request.urlopen(req, timeout=45).read()
@@ -43,7 +56,10 @@ def fetch(url, path):
     return path.read_bytes()
 
 def search(item):
-    """Run one direction's Europe PMC query and return its receipt and raw results."""
+    """Run one direction's Europe PMC query and return its receipt and raw results.
+
+    中文：执行一个方向的 Europe PMC 查询并返回其收据与原始结果。
+    """
     name, terms = item
     q = f'{terms} AND (kcat OR "turnover number" OR "kinetic characterization") AND FIRST_PDATE:[2023-01-01 TO 2026-10-04] AND OPEN_ACCESS:y'
     url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?' + urllib.parse.urlencode(dict(query=q, format='json', pageSize=100))
@@ -55,7 +71,10 @@ def search(item):
         return dict(direction=name, query=q, url=url, error=str(e)), []
 
 def fulltext(entry):
-    """Acquire one article's full text, screen its license, and extract evidence."""
+    """Acquire one article's full text, screen its license, and extract evidence.
+
+    中文：获取一篇文章的全文，筛查其许可并提取证据。
+    """
     pmc = entry['pmcid']
     p = OUT / f'{pmc}.xml'
     url = f'https://www.ebi.ac.uk/europepmc/webservices/rest/{pmc}/fullTextXML'
@@ -80,7 +99,10 @@ def fulltext(entry):
     return entry
 
 def main():
-    """Discover, screen, and register the public batch without accepting anything."""
+    """Discover, screen, and register the public batch without accepting anything.
+
+    中文：发现、筛查并登记公开批次，不接受任何记录。
+    """
     OUT.mkdir(parents=True, exist_ok=True)
     protected = [ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before = {str(p.relative_to(ROOT)): sha(p) for p in protected}

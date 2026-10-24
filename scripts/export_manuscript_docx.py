@@ -6,6 +6,9 @@ No third-party measurement data is read or written by this script.
 
 Usage:
     python scripts/export_manuscript_docx.py
+
+中文：把手稿 markdown 源导出为投稿 DOCX：从当前 .md 重新生成四份 DOCX，
+导出永不偏离占位符扫描所审计的源。
 """
 
 from __future__ import annotations
@@ -30,7 +33,9 @@ BOLD_ITALIC_RE = re.compile(r"(\*\*\*.+?\*\*\*|\*\*.+?\*\*|\*.+?\*|`.+?`)")
 
 
 def add_runs(paragraph, text: str) -> None:
-    """Render **bold**, *italic*, ***both*** and `code` spans into runs."""
+    """Render **bold**, *italic*, ***both*** and `code` spans into runs.
+中文：把 **粗体**、*斜体*、***复合*** 与 `代码` 渲染为 runs。
+"""
     for part in BOLD_ITALIC_RE.split(text):
         if not part:
             continue
@@ -52,7 +57,9 @@ def add_runs(paragraph, text: str) -> None:
 
 
 def add_table(doc: Document, rows: list[list[str]]) -> None:
-    """Append one markdown table as a DOCX table with a bold header row."""
+    """Append one markdown table as a DOCX table with a bold header row.
+中文：把一个 markdown 表格追加为带粗体表头的 DOCX 表格。
+"""
     # Drop the markdown header-separator row (e.g. |---|---|) before layout.
     rows = [r for r in rows if not all(re.fullmatch(r":?-{2,}:?", c.strip()) for c in r)]
     if not rows:
@@ -70,7 +77,9 @@ def add_table(doc: Document, rows: list[list[str]]) -> None:
 
 
 def convert(md_path: Path, docx_path: Path) -> None:
-    """Convert one manuscript markdown file to a DOCX file with basic block rendering."""
+    """Convert one manuscript markdown file to a DOCX file with basic block rendering.
+中文：把一份手稿 markdown 转换为 DOCX（基础块级渲染）。
+"""
     doc = Document()
     style = doc.styles["Normal"]
     style.font.name = "Times New Roman"

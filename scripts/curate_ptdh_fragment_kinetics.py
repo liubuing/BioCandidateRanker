@@ -9,6 +9,9 @@ homology-audit.json.
 Acceptance requires the exactly reconstructed 339-aa construct and reciprocal fixed-
 cosubstrate saturation at >=5x the measured Km of the other substrate; the homology gate
 then re-statuses both rows against the frozen MMseqs2 development reference.
+
+中文：整理 17X-PsPTDH 亚磷酸脱氢酶（DOI 10.1021/acs.biochem.5c00561）：
+两行互倒饱和 kcat（亚磷酸变化与 NAD+ 变化）；精确 GSH+O69054 17 取代构建体经质量与 4E5K 验证。
 """
 from __future__ import annotations
 
@@ -86,13 +89,17 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
     """Fetch article/sequence/compound/PDB files and extract the SI PDF from the archive if
-    needed."""
+    needed.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -112,7 +119,9 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -141,7 +150,9 @@ def exact_construct() -> str:
 
 def validate_raw() -> tuple[str, dict[str, tuple[int, str]]]:
     """Check article markers, the O69054 parent, PubChem identities, and the 4E5K 16X cross-check;
-    return (construct, structures)."""
+    return (construct, structures).
+中文：校验原始证据的完整性与哈希。
+"""
     xml = (RAW / "PMC12676663-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI, "creativecommons.org/licenses/by/4.0/", "D13E", "C336D", "E175A",
@@ -178,7 +189,9 @@ def validate_raw() -> tuple[str, dict[str, tuple[int, str]]]:
 
 
 def wsl_path(path: Path) -> str:
-    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires.
+中文：把 Windows 路径映射为 WSL /mnt 路径。
+"""
     resolved = path.resolve()
     drive = resolved.drive.rstrip(":").lower()
     if not drive:
@@ -187,7 +200,9 @@ def wsl_path(path: Path) -> str:
 
 
 def mmseqs_command(*arguments: str) -> list[str]:
-    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv."""
+    """Expand the ``wsl:<distro>:<binary>`` handle in MMSEQS into a full wsl argv.
+中文：组装 WSL mmseqs 命令行。
+"""
     _, distribution, executable = MMSEQS.split(":", 2)
     return ["wsl", "-d", distribution, executable, *arguments]
 
@@ -204,7 +219,9 @@ def reset_wsl_workspace(path: Path) -> None:
 
 def run_mmseqs(query: Path) -> None:
     """Easy-search and linclust ``query`` against the frozen reference inside the pinned WSL
-    mmseqs."""
+    mmseqs.
+中文：运行钉住的 WSL MMseqs2 同源搜索。
+"""
     if not REFERENCE.is_file() or sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen development FASTA is missing or has changed")
     version = subprocess.run(
@@ -258,7 +275,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 def curate(*, acquire: bool, run_homology: bool) -> None:
     """Verify evidence, gate on homology, and write the candidate/exclusion/audit bundle for the
-    17X construct."""
+    17X construct.
+中文：执行完整策展流程并写出证据束。
+"""
     if acquire:
         download_raw()
     construct, structures = validate_raw()

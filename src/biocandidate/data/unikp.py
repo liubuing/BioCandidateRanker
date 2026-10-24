@@ -5,6 +5,11 @@ audit report rather than failing the read or being dropped silently. Duplicate
 detection runs at the (sequence, canonical SMILES) model input pair, and
 :func:`aggregate_pair_measurements` collapses replicates to the median log10
 kcat with replicate counts and standard deviations.
+
+中文：UniKP kcat 数值语料适配器（17,010 原始行；16,838 行接受）。无效行逐行
+拒绝并把显式原因记入审计报告，而不是让读取失败或被静默丢弃。重复检测在
+（序列，规范化 SMILES）这一模型输入对上进行；aggregate_pair_measurements 把
+重复测量聚合为 log10 kcat 中位数，并附重复计数与标准差。
 """
 from __future__ import annotations
 
@@ -38,7 +43,9 @@ class DuplicateRow:
 
 @dataclass(frozen=True, slots=True)
 class UniKPAuditReport:
-    """Accept/reject and duplicate audit for one UniKP read."""
+    """Accept/reject and duplicate audit for one UniKP read.
+    中文：单次 UniKP 读取的接受/拒绝与重复审计。
+    """
 
     total_rows: int
     accepted_rows: int
@@ -52,7 +59,9 @@ class UniKPAuditReport:
 
 @dataclass(frozen=True, slots=True)
 class UniKPReadResult:
-    """Accepted records plus the audit trail explaining every other row."""
+    """Accepted records plus the audit trail explaining every other row.
+    中文：接受记录加上解释其余每一行的审计轨迹。
+    """
 
     records: Tuple[EnzymeSubstrateRecord, ...]
     audit: UniKPAuditReport
@@ -61,7 +70,9 @@ class UniKPReadResult:
 def aggregate_pair_measurements(
     records: Sequence[EnzymeSubstrateRecord],
 ) -> Tuple[EnzymeSubstrateRecord, ...]:
-    """Aggregate repeated sequence-SMILES kcat measurements on the log scale."""
+    """Aggregate repeated sequence-SMILES kcat measurements on the log scale.
+    中文：在 log 尺度上聚合重复的序列-SMILES kcat 测量（log10 中位数聚合）。
+    """
     groups: dict[tuple[str, str], list[EnzymeSubstrateRecord]] = {}
     for record in records:
         groups.setdefault((record.sequence, record.substrate_smiles), []).append(record)
@@ -116,6 +127,9 @@ def read_unikp_json(
     Rejection is row-local: non-numeric, non-positive, or non-finite values and
     unusable sequences/SMILES are recorded with reasons while the remaining rows
     are accepted, so the caller decides whether the audit passes governance.
+    中文：把语料读成记录；无效行落入审计而非甩给调用者。拒绝是行局部的：非数值、
+    非正或非有限值以及不可用序列/SMILES 都带原因记录，其余行照常接受，由调用者
+    决定该审计是否通过治理。
     """
     rows = _load_rows(Path(path))
     records = []

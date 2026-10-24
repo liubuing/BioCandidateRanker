@@ -7,6 +7,10 @@ families are assigned and capped per the frozen protocol, and the FASTA,
 mapping manifest, and ``readiness-audit.json`` are written. Any source that
 cannot be mapped exactly becomes a blocker: the audit is fail-closed and
 produces readiness artifacts only, never scores or labels.
+
+中文：构建与标签无关的全局时间家族就绪审计。终审接受的源行映射到显式构建体
+FASTA ID，全部组件序列用版本冻结的 MMseqs2 做全局聚类，按冻结协议分配并
+封顶全局家族，写出 FASTA、映射清单与 readiness-audit.json；就绪门未过即失败。
 """
 
 from __future__ import annotations
@@ -183,7 +187,9 @@ def _reset_mmseqs_workspace(path: Path, executable: str) -> None:
 
 
 def _record_families(records: list[dict[str, Any]], clusters: dict[str, str]) -> dict[int, str]:
-    """Union-find over records sharing any MMseqs representative (multicomponent rule)."""
+    """Union-find over records sharing any MMseqs representative (multicomponent rule).
+中文：对共享任一 MMseqs 代表序列的记录做并查集（多组件规则）。
+"""
     parents = list(range(len(records)))
 
     def find(index: int) -> int:
@@ -219,7 +225,9 @@ def build_global_audit(
     cluster_tsv: Path | None = None,
     threads: int = 4,
 ) -> dict[str, Any]:
-    """Map finalized rows, globally cluster components, cap families, and write artifacts."""
+    """Map finalized rows, globally cluster components, cap families, and write artifacts.
+中文：映射终审行、全局聚类组件、家族封顶并写出工件。
+"""
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     leakage = protocol["leakage_gates"]
     gates = protocol["diversity_and_size_gate"]
@@ -449,7 +457,9 @@ def build_global_audit(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the audit from CLI arguments; exit 0 only when the readiness gate passes."""
+    """Run the audit from CLI arguments; exit 0 only when the readiness gate passes.
+中文：按 CLI 参数运行审计；就绪门通过才以 0 退出。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("artifacts/external/temporal-absolute-kinetics"))
     parser.add_argument("--protocol", type=Path, default=Path("configs/temporal_absolute_kinetics_protocol.json"))

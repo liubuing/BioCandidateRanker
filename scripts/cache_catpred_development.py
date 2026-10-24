@@ -6,6 +6,12 @@ CPU batches through the WSL upstream tree, and asserts shape and finiteness on
 each cache entry. Writes
 artifacts/catpred-mode-b/development-feature-manifest.json, which records this
 script's own SHA256 and the training-and-validation-only scope.
+
+中文：本脚本经 WSL 上游树以有界内存计算官方 CatPred ESM 特征（仅限开发数据）：读取
+development-data/protein_records.json.gz（对照 receipt.json 校验），用小 CPU 批次为每条
+去重序列计算官方 CatPred ESM2 特征，并对每个缓存条目断言形状与有限性。写出
+artifacts/catpred-mode-b/development-feature-manifest.json，其中记录本脚本自身 SHA256 与
+“仅训练与验证”的范围。治理角色：范围受限的特征缓存清单收据（预处理证据，不产生预测）。
 """
 from pathlib import Path
 import hashlib,json,gzip,time,sys,os
@@ -17,11 +23,17 @@ os.environ.setdefault('CATPRED_ESM_BATCH_SIZE','2')
 sys.path.insert(0,str(BASE/'upstream'))
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    """Cache ESM features for all development sequences and write the manifest."""
+    """Cache ESM features for all development sequences and write the manifest.
+
+    中文：为全部开发序列缓存 ESM 特征并写出清单。
+    """
     import torch
     from catpred.data.esm_utils import get_many_esm_reprs,ESM_MAX_LENGTH,ESM_EMBED_DIM
     from catpred.data.cache_utils import cache_entry_path

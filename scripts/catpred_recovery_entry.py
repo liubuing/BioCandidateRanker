@@ -4,13 +4,21 @@ Patches catpred.train.run_training in memory (each source anchor must match
 exactly once, or the run refuses to start) to call the atomic restore/save
 hooks, then starts upstream training. Files on disk in the upstream tree are
 never modified.
+
+中文：本脚本在不改动上游源码的前提下安装有界内存输入与原子恢复：在内存中改接
+catpred.train.run_training（每个源码锚点必须恰好匹配一次，否则运行拒绝启动）以调用原子
+restore/save 钩子，然后启动上游训练。上游树中的磁盘文件从不被修改。治理角色：上游
+训练入口适配器（注入确定性恢复钩子，配合 catpred_recovery 协议使用）。
 """
 import importlib,inspect,textwrap
 from catpred_memory_entry import install_adapters
 import catpred_recovery
 
 def install_recovery():
-    """Rewrite run_training in memory to insert epoch-boundary recovery calls."""
+    """Rewrite run_training in memory to insert epoch-boundary recovery calls.
+
+    中文：在内存中改写 run_training，插入 epoch 边界的恢复调用。
+    """
     module=importlib.import_module('catpred.train.run_training')
     source=textwrap.dedent(inspect.getsource(module.run_training))
     old='        for epoch in trange(args.epochs):'

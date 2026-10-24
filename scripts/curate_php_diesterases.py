@@ -9,6 +9,9 @@ point mutants), family_reference_sequences.fasta, and homology-audit.json.
 Records start as pending_homology and are re-statused fail-closed by the frozen MMseqs2
 result, then a per-MMseqs-family cap of 20 applies; efficiency-only, censored, and
 relative-selectivity endpoints are excluded from candidacy entirely.
+
+中文：整理磷酸二酯酶（No-PDE/Sb-PDE，PHP 酯酶家族，DOI 10.1021/acs.biochem.4c00350）：
+Table 1 与 SI 表 S2-S4 的 39 行有限 Michaelis-Menten 值；精确合成全前体加 No-PDE 点突变。
 """
 from __future__ import annotations
 
@@ -158,12 +161,16 @@ ROWS = (
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(accession: str) -> str:
-    """Read raw/<accession>.fasta, failing unless the header and exact expected length match."""
+    """Read raw/<accession>.fasta, failing unless the header and exact expected length match.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     path = RAW / f"{accession}.fasta"
     lines = path.read_text(encoding="ascii").splitlines()
     expected_length = ACCESSIONS[accession][0]
@@ -361,7 +368,9 @@ def write_fasta(path: Path, entries: dict[str, tuple[str, str]]) -> None:
 
 def write_outputs() -> None:
     """Verify evidence, apply homology/family-cap selection, and write the
-    candidate/FASTA/provenance/audit bundle."""
+    candidate/FASTA/provenance/audit bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     verify_raw_evidence()
     constructs, native = build_sequences()
     records = build_records()

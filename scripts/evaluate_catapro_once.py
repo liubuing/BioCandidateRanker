@@ -13,6 +13,9 @@ prove the test set was never accessed during training; the exclusive
 ``started.json`` marker prevents repeat inference after outcomes are seen; an
 existing summary is verified against the freeze hash and reused without
 inference.
+
+中文：对三个已冻结的 CataPro 检查点在既有内部测试上做唯一一次评估：校验
+catapro_internal_test_freeze.json 与特征清单/ProtT5 复用门/种子收据后执行。
 """
 from datetime import datetime,timezone
 import csv,json,hashlib,sys,statistics
@@ -29,13 +32,17 @@ sys.path.insert(0,str(ROOT/'src'))
 from biocandidate.evaluation import regression_metrics
 
 def verify_files(entries,root=ROOT):
-    """Recompute SHA-256 for each pinned entry and raise on any mismatch."""
+    """Recompute SHA-256 for each pinned entry and raise on any mismatch.
+中文：对每个钉住条目重算 SHA-256，任何不符即抛错。
+"""
     for item in entries:
         if run.sha(root/item['path'])!=item['sha256']:
             raise ValueError(f"Frozen file changed: {item['path']}")
 
 def features(rows,identity):
-    """Build the 1646x1959 test feature matrix from frozen encoders and caches only."""
+    """Build the 1646x1959 test feature matrix from frozen encoders and caches only.
+中文：仅用冻结编码器与缓存构建 1646x1959 测试特征矩阵。
+"""
     from transformers import T5EncoderModel,T5Tokenizer
     gate=run.read_json(run.OUT/'prott5-reuse-check.json')
     if not gate['passed'] or run.sha(run.OUT/'prott5-reuse-check.json')!=identity['prott5_reuse_check_sha256']:
@@ -71,7 +78,9 @@ def features(rows,identity):
     return x
 
 def main():
-    """Verify freeze and provenance, run the one-shot seeded evaluation, write receipts."""
+    """Verify freeze and provenance, run the one-shot seeded evaluation, write receipts.
+中文：校验冻结与来源，执行一次性种子评估并写收据。
+"""
     freeze=run.read_json(FREEZE);verify_files(freeze['files'])
     DEST.mkdir(parents=True,exist_ok=True)
     summary_path=DEST/'summary.json'

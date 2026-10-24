@@ -28,6 +28,18 @@ two ledgers, currency and prosthetic.
 All kcat values are uncalibrated ranker-style guesses exposed as a scenario
 grid, not measurements; the coupling ratio of reductase to P450 is idealized
 at one. This is a bridge between two ledgers, not a flux prediction.
+
+中文：辅基账本：FBA 看不到的、酶结合型辅因子开销。基因组尺度模型把辅因子当作
+通货：在稳态下被消耗又再生，其需求随通量伸缩。本项目的酵母模型中黄素在该账本上
+接近于零——就其本身而言没错——而这恰恰与实验侧的观察相矛盾：路线的 P450 需要
+还原酶，而无论周转多快，每个还原酶分子都各带一个 FAD 和一个 FMN。这类需求是
+辅基库存：随酶表达量伸缩，在组装时支出、随蛋白周转回收，且从不出现在任何反应
+的化学计量中。本账本把该需求算成项目自身的数字（酶负载、库存、补充通量、
+负担比）。负担比低于 1 时细胞自身的黄素合成能力足以覆盖组装；高于 1 时表达
+路线酶所要求的辅基合成超过持家需求，前体补料或 RIB 基因过表达成为可见的
+干预手段。FBA 与本账本都不建模组装本身；它定价的是通货与辅基两本账之间的
+鸿沟。所有 kcat 都是以情景网格形式给出的未校准排序器式猜测，而非测量值；
+还原酶与 P450 的耦合比理想化为一。这是两本账之间的桥梁，不是通量预测。
 """
 
 from __future__ import annotations
@@ -69,7 +81,10 @@ KNOWN_GROUPS = frozenset(YEAST_SYNTHESIS_REACTIONS)
 
 
 def enzyme_load(flux_mmol_gdw_h: float, kcat_s: float) -> float:
-    """Enzyme load (mmol/gDW) that sustains a flux: ub = kcat x E x 3600."""
+    """Enzyme load (mmol/gDW) that sustains a flux: ub = kcat x E x 3600.
+
+    中文：维持某通量所需的酶负载（mmol/gDW）：ub = kcat x E x 3600。
+    """
     if kcat_s <= 0:
         raise ValueError(f"kcat must be positive, got {kcat_s}")
     if flux_mmol_gdw_h < 0:
@@ -94,6 +109,12 @@ def ledger_for_fluxes(
     inventory and replacement flux per prosthetic group, and carries the
     assumption block it was computed under so no consumer can quote the
     numbers without the kcat and half-life they rest on.
+
+    中文：计算一个工况点的辅基开销。``fluxes`` 把酶名映射到其反应承载的通量
+    （mmol/gDW/h）；``extra_enzymes`` 补充那些负载由耦合而非自身反应驱动的酶——
+    如 P450 还原酶，其负载是 P450 负载乘以 ``reductase_coupling``。开销报告
+    逐酶负载、逐辅基的库存与补充通量，并附带计算所依据的假设块，使任何使用方
+    都无法脱离 kcat 与半衰期引用这些数字。
     """
     if protein_half_life_h <= 0:
         raise ValueError(f"protein half-life must be positive, got {protein_half_life_h}")
@@ -157,6 +178,12 @@ def reference_synthesis_capacity(model, solution, growth: float) -> dict[str, An
     burden ratio compares route demand against composition rather than against
     one LP vertex. The FMN row is reported as a one-to-one floor of FAD rather
     than as the kinase vertex, which the FMN/FMNH2 cycle can park at zero.
+
+    中文：在参考最优点上读取专用生物合成反应，得到细胞自身生物质对每种辅基
+    的需求（按生长归一）。逐生长强度是稳定量：它是生物质组成中的辅基含量，
+    与培养基无关，因此负担比是把路线需求与组成而非某一个 LP 顶点作比较。
+    FMN 一行按 FAD 的一比一下限报告，而不取可被 FMN/FMNH2 循环压到零的
+    激酶顶点。
     """
     if growth <= 0:
         raise ValueError(f"growth must be positive, got {growth}")

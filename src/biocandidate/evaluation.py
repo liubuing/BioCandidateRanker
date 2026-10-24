@@ -4,6 +4,10 @@ Pure metric computations over tensors or plain dicts: no data loading and no
 model code. Campaign-ranking metrics derive their pairwise-sampling seed from
 the caller (the CLI passes a hash of the campaign identity), so repeated
 evaluations of one campaign are deterministic.
+
+中文：回归、不确定性与竞选（campaign）排序指标及运行汇总。纯指标计算，输入为
+张量或普通 dict：不含数据加载，也不含模型代码。竞选排序指标的两两采样种子由
+调用方传入（CLI 传入竞选身份的哈希值），因此对同一竞选的重复评估是确定性的。
 """
 
 from __future__ import annotations
@@ -32,7 +36,10 @@ def _pearson(predictions: torch.Tensor, labels: torch.Tensor) -> float | None:
 
 def regression_metrics(predictions: torch.Tensor, labels: torch.Tensor,
                        standard_deviation: torch.Tensor | None = None) -> dict:
-    """Point metrics (count, MAE, RMSE, Pearson) plus Gaussian coverage when deviations given."""
+    """Point metrics (count, MAE, RMSE, Pearson) plus Gaussian coverage when deviations given.
+
+    中文：点指标（数量、MAE、RMSE、Pearson）；若给定标准差，再加高斯覆盖率。
+    """
     if predictions.numel() == 0:
         return {"count": 0}
     error = predictions - labels
@@ -52,7 +59,10 @@ def regression_metrics(predictions: torch.Tensor, labels: torch.Tensor,
 def scalar_uncertainty_scale(
     predictions: torch.Tensor, standard_deviation: torch.Tensor, labels: torch.Tensor,
 ) -> float:
-    """RMS z-score of the residuals; fit on validation, then applied to test by callers."""
+    """RMS z-score of the residuals; fit on validation, then applied to test by callers.
+
+    中文：残差的均方根 z 分数；在验证集上拟合，再由调用方应用到测试集。
+    """
     if predictions.shape != labels.shape or standard_deviation.shape != labels.shape:
         raise ValueError("predictions, deviations, and labels must have identical shapes")
     if predictions.numel() == 0:
@@ -68,7 +78,10 @@ def scalar_uncertainty_scale(
 def uncertainty_metrics(
     predictions: torch.Tensor, standard_deviation: torch.Tensor, labels: torch.Tensor,
 ) -> dict:
-    """Gaussian coverage at one and two sigmas plus the mean Gaussian NLL."""
+    """Gaussian coverage at one and two sigmas plus the mean Gaussian NLL.
+
+    中文：1 倍与 2 倍 sigma 的高斯覆盖率，以及平均高斯 NLL。
+    """
     if predictions.shape != labels.shape or standard_deviation.shape != labels.shape:
         raise ValueError("predictions, deviations, and labels must have identical shapes")
     error = predictions - labels
@@ -127,6 +140,11 @@ def campaign_ranking_metrics(predictions: list[float], observations: list[float]
     accuracy over exactly comparable pairs. When the full pair set exceeds
     ``max_pairs`` it is subsampled with ``random.Random(seed)``, so a fixed seed
     makes the metric reproducible.
+
+    中文：在单个竞选候选列表内计算排序指标。报告基于平均秩（平分并列）的
+    Spearman rho、用分数隶属度处理并列后与真实前 10% 的重叠，以及仅在完全
+    可比对上的两两准确率。当全量对数超过 ``max_pairs`` 时，用
+    ``random.Random(seed)`` 做下采样，因此固定种子可使指标可复现。
     """
     if len(predictions) != len(observations):
         raise ValueError("predictions and observations must have equal length")
@@ -182,6 +200,10 @@ def summarize_campaign_runs(runs: list[dict], *, bootstrap_samples: int = 10_000
     All runs must share one frozen selection identity and the same campaign set;
     the bootstrap resamples campaigns (not rows) so the interval reflects
     campaign sampling uncertainty.
+
+    中文：跨种子汇总竞选排序运行，并给出竞选层面的 bootstrap 置信区间。所有运行
+    必须共享同一冻结选择身份和相同的竞选集合；bootstrap 重采样的是竞选（而非行），
+    因此区间反映的是竞选采样带来的不确定性。
     """
     if not runs:
         raise ValueError("at least one campaign evaluation run is required")
@@ -261,6 +283,9 @@ def summarize_paired_regression_runs(
 
     Both modes must be evaluated on the same seed set; differences are computed
     seed-wise so the comparison is paired, not pooled.
+
+    中文：给出逐种子汇总，并计算两种模式之间逐种子的配对差异。两种模式必须在
+    同一种子集合上评估；差值按种子逐对计算，因此比较是配对的，而非混合汇总。
     """
     seeds = sorted(task_query)
     if not seeds or seeds != sorted(late_concat):
@@ -295,7 +320,11 @@ def summarize_paired_regression_runs(
 
 
 def summarize_regression_seed_runs(runs: dict[str, dict[int, dict]]) -> dict:
-    """Per-seed mean/stddev of regression metrics for each baseline, enforcing one seed set."""
+    """Per-seed mean/stddev of regression metrics for each baseline, enforcing one seed set.
+
+    中文：为每条基线计算回归指标的逐种子均值/标准差，并强制所有基线使用同一
+    种子集合。
+    """
     if not runs:
         raise ValueError("at least one regression baseline is required")
     metric_names = ("rmse", "mae", "pearson")
@@ -325,7 +354,10 @@ def summarize_regression_seed_runs(runs: dict[str, dict[int, dict]]) -> dict:
 @torch.no_grad()
 def evaluate_model(model, loader: DataLoader, device: torch.device,
                    config: ModelConfig) -> dict:
-    """Run the model over a loader and return per-task metrics on observed labels only."""
+    """Run the model over a loader and return per-task metrics on observed labels only.
+
+    中文：在 loader 上运行模型，仅对已观测标签计算逐任务指标。
+    """
     model.eval()
     predictions = []
     deviations = []
@@ -354,7 +386,10 @@ def evaluate_model(model, loader: DataLoader, device: torch.device,
 
 def mean_baseline_metrics(train_records, evaluation_records,
                           task_names: tuple[str, ...]) -> dict:
-    """Metrics of predicting each task's train-set mean; the reference line for model scores."""
+    """Metrics of predicting each task's train-set mean; the reference line for model scores.
+
+    中文：以各任务训练集均值做预测得到的指标，是模型得分的参照线。
+    """
     output = {}
     for task in task_names:
         train_values = [getattr(record, task) for record in train_records

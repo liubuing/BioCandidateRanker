@@ -5,6 +5,11 @@ model: adapters normalize their sources into it and validation invariants run
 in ``__post_init__``. ``TASK_NAMES`` fixes the task column order shared by the
 collator, losses, and output heads; the metadata classes keep per-label
 canonical units and provenance so predictions stay traceable to evidence.
+
+中文：所有适配器共享的规范化记录 schema 与标签元数据契约。
+EnzymeSubstrateRecord 是流入模型的唯一受治理行类型：各适配器把来源规范化为它，
+校验不变量在 __post_init__ 中执行。TASK_NAMES 固定由 collator、损失与输出头
+共享的任务列顺序；元数据类保存逐标签的规范化单位与出处，使预测可回溯到证据。
 """
 from __future__ import annotations
 
@@ -16,7 +21,9 @@ from typing import Optional, Tuple
 
 
 class EvidenceTier(str, Enum):
-    """Label provenance tiers, from direct measurement down to unknown."""
+    """Label provenance tiers, from direct measurement down to unknown.
+    中文：标签证据层级，从直接测量到未知。
+    """
 
     DIRECT = "direct"
     CURATED = "curated"
@@ -30,7 +37,9 @@ CANONICAL_LOG10_FLUX_UNIT = "log10(mmol gDW^-1 h^-1)"
 
 @dataclass(frozen=True, slots=True)
 class FBAFeatureMetadata:
-    """Identity and ordered feature contract for one governed FBA context vector."""
+    """Identity and ordered feature contract for one governed FBA context vector.
+    中文：单个受治理 FBA 上下文向量的身份与有序特征契约。
+    """
 
     schema_version: int
     feature_ids: Tuple[str, ...]
@@ -57,7 +66,9 @@ class FBAFeatureMetadata:
 
 
 class FluxLabelType(str, Enum):
-    """Origin of a flux label: simulated (FBA) or experimental."""
+    """Origin of a flux label: simulated (FBA) or experimental.
+    中文：通量标签来源：模拟（FBA）或实验。
+    """
 
     SIMULATED = "simulated"
     EXPERIMENTAL = "experimental"
@@ -65,7 +76,9 @@ class FluxLabelType(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class FluxLabelMetadata:
-    """Provenance and semantics for a supplied normalized flux target."""
+    """Provenance and semantics for a supplied normalized flux target.
+    中文：所供规范化通量目标的出处与语义。
+    """
 
     label_type: FluxLabelType
     target_reaction_id: str
@@ -99,7 +112,9 @@ class FluxLabelMetadata:
 
 @dataclass(frozen=True, slots=True)
 class KineticLabelMetadata:
-    """Canonical unit, evidence tier, and provenance attached to one kinetic label."""
+    """Canonical unit, evidence tier, and provenance attached to one kinetic label.
+    中文：附在单个动力学标签上的规范化单位、证据层级与出处。
+    """
 
     task: str
     canonical_unit: str
@@ -136,6 +151,9 @@ class EnzymeSubstrateRecord:
     ``None`` labels mean "not measured" and are masked out by the collator.
     Optional FBA context and flux/kinetic metadata each carry their own
     validation invariants enforced below.
+    中文：一条带稀疏多任务标签的受治理酶-底物候选行。None 标签表示"未测量"，
+    由 collator 掩掉。可选的 FBA 上下文与通量/动力学元数据各自携带在下方强制
+    执行的校验不变量。
     """
 
     sequence: str

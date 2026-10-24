@@ -7,6 +7,8 @@ into ``upstream/``, verifying every blob against the GitHub tree API SHA-1
 recorded in ``artifacts/pcb-readiness/CatPred/tree.json``. Writes
 ``source-receipt.json`` with per-file SHA-256s. Governance role: pinned,
 hash-verified upstream acquisition; unsafe archive paths fail closed.
+
+中文：取钉住 commit 的 CatPred 上游归档，只解压经审查范围的代码/配置文件。
 """
 from pathlib import Path,PurePosixPath
 import hashlib,json,urllib.request,zipfile

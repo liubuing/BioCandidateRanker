@@ -2,6 +2,8 @@
 batch samplers, batch-partition-invariant evaluation loss, gradient
 accumulation that matches the single-batch objective, and ranking epochs that
 count every comparable pair.
+
+中文：钉住训练循环契约：安全检查点往返、campaign 感知批采样、批分区不变评估损失、梯度累积与单批目标一致、排序 epoch 计全可比对。
 """
 
 import tempfile

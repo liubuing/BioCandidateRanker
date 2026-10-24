@@ -9,6 +9,13 @@ absence of exact assayed sequences block governed row-level Km training. Any
 pre-existing prohibited outputs (normalized kinetics, manifests, family split,
 checkpoint) are deleted first, so the artifact directory can only ever contain
 the blocker.
+
+中文：本脚本探测 SABIO-RK 公开 API 的活性端点（Km 查询计数、样例动力学条目 39181、
+UniProt 实体 Q9UNW1、条款 JS 资源）及遗留导出端点以采集处置证据；随后删除任何既存的
+被禁产物（normalized kinetics、manifest、family split、checkpoint），使产物目录只能
+包含阻断记录，并把 blocker.json（状态 blocked_skip_training）写入
+artifacts/external/governed-km-sabio-rk。治理角色：fail-closed 阻断器——非商业且
+不可转让的条款加上缺少确切测定序列，两项阻断门使受治理的行级 log10 Km 训练被跳过。
 """
 
 from __future__ import annotations
@@ -42,14 +49,20 @@ PROHIBITED_OUTPUTS = (
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Surfaces redirects as responses so 404-shaped hops are recorded, not followed."""
+    """Surfaces redirects as responses so 404-shaped hops are recorded, not followed.
+
+    中文：把重定向作为响应暴露，使 404 形态的跳转被记录而不是被跟随。
+    """
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         return None
 
 
 def request(url: str, *, allow_redirects: bool = True) -> tuple[int, dict[str, str], bytes]:
-    """Make one request. In particular, HTTP 404 is returned and never retried."""
+    """Make one request. In particular, HTTP 404 is returned and never retried.
+
+    中文：发起一次请求；特别是 HTTP 404 会被原样返回且绝不重试。
+    """
     opener = urllib.request.build_opener() if allow_redirects else urllib.request.build_opener(
         NoRedirect
     )
@@ -61,7 +74,10 @@ def request(url: str, *, allow_redirects: bool = True) -> tuple[int, dict[str, s
 
 
 def json_request(path: str, params: dict[str, str] | None = None) -> tuple[int, Any]:
-    """GET a SABIO-RK path and parse the body as JSON (None for an empty body)."""
+    """GET a SABIO-RK path and parse the body as JSON (None for an empty body).
+
+    中文：GET 一个 SABIO-RK 路径并把响应体解析为 JSON（空体返回 None）。
+    """
     url = BASE + path
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -70,7 +86,10 @@ def json_request(path: str, params: dict[str, str] | None = None) -> tuple[int, 
 
 
 def acquire_evidence() -> dict[str, Any]:
-    """Probe endpoints and the terms bundle; return the raw evidence for the blocker."""
+    """Probe endpoints and the terms bundle; return the raw evidence for the blocker.
+
+    中文：探测各端点与条款资源包，返回供阻断记录使用的原始证据。
+    """
     attempts = []
     for path in LEGACY_ENDPOINTS:
         status, headers, _ = request(BASE + path, allow_redirects=False)
@@ -129,7 +148,10 @@ def acquire_evidence() -> dict[str, Any]:
 
 
 def build_blocker(evidence: dict[str, Any]) -> dict[str, Any]:
-    """Assemble the fail-closed blocker record from the acquired evidence."""
+    """Assemble the fail-closed blocker record from the acquired evidence.
+
+    中文：将采集到的证据组装为 fail-closed 阻断记录。
+    """
     api = evidence["current_api"]
     sample = api.get("sample_entry") or {}
     km = [
@@ -205,7 +227,10 @@ def build_blocker(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Delete prohibited outputs and write blocker.json into the output directory."""
+    """Delete prohibited outputs and write blocker.json into the output directory.
+
+    中文：删除被禁产物并把 blocker.json 写入输出目录。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=OUTPUT)
     args = parser.parse_args()

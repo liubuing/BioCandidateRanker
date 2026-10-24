@@ -8,6 +8,9 @@ homology split, and writes per-seed prediction CSVs with receipts and
 previously-observed-test diagnostic only -- every SHA-256 pin is re-verified,
 existing receipts must match the freeze and prediction hashes or the run
 aborts, and no checkpoint or selection is changed.
+
+中文：对每个冻结重训检查点做一次诊断性测试评估：校验评估冻结与重训协议
+清单后，重建 1,646 行内部测试分区，每种子恰评估一次并写收据。
 """
 from pathlib import Path
 import csv,json,hashlib,sys,os
@@ -27,7 +30,9 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(Path(p).read_text(encoding='utf-8'))
 
 def main():
-    """Verify freezes, run each seed checkpoint once over the internal test, write receipts."""
+    """Verify freezes, run each seed checkpoint once over the internal test, write receipts.
+中文：校验冻结后，每个种子检查点在内部测试上跑一次并写收据。
+"""
     freeze=read(BASE/'evaluation-freeze.json')
     for e in freeze['files']:assert sha(ROOT/e['path'])==e['sha256'],e['path']
     protocol=read(ROOT/'configs/current_code_retrain_protocol.json')

@@ -5,6 +5,11 @@ Trains a small multilayer perceptron on the classical features from
 standardization fitted on the train partition only, and the reported epoch
 selected by validation RMSE. It exists to give the deep ranker a like-for-like
 shallow reference on identical splits.
+
+中文：基于特征的 log10_kcat 回归 MLP 基线。在治理协议下，用
+:mod:`biocandidate.baselines` 的经典特征训练一个小型多层感知机：训练固定种子，
+标准化统计只在训练分区上拟合，报告的 epoch 由验证集 RMSE 选出。它的存在是为了
+在完全相同的切分上给深度排序器提供一个可比的浅层参照。
 """
 
 from __future__ import annotations
@@ -22,7 +27,10 @@ from .evaluation import regression_metrics
 
 
 class FeatureMLP(nn.Module):
-    """Plain MLP regressor: Linear/SiLU/Dropout blocks ending in one scalar output."""
+    """Plain MLP regressor: Linear/SiLU/Dropout blocks ending in one scalar output.
+
+    中文：普通 MLP 回归器：由 Linear/SiLU/Dropout 块组成，末尾输出一个标量。
+    """
 
     def __init__(
         self, input_dimension: int, hidden_dimensions: tuple[int, ...], dropout: float,
@@ -46,6 +54,9 @@ def standardize_features(
 
     Zero-variance columns are rescaled by 1.0 instead of dividing by zero, and
     the fitted statistics are returned so inference can reproduce them.
+
+    中文：用仅在训练分区上计算的均值和标准差对所有分区做 z-score 标准化。
+    零方差列改用 1.0 缩放以避免除零；同时返回拟合的统计量，供推理阶段复现。
     """
     mean = train.mean(axis=0, dtype=np.float64)
     standard_deviation = train.std(axis=0, dtype=np.float64)
@@ -76,6 +87,10 @@ def train_feature_mlp(
     The seed pins torch (CPU and CUDA) and the DataLoader shuffling. The epoch
     with the lowest validation RMSE is restored before test metrics are
     computed, so test labels never influence model selection.
+
+    中文：训练 MLP；返回（模型、指标、特征均值、特征标准差）。种子固定 torch
+    （CPU 与 CUDA）及 DataLoader 洗牌。在计算测试指标前会恢复验证 RMSE 最低的
+    epoch，因此测试标签绝不影响模型选择。
     """
     if set(features) != {"train", "validation", "test"} or set(labels) != set(features):
         raise ValueError("feature MLP requires train, validation, and test partitions")
@@ -147,7 +162,10 @@ def train_feature_mlp(
 
 
 def save_feature_checkpoint(payload: dict, path: str | Path) -> None:
-    """Write a torch payload atomically via a temp file plus ``os.replace``."""
+    """Write a torch payload atomically via a temp file plus ``os.replace``.
+
+    中文：通过临时文件加 ``os.replace`` 原子地写入 torch 载荷。
+    """
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(

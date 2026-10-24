@@ -9,6 +9,9 @@ saturation-audit.json, provenance.json, and homology-audit.json.
 Exclusion-only fail-closed: Table 2 never establishes saturation of the fixed GDP, Mg2+,
 Mn2+, and bicarbonate components, and the frozen MMseqs2 search of the exact full-length
 construct finds a development-corpus hit; no value is normalized into a label.
+
+中文：审计 PnPEPCK（WP_011799537.1）直接 kcat 行（DOI 10.1002/pro.70326）：
+Table 2 四个温度行保留为未归一化审计证据；产出带模式声明的空候选表与结构审计。
 """
 from __future__ import annotations
 
@@ -75,12 +78,16 @@ STRUCTURES = (
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def download_raw() -> None:
-    """Fetch article/supplement/sequence/compound/PDB files and extract the supplement DOCX."""
+    """Fetch article/supplement/sequence/compound/PDB files and extract the supplement DOCX.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -97,7 +104,9 @@ def download_raw() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -107,7 +116,9 @@ def read_fasta(path: Path) -> str:
 
 def validate_sources() -> tuple[str, int, str]:
     """Check article markers, the 622-aa accession, PubChem identity, and PDB cross-references;
-    return (sequence, cid, smiles)."""
+    return (sequence, cid, smiles).
+中文：校验各来源证据的完整性。
+"""
     xml = (RAW / "PMC12529880-fullText.xml").read_text(encoding="utf-8")
     required = (
         DOI,
@@ -186,7 +197,9 @@ def run_frozen_mmseqs(query_path: Path) -> None:
 
 def write_outputs(*, acquire: bool = True) -> None:
     """Verify sources, run the frozen homology search first, and write the audit-only evidence
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     if acquire:
         download_raw()
     sequence, cid, smiles = validate_sources()

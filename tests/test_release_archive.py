@@ -1,4 +1,7 @@
-"""Exercise the release archive builder and verifier on a synthetic tree."""
+"""Exercise the release archive builder and verifier on a synthetic tree.
+
+中文：在合成目录树上演练发布归档构建器与校验器。
+"""
 
 from __future__ import annotations
 

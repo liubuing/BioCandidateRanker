@@ -20,6 +20,9 @@ checks stay ``excluded_assay_saturation_or_identity``. Every PDB polymer must
 match its expected family mapping and the exact sequence-substrate overlap
 against the pinned development corpus is audited. Governance role: fail-closed
 family-wise curation -- readiness gate False, no model predictions.
+
+中文：整理嗜热栖热菌 HB8 磷酸模拟变体动力学（DOI 10.1002/2211-5463.70103）：
+读 BioStudies 存档与冻结开发语料；27 行中仅合格行可入选、同源命中即排除。
 """
 from __future__ import annotations
 
@@ -127,7 +130,9 @@ def sha256(path: Path) -> str:
 
 
 def download() -> None:
-    """Fetch every pinned raw artifact (skip when already present and non-empty)."""
+    """Fetch every pinned raw artifact (skip when already present and non-empty).
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -188,7 +193,9 @@ def run_checked(args: list[str]) -> str:
 
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
-    """Run per-family easy-search plus easy-linclust; return hits, clusters, and version."""
+    """Run per-family easy-search plus easy-linclust; return hits, clusters, and version.
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(command(executable, "version")).strip().splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -236,7 +243,9 @@ def read_fasta_entries(path: Path) -> dict[str, str]:
 
 
 def exact_overlap(entries: dict[str, str], records: list[dict[str, object]], corpus: Path) -> dict[str, object]:
-    """Audit exact sequence/sequence-substrate overlap with the pinned development corpus."""
+    """Audit exact sequence/sequence-substrate overlap with the pinned development corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE or sha256(corpus) != DEVELOPMENT_CORPUS_SHA256:
         raise ValueError("frozen 17,010-row development corpus changed")
     development = json.loads(corpus.read_text(encoding="utf-8"))
@@ -267,7 +276,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 
 def write_outputs(mmseqs: str, threads: int, corpus: Path) -> None:
-    """Validate evidence, run homology, and write every curation artifact under SOURCE."""
+    """Validate evidence, run homology, and write every curation artifact under SOURCE.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"missing raw files: {', '.join(missing)}; run with --download")

@@ -1,4 +1,7 @@
-"""Guard the new baseline against row-order, cache, and partition contamination."""
+"""Guard the new baseline against row-order, cache, and partition contamination.
+
+中文：守护新基线免受行序、缓存与分区污染。
+"""
 import importlib.util
 from pathlib import Path
 

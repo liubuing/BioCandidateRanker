@@ -6,6 +6,10 @@ Checkpoints embed the model config, RNG states, and the data-manifest
 identities; downstream commands verify those identities before reusing a
 checkpoint, so a checkpoint can only be evaluated or resumed against the exact
 data it was trained on.
+
+中文：训练循环、campaign 感知采样器与受治理的检查点。Epoch 执行器按模型的
+uncertainty_mode 分支，损失按有标签的证据权重归一化；检查点内嵌模型配置、
+RNG 状态与数据清单身份，下游命令复用前先校验身份。
 """
 
 from __future__ import annotations
@@ -39,7 +43,9 @@ def create_lr_scheduler(
     total_epochs: int = 1,
     min_lr_ratio: float = 0.01,
 ) -> torch.optim.lr_scheduler.LambdaLR:
-    """Cosine annealing with optional linear warmup."""
+    """Cosine annealing with optional linear warmup.
+中文：带可选线性预热的余弦退火。
+"""
     import math as _math
 
     def lr_lambda(epoch: int) -> float:
@@ -53,7 +59,9 @@ def create_lr_scheduler(
 
 
 class RecordDataset(Dataset):
-    """In-memory dataset of :class:`EnzymeSubstrateRecord` items."""
+    """In-memory dataset of :class:`EnzymeSubstrateRecord` items.
+中文：以 EnzymeSubstrateRecord 为元素的内存数据集。
+"""
 
     def __init__(self, records: list[EnzymeSubstrateRecord] | tuple[EnzymeSubstrateRecord, ...]):
         self.records = tuple(records)
@@ -70,7 +78,9 @@ class CampaignBatchSampler(Sampler[list[int]]):
 
     Shuffling is deterministic per epoch: the permutation is seeded with
     ``seed + epoch``, so call :meth:`set_epoch` each epoch to vary it.
-    """
+    
+中文：定长且绝不混合 campaign 的批采样器（排序损失在 campaign 内）。
+"""
 
     def __init__(
         self,
@@ -124,7 +134,9 @@ class CampaignGroupedBatchSampler:
     Ranking pairs are then complete within each campaign instead of being restricted to
     the sub-chunk produced by a fixed ``batch_size``. Memory cost is quadratic in the
     largest campaign; consumers with very large groups should downsample pairs instead.
-    """
+    
+中文：把一个 campaign 的全部记录作为单批整体产出。
+"""
 
     def __init__(self, records: Sequence[EnzymeSubstrateRecord], *, shuffle: bool = False,
                  seed: int = 42) -> None:
@@ -178,7 +190,9 @@ def run_epoch(model: BioCandidateRanker, loader: DataLoader, device: torch.devic
     The reported loss is the evidence-weighted numerator summed over all
     observed labels divided by the summed denominator, matching the objective
     the masked loss functions normalize internally per batch.
-    """
+    
+中文：过一遍 loader；给 optimizer 则训练，否则评估。
+"""
     training = optimizer is not None
     model.train(training)
     total_loss_numerator = 0.0
@@ -225,7 +239,9 @@ def run_epoch_accum(model: BioCandidateRanker, loader: DataLoader, device: torch
     gradient units as its share of the window's total observed-label weight. Each window
     backpropagates once with that window's total denominator; a trailing partial window is
     normalized by its own denominator, not the nominal ``accum_steps``.
-    """
+    
+中文：显存受限时带梯度累积的训练 epoch。
+"""
     if accum_steps < 1:
         raise ValueError("accum_steps must be positive")
     model.train()
@@ -272,7 +288,9 @@ def _backprop_window(model: BioCandidateRanker, device: torch.device,
                      window_batches: list[tuple[dict[str, torch.Tensor], torch.Tensor, torch.Tensor]],
                      window_denominator: float,
                      optimizer: torch.optim.Optimizer) -> None:
-    """Backpropagate one accumulated window as ``sum(numerator)/sum(denominator)``."""
+    """Backpropagate one accumulated window as ``sum(numerator)/sum(denominator)``.
+中文：以 sum(分子)/sum(分母) 回传一个累积窗口。
+"""
     if window_denominator <= 0:
         return
     scale = 1.0 / window_denominator
@@ -305,7 +323,9 @@ def run_ranking_epoch(
 
     Trains when ``optimizer`` is given, else evaluates. The reported loss is the
     pair-count-weighted mean over the epoch.
-    """
+    
+中文：在 task_index 上以 campaign 内成对 logistic 排序损失跑一遍。
+"""
     training = optimizer is not None
     model.train(training)
     weighted_loss = 0.0
@@ -346,7 +366,9 @@ def save_checkpoint(path: str | Path, model: BioCandidateRanker,
     The payload records the model config, torch/CUDA/DataLoader RNG states, the
     data manifest, and metrics; ``train --resume`` restores all of them and
     refuses to continue when the embedded identities no longer match the run.
-    """
+    
+中文：原子保存模型/优化器状态及精确恢复所需身份。
+"""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -376,7 +398,9 @@ def load_checkpoint(path: str | Path, device: torch.device) -> tuple[BioCandidat
     """Load a checkpoint and rebuild the model from its embedded config.
 
     Rejects payloads written by a different checkpoint format version.
-    """
+    
+中文：按内嵌配置重建并加载检查点，格式不符即拒绝。
+"""
     payload = torch.load(path, map_location=device, weights_only=True)
     if payload.get("format_version") != 1:
         raise ValueError("unsupported checkpoint format")

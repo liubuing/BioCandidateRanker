@@ -7,6 +7,13 @@ the audit always concludes ``status: blocked`` and enumerates the missing
 provenance fields; no experimental-flux dataset, split, manifest, or checkpoint
 is ever produced. The written report is the fail-closed artifact that must
 exist before any experimental-flux work can be attempted.
+
+中文：对外部厌氧酵母通量表（yeast-GEM v9.1.0）做 fail-closed 审计。抓取两个固定
+版本的上游发布文件，记录其字节身份，并对照本地 Yeast-MetaTwin 模型审计该无表头
+通量表。数据源没有表头、单位，也没有条件/菌株元数据，因此审计结论恒为
+``status: blocked``，并列出缺失的来源凭证字段；绝不产出任何实验通量数据集、
+切分、清单或检查点。写出的报告是任何实验通量工作启动前必须存在的 fail-closed
+工件。
 """
 
 from __future__ import annotations
@@ -76,6 +83,9 @@ def inspect_flux_table(payload: bytes, model_reaction_ids: set[str]) -> dict:
     Measures row widths, dataset label counts, coverage of explicit ``r_*``
     reaction mappings against the model, and numeric columns whose semantics
     (units, normalization) the source never declares.
+
+    中文：对无表头 TSV 做结构审计。测量行宽、数据集标签计数、显式 ``r_*`` 反应
+    映射相对模型的覆盖率，以及源文件从未声明语义（单位、归一化方式）的数值列。
     """
     text = payload.decode("utf-8-sig")
     rows = list(csv.reader(text.splitlines(), delimiter="\t"))
@@ -116,6 +126,10 @@ def audit(model_path: str | Path, output_path: str | Path) -> dict:
     ``status: blocked`` is unconditional: the source cannot supply the required
     provenance fields, so the written report is the audit's only artifact and no
     dataset, split, or checkpoint is ever produced.
+
+    中文：抓取固定版本的文件，审计通量表，并写出 fail-closed 报告。
+    ``status: blocked`` 是无条件的：数据源无法提供所需的来源凭证字段，因此写出的
+    报告是本审计唯一的工件，绝不产出任何数据集、切分或检查点。
     """
     model = Path(model_path).resolve()
     if not model.is_file():

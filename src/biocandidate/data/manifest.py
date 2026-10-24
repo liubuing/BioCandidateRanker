@@ -5,6 +5,12 @@ Every governed dataset is bound to a (sha256, size_bytes, row_count) triple.
 recomputes it byte by byte and fails closed with
 :class:`ManifestVerificationError` on any digest, size, or row-count drift, so
 no run can silently consume mutated source data.
+
+中文：冻结数据资产的 SHA256 源身份清单。每个受治理数据集都绑定
+(sha256, size_bytes, row_count) 三元组。build_manifest 记录资产身份；
+verify_manifest 逐字节重算身份，任何摘要、大小或行数漂移都以
+ManifestVerificationError fail-closed（拒绝），任何运行都无法静默消费被改动的
+源数据。
 """
 from __future__ import annotations
 
@@ -22,12 +28,16 @@ PathLike = Union[str, Path]
 
 
 class ManifestVerificationError(RuntimeError):
-    """Raised when a source asset does not match its recorded manifest."""
+    """Raised when a source asset does not match its recorded manifest.
+    中文：当源资产与其记录的清单不符时抛出。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class FileManifest:
-    """Frozen (sha256, size_bytes, row_count) identity triple for one source asset."""
+    """Frozen (sha256, size_bytes, row_count) identity triple for one source asset.
+    中文：单个源资产的冻结 (sha256, size_bytes, row_count) 身份三元组。
+    """
 
     sha256: str
     size_bytes: int
@@ -107,7 +117,9 @@ def _row_count(path: Path) -> int:
 
 
 def verify_manifest(path: PathLike, manifest: FileManifest) -> None:
-    """Recompute the asset identity; raise unless digest, size, and row count all match."""
+    """Recompute the asset identity; raise unless digest, size, and row count all match.
+    中文：重算资产身份；除非摘要、大小与行数全部匹配，否则抛错。
+    """
     source = Path(path)
     if not source.is_file():
         raise ManifestVerificationError(f"source is not a regular file: {source}")
@@ -136,7 +148,9 @@ def verify_manifest(path: PathLike, manifest: FileManifest) -> None:
 
 
 def build_manifest(path: PathLike) -> FileManifest:
-    """Compute an identity manifest without modifying the source asset."""
+    """Compute an identity manifest without modifying the source asset.
+    中文：计算身份清单，不改动源资产。
+    """
     source = Path(path)
     if not source.is_file():
         raise ManifestVerificationError(f"source is not a regular file: {source}")

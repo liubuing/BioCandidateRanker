@@ -12,6 +12,10 @@ the upstream molecule-equivalence check must pass before full training; the
 seed set comes from the protocol (single seed 7 for --mode smoke); there is
 deliberately no test-evaluation action and every artifact records
 test_accessed=false.
+
+中文：CataPro Mode B：在冻结同源冷切分上重训 CataPro 的 kcat 头。读冻结协议、
+SHA256 钉住的数据与分区、commit 钉住的上游源码；特征缓存经复用门校验；
+每协议种子训练一次，绝不评估测试集。
 """
 from __future__ import annotations
 import argparse
@@ -53,7 +57,9 @@ def save_json(path,value):
 def json_hash(value):return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
 
 def load_partitions(limit=0):
-    """Return the frozen train/validation rows after re-verifying every recorded hash."""
+    """Return the frozen train/validation rows after re-verifying every recorded hash.
+中文：重验全部记录哈希后返回冻结的训练/验证行。
+"""
     protocol=read_json(PROTOCOL)
     manifest=read_json(ROOT/protocol['data_manifest'])
     if sha(ROOT/protocol['data_manifest'])!=protocol['data_manifest_sha256']:
@@ -74,12 +80,16 @@ def sequence_text(sequence):
     return re.sub('[UZOB]','X',' '.join(sequence))
 
 def model_identity(path):
-    """Return a SHA256 map of the model files that pin this encoder's identity."""
+    """Return a SHA256 map of the model files that pin this encoder's identity.
+中文：返回钉住该编码器身份的模型文件 SHA256 映射。
+"""
     names=['config.json','pytorch_model.bin','spiece.model','tokenizer_config.json','special_tokens_map.json','tokenizer.json']
     return {n:sha(path/n) for n in names if (path/n).is_file()}
 
 def source_module(relative):
-    """Import one pinned upstream CataPro module after checking its commit and file hash."""
+    """Import one pinned upstream CataPro module after checking its commit and file hash.
+中文：校验 commit 与文件哈希后导入钉住的上游 CataPro 模块。
+"""
     receipt=read_json(ROOT/'artifacts/pcb-readiness/source-receipt.json')
     repo=next(r for r in receipt['repositories'] if r['repository']=='zchwang/CataPro')
     if repo['commit']!=read_json(PROTOCOL)['upstream_commit']:raise ValueError('Upstream commit changed')
@@ -91,7 +101,9 @@ def source_module(relative):
     return module
 
 def cache_features(limit=0,device='cuda'):
-    """Cache (or reuse) the 1959-dim train/validation features and write the feature manifest."""
+    """Cache (or reuse) the 1959-dim train/validation features and write the feature manifest.
+中文：缓存（或复用）1959 维训练/验证特征并写特征清单。
+"""
     from transformers import T5EncoderModel,T5Tokenizer
     started=time.perf_counter();rows=load_partitions(limit)
     mode='smoke' if limit else 'full';dest=OUT/mode;dest.mkdir(parents=True,exist_ok=True)
@@ -177,7 +189,9 @@ def cache_features(limit=0,device='cuda'):
     print(json.dumps({'status':'cached','mode':mode,'sizes':{k:len(v) for k,v in rows.items()},'seconds':manifest['seconds']}),flush=True)
 
 def load_feature_data(mode):
-    """Load cached features and labels, re-verifying protocol, ordering, hashes, shapes."""
+    """Load cached features and labels, re-verifying protocol, ordering, hashes, shapes.
+中文：载入缓存特征与标签，复验协议、顺序、哈希与形状。
+"""
     manifest=read_json(OUT/mode/'feature-manifest.json')
     if manifest['identity']['protocol_sha256']!=sha(PROTOCOL):raise ValueError('Protocol changed')
     rows=load_partitions(manifest['limit']);result={}
@@ -193,7 +207,9 @@ def load_feature_data(mode):
     return result,manifest
 
 def train(mode,device):
-    """Train one protocol seed at a time; writes checkpoints/receipts; never evaluates test."""
+    """Train one protocol seed at a time; writes checkpoints/receipts; never evaluates test.
+中文：一次训练一个协议种子；写检查点/收据；绝不评估测试集。
+"""
     protocol=read_json(PROTOCOL);cfg=protocol['training'];data,feature_manifest=load_feature_data(mode)
     if mode=='full':
         check=read_json(OUT/'molecule-equivalence-check.json')

@@ -3,6 +3,10 @@
 Fitting functions in this module accept one labeled calibration set.  Applying a
 fitted calibrator accepts predictions only, which keeps test labels out of the
 calibration interface.
+
+中文：仅基于验证集的不确定性校准与区间评估工具。本模块中的拟合函数只接受一个
+带标签的校准集；应用已拟合的校准器时只接受预测值，从而将测试标签隔离在校准
+接口之外（治理角色：防止测试标签泄漏）。
 """
 
 from __future__ import annotations
@@ -62,7 +66,10 @@ def _probability(value: float, name: str = "alpha") -> float:
 
 @dataclass(frozen=True)
 class IdentityGaussianCalibrator:
-    """Leave Gaussian predictive means and deviations unchanged."""
+    """Leave Gaussian predictive means and deviations unchanged.
+
+    中文：恒等校准器，保持高斯预测均值与标准差不变。
+    """
 
     kind = "identity"
 
@@ -70,12 +77,18 @@ class IdentityGaussianCalibrator:
     def fit(
         cls, mean: Tensor, standard_deviation: Tensor, labels: Tensor
     ) -> IdentityGaussianCalibrator:
-        """Validate the calibration sample and return the no-op calibrator."""
+        """Validate the calibration sample and return the no-op calibrator.
+
+        中文：校验校准样本并返回无操作校准器。
+        """
         _validated_gaussian_sample(mean, standard_deviation, labels)
         return cls()
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
-        """Return the predictions unchanged (validating them first)."""
+        """Return the predictions unchanged (validating them first).
+
+        中文：先校验预测，再原样返回（不做任何修改）。
+        """
         _validated_predictions(mean, standard_deviation)
         return mean, standard_deviation
 
@@ -85,7 +98,10 @@ class IdentityGaussianCalibrator:
 
 @dataclass(frozen=True)
 class ScalarGaussianCalibrator:
-    """Multiply predictive standard deviations by one validation-fitted scale."""
+    """Multiply predictive standard deviations by one validation-fitted scale.
+
+    中文：标量校准器，将预测标准差乘以一个在验证集上拟合的缩放系数。
+    """
 
     scale: float
     kind = "scalar"
@@ -100,7 +116,10 @@ class ScalarGaussianCalibrator:
     def fit(
         cls, mean: Tensor, standard_deviation: Tensor, labels: Tensor
     ) -> ScalarGaussianCalibrator:
-        """Fit one scale as the root-mean-square z-score of the validation residuals."""
+        """Fit one scale as the root-mean-square z-score of the validation residuals.
+
+        中文：以验证残差 z 分数的均方根作为缩放系数完成拟合。
+        """
         _validated_gaussian_sample(mean, standard_deviation, labels)
         scale = torch.sqrt(torch.mean(((labels - mean) / standard_deviation).square()))
         if not torch.isfinite(scale) or scale <= 0:
@@ -108,7 +127,10 @@ class ScalarGaussianCalibrator:
         return cls(float(scale))
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
-        """Scale predictive standard deviations by the fitted scalar."""
+        """Scale predictive standard deviations by the fitted scalar.
+
+        中文：将预测标准差乘以拟合得到的标量。
+        """
         _validated_predictions(mean, standard_deviation)
         return mean, standard_deviation * self.scale
 
@@ -118,7 +140,10 @@ class ScalarGaussianCalibrator:
 
 @dataclass(frozen=True)
 class AffineVarianceGaussianCalibrator:
-    """Transform predictive variance as ``scale * variance + offset``."""
+    """Transform predictive variance as ``scale * variance + offset``.
+
+    中文：仿射方差校准器，将预测方差变换为 ``scale * variance + offset``。
+    """
 
     scale: float
     offset: float
@@ -142,7 +167,10 @@ class AffineVarianceGaussianCalibrator:
         *,
         max_steps: int = 250,
     ) -> AffineVarianceGaussianCalibrator:
-        """Fit ``scale * variance + offset`` by LBFGS on the validation Gaussian NLL."""
+        """Fit ``scale * variance + offset`` by LBFGS on the validation Gaussian NLL.
+
+        中文：在验证集高斯 NLL 上用 LBFGS 拟合 ``scale * variance + offset``。
+        """
         _validated_gaussian_sample(mean, standard_deviation, labels)
         if isinstance(max_steps, bool) or not isinstance(max_steps, int):
             raise TypeError("max_steps must be an integer")
@@ -178,7 +206,10 @@ class AffineVarianceGaussianCalibrator:
         return cls(float(parameters[0]), float(parameters[1]))
 
     def calibrate(self, mean: Tensor, standard_deviation: Tensor) -> tuple[Tensor, Tensor]:
-        """Apply the affine variance transform and return the new standard deviations."""
+        """Apply the affine variance transform and return the new standard deviations.
+
+        中文：应用仿射方差变换并返回新的标准差。
+        """
         _validated_predictions(mean, standard_deviation)
         variance = self.scale * standard_deviation.square() + self.offset
         return mean, torch.sqrt(variance)
@@ -205,7 +236,10 @@ def _validated_gaussian_sample(mean: Tensor, standard_deviation: Tensor, labels:
 
 
 def gaussian_nll(mean: Tensor, standard_deviation: Tensor, labels: Tensor) -> Tensor:
-    """Return mean Gaussian negative log likelihood, including its constant term."""
+    """Return mean Gaussian negative log likelihood, including its constant term.
+
+    中文：返回平均高斯负对数似然（含常数项）。
+    """
     _validated_gaussian_sample(mean, standard_deviation, labels)
     z = (labels - mean) / standard_deviation
     return torch.mean(
@@ -214,7 +248,10 @@ def gaussian_nll(mean: Tensor, standard_deviation: Tensor, labels: Tensor) -> Te
 
 
 def gaussian_crps(mean: Tensor, standard_deviation: Tensor, labels: Tensor) -> Tensor:
-    """Return the mean proper continuous ranked probability score for Gaussians."""
+    """Return the mean proper continuous ranked probability score for Gaussians.
+
+    中文：返回高斯分布的平均严格正常连续分级概率评分（CRPS）。
+    """
     _validated_gaussian_sample(mean, standard_deviation, labels)
     z = (labels - mean) / standard_deviation
     phi = torch.exp(-0.5 * z.square()) / math.sqrt(2.0 * math.pi)
@@ -225,7 +262,10 @@ def gaussian_crps(mean: Tensor, standard_deviation: Tensor, labels: Tensor) -> T
 
 
 def interval_score(lower: Tensor, upper: Tensor, labels: Tensor, *, alpha: float) -> Tensor:
-    """Return the mean proper central interval score at miscoverage ``alpha``."""
+    """Return the mean proper central interval score at miscoverage ``alpha``.
+
+    中文：返回误覆盖率 ``alpha`` 下的平均正常中心区间评分。
+    """
     alpha = _probability(alpha)
     _vector(lower, "lower")
     _vector(upper, "upper")
@@ -241,7 +281,10 @@ def interval_score(lower: Tensor, upper: Tensor, labels: Tensor, *, alpha: float
 
 @dataclass(frozen=True)
 class SplitConformalCalibrator:
-    """A finite-sample split-conformal symmetric interval calibrator."""
+    """A finite-sample split-conformal symmetric interval calibrator.
+
+    中文：有限样本 split-conformal 对称区间校准器。
+    """
 
     radius: float
     alpha: float
@@ -274,6 +317,10 @@ class SplitConformalCalibrator:
         The rank is the finite-sample ``ceil((n + 1) * (1 - alpha))`` order
         statistic; when it exceeds the sample size the radius is infinity and
         every interval is unbounded (an honest answer at this alpha).
+
+        中文：在验证集绝对分数上拟合 conformal 半径。秩取有限样本的
+        ``ceil((n + 1) * (1 - alpha))`` 阶次序统计量；当秩超过样本量时半径为
+        无穷大，所有区间都无界（在该 alpha 下这是诚实的答案）。
         """
         alpha = _probability(alpha)
         _vector(mean, "mean")
@@ -300,7 +347,10 @@ class SplitConformalCalibrator:
         mean: Tensor,
         standard_deviation: Tensor | None = None,
     ) -> tuple[Tensor, Tensor]:
-        """Return symmetric (lower, upper) conformal bounds around the mean."""
+        """Return symmetric (lower, upper) conformal bounds around the mean.
+
+        中文：返回围绕均值的对称 conformal 区间（下界, 上界）。
+        """
         _vector(mean, "mean")
         if self.normalized:
             if standard_deviation is None:
@@ -328,6 +378,10 @@ def conformal_calibrator_from_dict(payload: Mapping[str, Any]) -> SplitConformal
 
     A serialized ``radius`` of null denotes the infinite radius fitted when the
     conformal quantile exceeds the calibration sample size.
+
+    中文：依据 :meth:`SplitConformalCalibrator.to_dict` 的输出重建校准器。
+    序列化中 ``radius`` 为 null 表示当 conformal 分位数超过校准样本量时
+    拟合得到的无穷大半径。
     """
     if not isinstance(payload, Mapping) or set(payload) != {
         "alpha", "normalized", "radius", "tie_policy",
@@ -350,7 +404,10 @@ def deterministic_group_folds(
     n_splits: int,
     seed: int = 0,
 ) -> tuple[int, ...]:
-    """Assign rows to balanced folds without splitting a group."""
+    """Assign rows to balanced folds without splitting a group.
+
+    中文：将各行分配到均衡的折中，且不拆散任何组。
+    """
     if isinstance(n_splits, bool) or not isinstance(n_splits, int):
         raise TypeError("n_splits must be an integer")
     if n_splits < 2:
@@ -393,7 +450,10 @@ def grouped_fold_indices(
     n_splits: int,
     seed: int = 0,
 ) -> tuple[tuple[tuple[int, ...], tuple[int, ...]], ...]:
-    """Return deterministic ``(train, validation)`` indices for grouped folds."""
+    """Return deterministic ``(train, validation)`` indices for grouped folds.
+
+    中文：返回分组折的确定性 ``(train, validation)`` 索引。
+    """
     assignment = deterministic_group_folds(groups, n_splits=n_splits, seed=seed)
     return tuple(
         (
@@ -419,7 +479,10 @@ def _fit_gaussian_calibrator(
 
 @dataclass(frozen=True)
 class GroupedCalibrationSelection:
-    """Validation-only grouped cross-validation selection result."""
+    """Validation-only grouped cross-validation selection result.
+
+    中文：仅基于验证集的分组交叉验证选择结果。
+    """
 
     calibrator: GaussianCalibrator
     selected_kind: str
@@ -458,7 +521,10 @@ def select_grouped_gaussian_calibrator(
     nll_tolerance: float = 1e-12,
     crps_tolerance: float = 1e-12,
 ) -> GroupedCalibrationSelection:
-    """Select variance calibration by grouped CV on one validation partition."""
+    """Select variance calibration by grouped CV on one validation partition.
+
+    中文：在单一验证分区上通过分组交叉验证选择方差校准方案。
+    """
     _validated_gaussian_sample(mean, standard_deviation, labels)
     if len(groups) != labels.numel():
         raise ValueError("groups must have one identifier per validation observation")
@@ -517,7 +583,10 @@ def select_grouped_gaussian_calibrator(
 
 
 def calibrator_from_dict(payload: Mapping[str, Any]) -> GaussianCalibrator:
-    """Rebuild a Gaussian calibrator from its ``to_dict`` payload, rejecting unknown schemas."""
+    """Rebuild a Gaussian calibrator from its ``to_dict`` payload, rejecting unknown schemas.
+
+    中文：依据 ``to_dict`` 载荷重建高斯校准器，拒绝未知模式。
+    """
     if not isinstance(payload, Mapping):
         raise TypeError("calibrator payload must be a mapping")
     kind = payload.get("kind")
@@ -557,7 +626,11 @@ def save_calibration_artifact(
     conformal_calibrators: Sequence[SplitConformalCalibrator] = (),
     selection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Serialize a calibrator bound to exact input/checkpoint identities."""
+    """Serialize a calibrator bound to exact input/checkpoint identities.
+
+    中文：序列化校准器，并绑定精确的输入/检查点身份（写入 SHA256 完整性
+    摘要，作为冻结身份校验的一部分）。
+    """
     if not isinstance(
         calibrator,
         (
@@ -608,7 +681,11 @@ def load_calibration_artifact(
     *,
     expected_identities: Mapping[str, Any] | None = None,
 ) -> tuple[GaussianCalibrator, dict[str, Any]]:
-    """Load an artifact after integrity and optional exact identity checks."""
+    """Load an artifact after integrity and optional exact identity checks.
+
+    中文：加载校准工件，先做 SHA256 完整性校验，可选地执行精确身份匹配
+    （fail-closed：任何不匹配即报错）。
+    """
     with Path(path).open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     required = {

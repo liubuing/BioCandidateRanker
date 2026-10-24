@@ -9,6 +9,9 @@ test_metrics.json under artifacts/esm2-modality-diagnostic/<variant>-seed<seed>/
 Fail-closed: source and split files are hash-checked up front, and a checkpoint
 left by an interrupted run without its training-complete.json marker aborts the
 run instead of being silently reused.
+
+中文：单 GPU 顺序执行冻结的事后 ESM-2 模态诊断：协议钉住语料与切分身份、
+训练超参、种子集 (7,42,123) 与两个变体；每个 run 恰一次测试评估。
 """
 
 from __future__ import annotations
@@ -42,7 +45,9 @@ def identity(path: Path) -> dict[str, int | str]:
 
 
 def checked_identity(path: Path, expected: dict) -> None:
-    """Fail closed unless the file exists and matches the recorded size and SHA256."""
+    """Fail closed unless the file exists and matches the recorded size and SHA256.
+中文：文件缺失或与记录的大小/SHA256 不符即 fail-closed。
+"""
     if not path.is_file():
         raise FileNotFoundError(path)
     actual = identity(path)
@@ -52,7 +57,9 @@ def checked_identity(path: Path, expected: dict) -> None:
 
 
 def call_logged(arguments: list[str], logfile: Path) -> None:
-    """Run one biocandidate.cli subcommand with output captured to the given log file."""
+    """Run one biocandidate.cli subcommand with output captured to the given log file.
+中文：运行一个 biocandidate.cli 子命令并把输出捕获到日志文件。
+"""
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(ROOT / "src")
     with logfile.open("w", encoding="utf-8") as output:

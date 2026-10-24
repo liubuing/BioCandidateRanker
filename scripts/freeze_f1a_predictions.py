@@ -19,6 +19,9 @@ with SHA-256 identity for every input, the pre-registered decision rule, and a
 discriminating-power check. Governance role: pre-registration only -- nothing
 is predicted here and the manifest exists so the comparison cannot be adjusted
 after measurements are seen.
+
+中文：在测定运行前冻结 F1a 前瞻预测（HFD1/ALD2/ALD3/ALD6 对 10-氧癸酸的直接
+酶学比较），使预测顺序事后不可调整。
 """
 
 from __future__ import annotations
@@ -77,7 +80,9 @@ def sha256(path: Path) -> str:
 
 
 def build_freeze() -> dict[str, Any]:
-    """Assemble the freeze manifest with predictions, ranks, and decision rule."""
+    """Assemble the freeze manifest with predictions, ranks, and decision rule.
+中文：组装带预测、排名与决策规则的冻结清单。
+"""
     if not PREDICTIONS.is_file():
         raise SystemExit(f"missing stored predictions: {PREDICTIONS}")
 
@@ -176,7 +181,9 @@ def build_freeze() -> dict[str, Any]:
 
 
 def main() -> int:
-    """Write the freeze manifest and print the recorded ordering summary."""
+    """Write the freeze manifest and print the recorded ordering summary.
+中文：写冻结清单并打印记录的排序摘要。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()

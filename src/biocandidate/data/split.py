@@ -6,6 +6,12 @@ protein-scaffold graph, so a protein or scaffold never appears in two splits.
 Group-to-split assignment is deterministic (largest group first, seed-hashed
 tie-break), and :func:`write_cold_split_manifest` records an explicit
 cross-split leakage audit alongside the parameters.
+
+中文：让相关行保持在切分同侧的冷切分策略。protein_cold 按序列分组，
+scaffold_cold 按 Bemis-Murcko 骨架分组，double_cold 按蛋白质-骨架二部图的
+连通分量分组，因此一种蛋白质或骨架不会同时出现在两个切分中。组到切分的分配
+是确定性的（大组优先，种子哈希打破并列），write_cold_split_manifest 在参数
+之外还记录显式的跨切分泄漏审计。
 """
 from __future__ import annotations
 
@@ -22,7 +28,9 @@ SPLIT_NAMES = ("train", "validation", "test")
 
 
 def molecular_scaffold(smiles: str) -> str:
-    """Return the Bemis-Murcko scaffold SMILES, falling back to the canonical molecule."""
+    """Return the Bemis-Murcko scaffold SMILES, falling back to the canonical molecule.
+    中文：返回 Bemis-Murcko 骨架 SMILES，无骨架时回退到规范化分子。
+    """
     Chem = require_rdkit()
     try:
         from rdkit.Chem.Scaffolds import MurckoScaffold
@@ -97,7 +105,9 @@ def split_records(
     ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
     seed: int = 0,
 ) -> tuple[EnzymeSubstrateRecord, ...]:
-    """Assign whole groups to train/validation/test under the requested cold strategy."""
+    """Assign whole groups to train/validation/test under the requested cold strategy.
+    中文：按所请求的冷切分策略把整个组分配到 train/validation/test。
+    """
     if len(ratios) != 3 or any(ratio < 0 for ratio in ratios) or abs(sum(ratios) - 1.0) > 1e-9:
         raise ValueError("ratios must contain three non-negative values summing to one")
     if not records:
@@ -131,7 +141,9 @@ def split_records(
 
 def write_cold_split_manifest(records: Sequence[EnzymeSubstrateRecord], strategy: str,
                               path: str, *, seed: int, source_identity: dict) -> dict:
-    """Write a manifest with parameters, per-row splits, and cross-split leakage counts."""
+    """Write a manifest with parameters, per-row splits, and cross-split leakage counts.
+    中文：写出的清单包含参数、逐行切分及跨切分泄漏计数。
+    """
     scaffolds = [molecular_scaffold(record.substrate_smiles) for record in records]
     rows = []
     split_counts: dict[str, int] = {}

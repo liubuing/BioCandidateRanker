@@ -10,6 +10,9 @@ Exclusion-only fail-closed: fixed methylmalonyl-CoA/ACP and NADPH saturation plu
 coupling capacity are undemonstrated, exact affinity-tag/termini sequences are undisclosed,
 and the native-coordinate queries face the frozen MMseqs2 development-homology gate and
 the exact-overlap audit against the 17,010-row corpus.
+
+中文：整理小鼠脂肪酸合酶（mFAS，P19096）表观 kcat（DOI 10.1002/pro.70229）：
+两个 Table 1 表观终点（整合循环与 KS-MAT S581A 耦合测定）全部排除，空候选表。
 """
 from __future__ import annotations
 
@@ -76,7 +79,9 @@ COMPOUNDS = {
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -86,7 +91,9 @@ def sha256(path: Path) -> str:
 
 def download() -> None:
     """Fetch article/metadata/supplement/sequence/compound files and extract the SI PDF from the
-    zip."""
+    zip.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -101,7 +108,9 @@ def download() -> None:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -197,7 +206,9 @@ def verify_raw() -> tuple[str, str, str]:
 
 def exact_overlap(sequences: dict[str, str], development_corpus: Path) -> dict[str, object]:
     """Count exact sequence and sequence+SMILES overlaps against the hash-pinned 17,010-row
-    corpus."""
+    corpus.
+中文：与冻结的 17,010 行开发语料做精确序列/序列-底物对重叠审计。
+"""
     if not development_corpus.is_file() or development_corpus.stat().st_size != DEVELOPMENT_CORPUS_SIZE:
         raise FileNotFoundError("Frozen 17,010-row development corpus is absent or changed")
     if sha256(development_corpus) != DEVELOPMENT_CORPUS_SHA256:
@@ -230,7 +241,9 @@ def write_fasta(path: Path, sequences: dict[str, str]) -> None:
 
 def run_homology(fasta: Path, executable: str, threads: int) -> tuple[Path, Path, str]:
     """Easy-search/easy-linclust ``fasta`` against the frozen reference; return (hits, clusters,
-    version)."""
+    version).
+中文：运行钉住的 MMseqs2 同源搜索并返回证据文件路径。
+"""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise RuntimeError(f"MMseqs2 version {version!r} != frozen version {MMSEQS_VERSION!r}")
@@ -318,7 +331,9 @@ def excluded_records() -> list[dict[str, object]]:
 
 def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
     """Verify evidence, run overlap and homology audits, and write the exclusion-only evidence
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     SOURCE.mkdir(parents=True, exist_ok=True)
     native, ks_mat0, _ = verify_raw()
     sequences = {
@@ -405,7 +420,9 @@ def write_outputs(mmseqs: str, threads: int, development_corpus: Path) -> None:
 
 def main() -> None:
     """Run the download/verify/audit pipeline for the mFAS source; no candidate labels are ever
-    created."""
+    created.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--mmseqs", default=DEFAULT_MMSEQS)

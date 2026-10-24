@@ -7,6 +7,10 @@ torch/np seeds set, 50
 upstream iterations with lr decay every 10, and exactly one test evaluation at the end
 through the shared evaluator. Governed by
 configs/sota_homology_cold_comparison_protocol.json.
+
+中文：DLKcat Mode B：在冻结切分上重训已发表的 DLKcat 架构：逐字导入钉住
+上游 run_model.py 的类并注入已发表超参；上游 80/10/10 随机切分替换为冻结
+同源冷分区；每种子测试集恰评估一次（log2 内部编码换算回 log10 报告）。
 """
 
 from __future__ import annotations
@@ -43,7 +47,9 @@ def sha256(path: Path) -> str:
 
 
 def load_upstream_run_model() -> object:
-    """Import the pinned upstream run_model.py as a standalone module."""
+    """Import the pinned upstream run_model.py as a standalone module.
+中文：把钉住的上游 run_model.py 作为独立模块导入。
+"""
     spec = importlib.util.spec_from_file_location("dlkcat_upstream_run_model", UPSTREAM / "run_model.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -51,7 +57,9 @@ def load_upstream_run_model() -> object:
 
 
 def load_partition(input_dir: Path, split: str, device: torch.device) -> list[tuple]:
-    """Load one encoded partition as upstream (compound, adjacency, protein, target) tuples."""
+    """Load one encoded partition as upstream (compound, adjacency, protein, target) tuples.
+中文：按上游 (compound, adjacency, protein, target) 元组载入一个编码分区。
+"""
     def load_tensor(name: str, dtype) -> list:
         return [dtype(d).to(device)
                 for d in np.load(input_dir / split / f"{name}.npy", allow_pickle=True)]

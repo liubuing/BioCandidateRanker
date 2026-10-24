@@ -8,6 +8,9 @@ from the SI PDF with exact length checks), and homology-audit.json.
 Rows start as pending_homology and are re-statused by the frozen MMseqs2 result; source
 anomalies (a "0.13 Nm" typo and an oversized kcat/Km error) are retained verbatim and
 flagged, never corrected.
+
+中文：整理九个鞘氨醇单胞菌酸性磷酸酶 PhoK（DOI 10.1021/acsomega.5c05616）：
+补充表 S2 十八行（9 酶 x 2 底物）；图 S2 天然/核心序列自 SI PDF 恢复并做精确长度检查。
 """
 from __future__ import annotations
 
@@ -168,13 +171,17 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
     """Extract sequences, build records, apply homology status, and write the
-    CSV/FASTA/provenance/audit bundle."""
+    CSV/FASTA/provenance/audit bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = extract_sequences()
     records = build_records()
     apply_homology_status(records)

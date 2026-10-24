@@ -11,6 +11,9 @@ Acceptance requires the exact deposited sequence (PDB 9X6I vs UniProt A0A844HLS7
 table-order selection without magnitude bias, and a homology-cold pool: full constructs,
 tag-free cores, and the native reference must all return zero MMseqs2 hits against the
 frozen development reference. Ambiguous or duplicate measurements are withheld.
+
+中文：整理 PlLtn3D L-苏糖酸脱氢酶（DOI 10.1016/j.jbc.2026.111280）：
+十行接受（WT x 5 碳底物 + L-苏糖酸上 4 个丙氨酸突变）；存档 9X6I 实体带保留的 11 残基前导。
 """
 import csv
 import hashlib
@@ -39,13 +42,17 @@ VERSION = '5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 
 
 def sha(p):
-    """Return the SHA-256 hex digest of the file at ``p``."""
+    """Return the SHA-256 hex digest of the file at ``p``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
     """Copy/verify stage inputs, run the homology audit, and write the PlLtn3D evidence bundle
-    fail-closed."""
+    fail-closed.
+中文：解析参数并运行策展。
+"""
     protected = [ROOT / 'configs/temporal_absolute_kinetics_protocol.json',
                  ROOT / 'artifacts/external/temporal-global-family-audit-20261004-batch2/readiness-audit.json']
     before = {str(p): sha(p) for p in protected}

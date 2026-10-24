@@ -6,6 +6,12 @@ record license state, and reports which corpora block a public release.
 
 The script asserts nothing about license terms on its own; it verifies that the
 declarations are complete, internally consistent, and still supported.
+
+中文：本脚本审计项目全部语料库的声明许可与再分发状态：读取
+configs/data_license_inventory.json，检查每条声明的证据路径是否存在，与独立记录许可
+状态的清单交叉核对，并报告哪些语料库阻断公开发布。写出 JSON 报告（--json-out 可选）与
+Markdown 汇总（--markdown 可选）。治理角色：发布前许可声明审计收据；--strict 下声明
+不完整或不一致即以非零退出，充当 fail-closed 发布阻断。
 """
 
 from __future__ import annotations
@@ -34,7 +40,10 @@ REQUIRED_FIELDS = ("id", "role", "license_name", "license_basis", "redistributio
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    """Read a UTF-8 JSON file into a dict."""
+    """Read a UTF-8 JSON file into a dict.
+
+    中文：把 UTF-8 编码的 JSON 文件读入字典。
+    """
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -44,7 +53,10 @@ def audit(
     release_manifest: dict[str, Any] | None,
     cross_checks: tuple[dict[str, Any], ...] | None = None,
 ) -> dict[str, Any]:
-    """Validate every inventory declaration and cross-check independently recorded license state."""
+    """Validate every inventory declaration and cross-check independently recorded license state.
+
+    中文：校验清单中的每条声明，并交叉核对独立记录的许可状态。
+    """
     checks = CROSS_CHECKS if cross_checks is None else cross_checks
     issues: list[str] = []
     allowed = set(inventory.get("policy", {}).get("allowed_redistribution_states", []))
@@ -157,7 +169,10 @@ def audit(
 
 
 def render_markdown(report: dict[str, Any]) -> str:
-    """Render the audit report as a Markdown summary table with issues."""
+    """Render the audit report as a Markdown summary table with issues.
+
+    中文：把审计报告渲染为带问题清单的 Markdown 汇总表。
+    """
     lines = ["# Development corpus license audit", ""]
     lines.append(f"Inventory: `{report['inventory_path']}`")
     lines.append("")
@@ -188,7 +203,10 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    """Run the audit and print it, optionally writing Markdown and JSON copies."""
+    """Run the audit and print it, optionally writing Markdown and JSON copies.
+
+    中文：运行审计并打印结果，可选写出 Markdown 与 JSON 副本。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--inventory", type=Path, default=DEFAULT_INVENTORY)

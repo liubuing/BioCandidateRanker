@@ -5,6 +5,12 @@ named by the release manifest. Entries are written in sorted order with fixed
 timestamps, so rebuilding the same commit reproduces byte-identical output.
 
 A RELEASE_MANIFEST.json is embedded in the archive and written alongside it.
+
+中文：本脚本构建用于公开发布的确定性发布归档：归档包含每个 Git 跟踪文件以及发布清单
+点名的每份冻结证据产物；条目按排序顺序与固定时间戳写入，因此同一 commit 重建可得到
+逐字节一致的输出。RELEASE_MANIFEST.json 嵌入归档并随归档另写一份。治理角色：发布归档
+构建器——冻结证据校验、本地路径与许可所有权检查均为 fail-closed 门，任一不通过即拒绝
+写出归档。
 """
 
 from __future__ import annotations
@@ -38,7 +44,10 @@ LOCAL_PATH_PATTERNS = (
 
 
 def _run_git(root: Path, *args: str) -> str | None:
-    """Run a git subcommand in root and return stdout, or None when git is unavailable."""
+    """Run a git subcommand in root and return stdout, or None when git is unavailable.
+
+    中文：在 root 下运行 git 子命令并返回 stdout；git 不可用时返回 None。
+    """
     try:
         completed = subprocess.run(
             ["git", *args],
@@ -53,7 +62,10 @@ def _run_git(root: Path, *args: str) -> str | None:
 
 
 def _excluded(relative: str) -> bool:
-    """Return True for VCS, cache and bytecode paths that never belong in the archive."""
+    """Return True for VCS, cache and bytecode paths that never belong in the archive.
+
+    中文：对绝不属于归档的 VCS、缓存与字节码路径返回 True。
+    """
     if relative.startswith(EXCLUDED_PREFIXES):
         return True
     if relative.endswith(EXCLUDED_SUFFIXES):
@@ -62,7 +74,10 @@ def _excluded(relative: str) -> bool:
 
 
 def list_tracked_files(root: Path) -> list[str]:
-    """Return sorted repo-relative paths of every Git-tracked file."""
+    """Return sorted repo-relative paths of every Git-tracked file.
+
+    中文：返回每个 Git 跟踪文件排序后的仓库相对路径。
+    """
     output = _run_git(root, "ls-files", "-z")
     if not output:
         return []
@@ -71,7 +86,10 @@ def list_tracked_files(root: Path) -> list[str]:
 
 
 def source_date(root: Path) -> str:
-    """Derive a stable build timestamp from the commit, not the wall clock."""
+    """Derive a stable build timestamp from the commit, not the wall clock.
+
+    中文：从 commit 而非墙钟推导稳定的构建时间戳。
+    """
     committed = _run_git(root, "log", "-1", "--format=%cI")
     if committed and committed.strip():
         return committed.strip()
@@ -79,18 +97,27 @@ def source_date(root: Path) -> str:
 
 
 def head_commit(root: Path) -> str | None:
-    """Return the HEAD commit hash, or None outside a Git checkout."""
+    """Return the HEAD commit hash, or None outside a Git checkout.
+
+    中文：返回 HEAD commit 哈希；不在 Git 检出内时返回 None。
+    """
     commit = _run_git(root, "rev-parse", "HEAD")
     return commit.strip() if commit and commit.strip() else None
 
 
 def sha256_bytes(payload: bytes) -> str:
-    """Return the SHA256 hex digest of a byte payload."""
+    """Return the SHA256 hex digest of a byte payload.
+
+    中文：返回字节负载的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(payload).hexdigest()
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:
-    """Create a ZipInfo with the fixed epoch timestamp so builds are reproducible."""
+    """Create a ZipInfo with the fixed epoch timestamp so builds are reproducible.
+
+    中文：创建带固定纪元时间戳的 ZipInfo，使构建可复现。
+    """
     info = zipfile.ZipInfo(filename=name, date_time=ZIP_TIMESTAMP)
     info.compress_type = zipfile.ZIP_DEFLATED
     info.create_system = 0
@@ -99,7 +126,10 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
 
 
 def collect_entries(root: Path, release_manifest: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
-    """Resolve archive members and flag frozen evidence missing from disk."""
+    """Resolve archive members and flag frozen evidence missing from disk.
+
+    中文：解析归档成员并标记磁盘上缺失的冻结证据。
+    """
     entries: list[dict[str, Any]] = []
     seen: set[str] = set()
     for relative in list_tracked_files(root):
@@ -134,6 +164,8 @@ def scan_local_paths(
 
     A double-blind deposit must not carry the authors' home or project paths, and
     frozen audit files frequently echo the machine that produced them.
+
+    中文：在文本成员中查找绝对本地文件系统路径，供双盲投稿前的脱敏检查。
     """
     findings: list[dict[str, Any]] = []
     for entry in entries:
@@ -164,6 +196,9 @@ def redact_payload(payload: bytes) -> tuple[bytes, int]:
 
     Returns the transformed payload and the number of replacements. Binary
     members are returned untouched.
+
+    中文：把文本成员中的绝对本地路径替换为中性标记，返回替换后的负载与替换次数；二进制
+    成员原样返回。
     """
     try:
         text = payload.decode("utf-8")
@@ -180,7 +215,10 @@ def build_redact_map(
     entries: list[dict[str, Any]],
     root: Path,
 ) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
-    """Redacted payload for every member that embeds a local path."""
+    """Redacted payload for every member that embeds a local path.
+
+    中文：为每个内嵌本地路径的成员生成脱敏后的负载。
+    """
     redact_map: dict[str, bytes] = {}
     redactions: list[dict[str, Any]] = []
     for entry in entries:
@@ -195,7 +233,10 @@ def build_redact_map(
 
 
 def member_bytes(entry: dict[str, Any], root: Path, redact_map: dict[str, bytes] | None) -> bytes:
-    """Return a member's bytes, substituting the redacted payload when one exists."""
+    """Return a member's bytes, substituting the redacted payload when one exists.
+
+    中文：返回成员字节；存在脱敏负载时以脱敏版本替换。
+    """
     if redact_map and entry["path"] in redact_map:
         return redact_map[entry["path"]]
     return (root / entry["path"]).read_bytes()
@@ -209,6 +250,9 @@ def check_license_ownership(
 
     A frozen artifact carrying measurement data from a non-redistributable corpus
     must not enter a public archive, so ownership is checked before writing.
+
+    中文：确认每个归档路径都属于可发布语料库；携带不可再分发测量数据的冻结产物不得进入
+    公开归档，故写出前先做所有权检查。
     """
     if license_inventory is None:
         return [], []
@@ -268,7 +312,10 @@ def build_manifest(
     missing: list[str],
     redact_map: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
-    """Assemble the embedded manifest with per-file hashes and frozen-evidence verification."""
+    """Assemble the embedded manifest with per-file hashes and frozen-evidence verification.
+
+    中文：组装内嵌清单，含逐文件哈希与冻结证据校验。
+    """
     # Resolve against root, not the process working directory, so --root works
     # from anywhere.
     resolved_manifest = (
@@ -333,7 +380,10 @@ def write_archive(
     manifest: dict[str, Any],
     redact_map: dict[str, bytes] | None = None,
 ) -> None:
-    """Write every member plus the embedded manifest into the zip archive."""
+    """Write every member plus the embedded manifest into the zip archive.
+
+    中文：把每个成员连同内嵌清单写入 zip 归档。
+    """
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for entry in entries:
@@ -343,7 +393,10 @@ def write_archive(
 
 
 def main() -> int:
-    """Collect, gate, and write the release archive with its sidecar manifest."""
+    """Collect, gate, and write the release archive with its sidecar manifest.
+
+    中文：收集、门控并写出发布归档及其旁路清单。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--manifest", type=Path, default=DEFAULT_RELEASE_MANIFEST)

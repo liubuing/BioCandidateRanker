@@ -8,6 +8,9 @@ provenance.json, and homology-audit.json.
 Rows start as pending_homology and are re-statused by the frozen MMseqs2 result against
 the development reference: a hit excludes the sequence, otherwise the row joins the
 homology-cold pool. The kcat min-1 -> s-1 conversion is the only transformation applied.
+
+中文：整理 CYP152 过加氧酶（OleTLA/OleTJE，DOI 10.1016/j.jbc.2025.110397）：
+Table 1 五行（含乙醇共溶剂对照）；min-1 换算 s-1；冻结同源重审后分流接受/排除。
 """
 from __future__ import annotations
 
@@ -22,7 +25,9 @@ SOURCE = ROOT / "artifacts" / "external" / "temporal-absolute-kinetics" / "europ
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -106,13 +111,17 @@ def apply_homology_status(records: list[dict[str, object]]) -> None:
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+中文：计算文件的 SHA256 摘要。
+"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_outputs() -> None:
     """Build sequences and records, apply homology status, and write the CSV/FASTA/provenance/audit
-    bundle."""
+    bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     sequences = build_sequences()
     records = build_records()
     apply_homology_status(records)

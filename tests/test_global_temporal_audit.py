@@ -2,6 +2,8 @@
 manifest, label-independent global family caps, and fail-closed blockers for
 ambiguous FASTA ids, undeclared schemas, hash mismatches, and partial
 cluster coverage.
+
+中文：钉住全局时间审计：精确序列映射带清单、与标签无关的全局家族封顶、歧义 FASTA id/未声明模式/哈希不符/簇覆盖不全均阻塞。
 """
 
 import csv

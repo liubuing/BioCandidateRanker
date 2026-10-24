@@ -7,6 +7,13 @@ contrasts (seed 20260918, 5000 replicates) against the adapted CatPred run.
 Writes artifacts/catpred-mode-b/internal-test/paired-comparison.json,
 refusing to overwrite an existing report. Exploratory only: no multiplicity
 adjustment and a CI crossing zero never establishes equivalence.
+
+中文：本脚本在冻结的 CatPred 推理之后做探索性的配对家族比较：读取冻结内部测试划分、
+同源家族映射，以及 CatPred、CataPro、UniKP 与两个 BioCandidateRanker 回放的逐种子预测
+CSV，再针对适配后的 CatPred 运行计算家族分层的配对 bootstrap 对比（种子 20260918、
+5000 次重抽样）。写出 artifacts/catpred-mode-b/internal-test/paired-comparison.json，
+拒绝覆盖既有报告。治理角色：探索性对比收据——无多重性校正，跨零置信区间绝不确立
+等效性，不构成确认性结论。
 """
 from pathlib import Path
 import json, hashlib
@@ -17,7 +24,10 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/catpred-mode-b/internal-test'
 
 def main():
-    """Compute and write the paired family-bootstrap comparison report."""
+    """Compute and write the paired family-bootstrap comparison report.
+
+    中文：计算并写出配对家族 bootstrap 对比报告。
+    """
     target=OUT/'paired-comparison.json'
     if target.exists(): raise FileExistsError(target)
     data=rows(ROOT/'artifacts/external/sota-homology-cold/data/test.csv')

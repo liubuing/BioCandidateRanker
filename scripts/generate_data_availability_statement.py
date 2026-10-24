@@ -6,6 +6,9 @@ obtain from the original deposit, and what remains unresolved.
 
 The generated text is a draft for author review. It never asserts a right the
 audit did not record.
+
+中文：从许可审计起草手稿数据可用性声明：区分随发布提供、需向原始存档
+获取、与未决三类语料，产出声明文本与核查清单。
 """
 
 from __future__ import annotations
@@ -27,7 +30,9 @@ OBTAIN_STATES = {
 
 
 def group_corpora(report: dict[str, Any]) -> tuple[list[dict], list[dict], list[dict]]:
-    """Split audited corpora into ships-in-release, obtain-elsewhere, and unresolved."""
+    """Split audited corpora into ships-in-release, obtain-elsewhere, and unresolved.
+中文：把审计语料分为随发布/另行获取/未决三组。
+"""
     ships, obtain, unresolved = [], [], []
     for corpus in report.get("corpora", []):
         state = corpus.get("redistribution")
@@ -50,7 +55,9 @@ def group_corpora(report: dict[str, Any]) -> tuple[list[dict], list[dict], list[
 
 
 def build_statement(report: dict[str, Any], release_id: str, archive_note: str | None) -> dict[str, Any]:
-    """Draft the statement text and review checklist from the grouped audit."""
+    """Draft the statement text and review checklist from the grouped audit.
+中文：从分组审计起草声明文本与核查清单。
+"""
     ships, obtain, unresolved = group_corpora(report)
     valid = report.get("valid", False)
 
@@ -114,7 +121,9 @@ def build_statement(report: dict[str, Any], release_id: str, archive_note: str |
 
 
 def main() -> int:
-    """Load the license audit, draft the statement, and optionally write it out."""
+    """Load the license audit, draft the statement, and optionally write it out.
+中文：读许可审计、起草声明并可选写盘。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument(

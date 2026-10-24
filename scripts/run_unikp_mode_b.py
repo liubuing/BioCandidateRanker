@@ -6,6 +6,11 @@ once over unique rows, and fits one ExtraTreesRegressor per frozen seed on the t
 partition only. Test predictions and metrics are written per seed (default set
 7, 42, 123) under the protocol's
 artifacts root. Governed by configs/sota_homology_cold_comparison_protocol.json.
+
+中文：UniKP Mode B：在冻结同源冷切分上重训 UniKP 的 ExtraTrees 回归器：
+完全按发表方式使用本地 UniKP 部署的冻结预训练特征提取器（SMILES
+transformer + ProtT5 均值池化），嵌入对唯一行算一次并缓存，逐种子拟合；
+每种子测试集恰评估一次。
 """
 
 from __future__ import annotations

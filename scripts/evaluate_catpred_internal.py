@@ -12,6 +12,9 @@ CSVs with receipts, and ``summary.json`` under ``internal-test/``.
 Governance role: fail-closed evaluation -- partial prediction outputs require
 manual audit before retry, existing receipts are re-verified on rerun, and
 execution status is journaled under an exclusive fcntl lock.
+
+中文：已完成适配版 CatPred 集成（WSL）的冻结内部评估：按协议评估每组种子
+集成对 1,646 行内部测试的预测并写收据与汇总。
 """
 from pathlib import Path
 import csv, gzip, hashlib, json, os, sys, time
@@ -38,7 +41,9 @@ def write(path, data):
     os.replace(tmp, path)
 
 def main():
-    """Evaluate each seed ensemble against the internal test and write receipts/summary."""
+    """Evaluate each seed ensemble against the internal test and write receipts/summary.
+中文：逐种子集成对内部测试评估并写收据/汇总。
+"""
     import numpy as np
     import torch
     protocol = json.loads(PROTOCOL.read_text())

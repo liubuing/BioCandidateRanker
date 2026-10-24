@@ -23,6 +23,10 @@ rather than assumed:
      9.2e-06 through r_0440, i.e. 1e-5 of the growth rate). Flavins therefore
      cannot serve as a degradation-side handle in this model; the acyl-CoA
      thioesters and the r_0120 flux can.
+
+中文：酵母基因组模型上的蜂王酸（10-HDA）路线分析：各已记录路线能支撑多少
+目标通量、瓶颈在哪、NADPH 需求、IDP3 瓶颈与过氧化物酶体穿梭的代价与收益、
+碳/氧供给账单——面向 10H2DA 项目实际问题的定向 FBA 分析。
 """
 
 from __future__ import annotations
@@ -91,7 +95,9 @@ def build_candidate_extension(model, target_config: dict[str, Any]) -> list[str]
 
     Moved here from scripts/fusion_yeast_kcat_fba_pilot.py so the pilot and the
     route analysis share one implementation instead of two copies.
-    """
+    
+中文：幂等地重建外部项目的 10H2DA 候选层。
+"""
     import cobra
 
     added: list[str] = []
@@ -146,7 +152,9 @@ def build_candidate_extension(model, target_config: dict[str, Any]) -> list[str]
 
 
 def _route_reactions(model) -> dict[str, list[str]]:
-    """Only report routes whose candidate reactions actually exist."""
+    """Only report routes whose candidate reactions actually exist.
+中文：只报告候选反应确实存在的路线。
+"""
     routes: dict[str, list[str]] = {}
     if all(r in model.reactions for r in ROUTE_A):
         routes["route_A_free_acid"] = list(ROUTE_A)
@@ -166,7 +174,9 @@ def route_context(
 
     Kept separate from analyze() so the marginal curve is measured under the same
     medium, route and gate as the capacity it is derived from.
-    """
+    
+中文：为边际分析构建场景应用器（与分析主体分离以便测量）。
+"""
     routes = {"A": ROUTE_A, "B": ROUTE_B}
     if route not in routes:
         raise ValueError(f"unknown route {route!r}; known: {sorted(routes)}")
@@ -192,7 +202,9 @@ def marginal_route_cost(
     oxygen: float = 1000.0,
     level_fractions: tuple[float, ...] = (0.25, 0.5, 0.75, 1.0),
 ) -> dict[str, Any]:
-    """What one more unit of 10-HDA costs the cell, per cofactor and in growth."""
+    """What one more unit of 10-HDA costs the cell, per cofactor and in growth.
+中文：每多产一单位 10-HDA 的细胞代价：按辅因子与生长计。
+"""
     from .fba_context import MODEL_REGISTRY as registry
 
     model = load_model(MODEL_ID)
@@ -240,7 +252,9 @@ def peroxisomal_nadph_supply_scan(
     phosphate shunt, and the model leaves IDP3 uncapped. Capping it and
     re-maximising the target shows whether the route depends on a flux IDP3 must
     actually be able to deliver.
-    """
+    
+中文：过氧化物酶体 NADPH 供给是否是该路线的瓶颈。
+"""
     model = load_model(MODEL_ID)
     build_candidate_extension(model, load_target_config(target_config_path))
     report = enzyme_capacity_scan(
@@ -321,7 +335,9 @@ def add_shuttle(
     caps the rate, which is how a finite amount of transporter is represented.
     The reaction id encodes the version and the price, so two variants cannot
     silently overwrite each other.
-    """
+    
+中文：幂等添加一个穿梭反应并返回其 id。
+"""
     import cobra
 
     definition = SHUTTLE_DEFINITIONS[shuttle_key]
@@ -382,7 +398,9 @@ def shuttle_comparison(
     route's yield is limited by that single enzyme, connecting the pool should
     lift the limit - and that is the modelling form of the compartmentalization
     question the 2025 yeast paper addressed by moving its P450 into mitochondria.
-    """
+    
+中文：打开还原力连接能否缓解 IDP3 瓶颈。
+"""
     context = route_context(route, pox1_closed=pox1_closed)
     report: dict[str, Any] = {
         "route": route,
@@ -453,7 +471,9 @@ def shuttle_cost_scan(
     shuttle is only worth building if it comes in under that price. The cap sweep
     answers the separate question of whether a slow shuttle is enough, which is
     what decides between a native transporter and an engineered one.
-    """
+    
+中文：IDP3 缓解的代价，以及到何处不再值得。
+"""
     from .fba_context import MODEL_REGISTRY as registry
 
     target_config = load_target_config(target_config_path)
@@ -648,7 +668,9 @@ def capacity_to_titer(
     implicit: genome-scale models have no enzyme, toxicity or transport limit, so
     their capacity sits well above what a real strain reaches, and quoting the
     flux without that gap invites reading it as a forecast.
-    """
+    
+中文：把模型容量换算为隐含滴度，假设全部显式列出。
+"""
     specific = capacity_mmol_gdw_h * molecular_weight
     return {
         "capacity_mmol_gdw_h": capacity_mmol_gdw_h,
@@ -675,7 +697,9 @@ def carbon_limitation_check(
     exchange, and capacity scales with it at a stable yield, which says the
     internal machinery - cofactors included - is not what caps production. If
     capacity instead plateaued, an internal step would be limiting.
-    """
+    
+中文：路线受碳源限制还是内部因素限制。
+"""
     rows: list[dict[str, Any]] = []
     for glucose in glucose_levels:
         model = load_model(MODEL_ID)
@@ -802,7 +826,9 @@ def restrict_to_physiological_exchanges(model, *, keep=PHYSIOLOGICAL_EXCHANGES) 
 
     See PHYSIOLOGICAL_EXCHANGES for why: an open engineered exchange set lets a
     redox question be answered with a secretion no strain performs.
-    """
+    
+中文：关闭已记录集合之外的全部边界反应，返回计数。
+"""
     allowed = set(keep) | {BIOMASS_ID, *CANDIDATE_EXCHANGES}
     closed = 0
     for reaction in model.reactions:
@@ -818,7 +844,9 @@ def oxygen_species(model) -> list[str]:
     This model carries six of them (cytosol, ER, extracellular, mitochondrion,
     peroxisome, ER membrane) and the recycling that matters runs through several,
     so a check that looks at one id sees nothing.
-    """
+    
+中文：按分子式（而非 id）列出模型中每个区室的 O2 物种。
+"""
     return [
         metabolite.id
         for metabolite in model.metabolites
@@ -840,7 +868,9 @@ def _internal_oxygen_cycling(
     Closing the exchanges cannot remove it, because the cycle is internal.
     Reporting the cycling fluxes is the difference between "this route needs no
     aeration" and "this model can be made to say so".
-    """
+    
+中文：模型内部造氧而非摄氧的通量。
+"""
     species = set(oxygen_species(model))
     producers = []
     for reaction in model.reactions:
@@ -909,7 +939,9 @@ def supply_requirement(
     not fix. Byproducts are reported as what must be secreted at the optimum
     (a second LP with the carbon fixed), because the carbon optimum is degenerate
     and the solver's arbitrary pick would otherwise be read as chemistry.
-    """
+    
+中文：某滴度所需的碳与氧账单，以及二者谁更紧。
+"""
     target_config = load_target_config(target_config_path)
     base = load_model(MODEL_ID)
     build_candidate_extension(base, target_config)
@@ -932,7 +964,9 @@ def supply_requirement(
     closed_exchanges = 0
 
     def scenarise(oxygen: float):
-        """A copy under the route scenario, with the supply bounds set for a bill LP."""
+        """A copy under the route scenario, with the supply bounds set for a bill LP.
+中文：在路线场景下取副本并为账单 LP 设好供给边界。
+"""
         model = base.copy()
         route_context(
             route,
@@ -967,7 +1001,9 @@ def supply_requirement(
 
         Maximising an exchange flux is the same as minimising its uptake, because
         uptake is the negative flux.
-        """
+        
+中文：先最小化一种供给、再固定它最小化另一种、最后看副产物。
+"""
         first, second = (minimise, "oxygen" if minimise == "glucose" else "glucose")
         model = scenarise(oxygen_ceiling)
         with model:
@@ -1224,7 +1260,9 @@ def analyze(
     Both routes are scored with the other one blocked, so each capacity is that
     route's own. At the LP level the two come out identical because neither is
     kcat-constrained yet; the routes separate only once enzyme capacity binds.
-    """
+    
+中文：按路线最大化目标通量并同步报告辅因子视图。
+"""
     model = load_model(MODEL_ID)
     target_config = load_target_config(target_config_path)
     build_candidate_extension(model, target_config)
@@ -1368,7 +1406,9 @@ def analyze(
 
 
 def minimum_enzyme_for_flux(kcat_s: float, flux: float) -> float:
-    """Enzyme load (mmol gDW-1) needed to sustain a flux, ub = kcat * E * 3600."""
+    """Enzyme load (mmol gDW-1) needed to sustain a flux, ub = kcat * E * 3600.
+中文：支撑某通量所需酶量（mmol/gDW），ub = kcat·E·3600。
+"""
     if kcat_s <= 0:
         raise ValueError(f"kcat must be positive, got {kcat_s}")
     return flux / (kcat_s * SECONDS_PER_HOUR)

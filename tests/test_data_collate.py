@@ -1,6 +1,8 @@
 """Pins the collation contract: tokenizer padding/unknown handling, masked
 multitask labels, deterministic context bucketing, and the FBA/flux schema
 rules (versioned metadata, exact feature widths, leakage-free flux targets).
+
+中文：钉住 collate 契约：tokenizer 填充/未知处理、掩码多任务标签、确定性上下文分桶与 FBA/flux 模式规则（无泄漏通量目标）。
 """
 
 import unittest

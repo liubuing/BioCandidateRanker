@@ -5,6 +5,8 @@ report states a maximum target flux of 0.274011 on the model-file default
 medium, and this module must reproduce it before any of its own numbers are
 trusted. Skipped when the model file or the external target configuration is
 unavailable.
+
+中文：蜂王酸路线分析测试：锚点是外部项目 9 月 2 日报告的最大目标通量 0.274011，本模块必须先复现它才可信（模型缺失时跳过）。
 """
 
 from __future__ import annotations

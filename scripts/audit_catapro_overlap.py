@@ -7,6 +7,14 @@ partition recorded in artifacts/external/sota-homology-cold/data-manifest.json
 (each re-hashed before use). Writes artifacts/pcb-readiness/catapro-data-audit.json;
 the receipt records predictions_generated=false and its interpretation is
 deliberately scoped to input overlap, with no homology or license claim.
+
+中文：本脚本仅为输入重叠审计下载一个钉住的公开数据集（不做预测）：按
+artifacts/pcb-readiness/CataPro/tree.json 指定的 blob 获取 CataPro 的
+kcat-data_0.4simi-10fold.csv，校验其 Git blob SHA1，并将精确的 序列/RDKit 规范 SMILES
+对与 artifacts/external/sota-homology-cold/data-manifest.json 记录的每个本地分区（使用前
+逐一重新哈希）比对。写出 artifacts/pcb-readiness/catapro-data-audit.json；收据记录
+predictions_generated=false，解释范围刻意限定为输入重叠，不做同源性或许可声明。
+治理角色：只读审计收据（重叠证据，不产生任何预测或标签）。
 """
 from pathlib import Path
 from collections import Counter

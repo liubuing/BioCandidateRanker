@@ -5,6 +5,11 @@ explicit reason instead of failing the read. Supervision is derived either as
 average-tie percentile ``activity_rank`` targets over a campaign or as one
 consensus-nearest representative sequence per campaign. The ``ARCHIVE_SHA256``
 and size constants below are the frozen source identity of the dataset.
+
+中文：EnzEngDB 定向进化语料（冻结的 Zenodo 归档）适配器。每个 CSV 文件读取为
+一个 fitness campaign，畸形行以显式原因拒绝而非让读取失败。监督信号或按
+campaign 取平均并列百分位 activity_rank 目标，或每 campaign 取一条最接近
+共识序列的代表序列。下方的 ARCHIVE_SHA256 与大小常量是该数据集的冻结源身份。
 """
 from __future__ import annotations
 
@@ -62,7 +67,9 @@ class EnzEngDBReadResult:
 def campaign_rank_records(
     observations: Iterable[EnzEngDBObservation],
 ) -> tuple[EnzymeSubstrateRecord, ...]:
-    """Attach average-tie percentile ranks while preserving observation order."""
+    """Attach average-tie percentile ranks while preserving observation order.
+    中文：附加平均并列（average-tie）百分位排名，保持观测顺序不变。
+    """
     items = tuple(observations)
     campaign_indices: dict[str, list[int]] = defaultdict(list)
     for index, observation in enumerate(items):
@@ -95,7 +102,9 @@ def campaign_rank_records(
 def campaign_representative_records(
     observations: Iterable[EnzEngDBObservation],
 ) -> tuple[EnzymeSubstrateRecord, ...]:
-    """Select one actual modal-length sequence nearest consensus per campaign."""
+    """Select one actual modal-length sequence nearest consensus per campaign.
+    中文：每个 campaign 选出一条真实的众数长度且最接近共识序列的序列。
+    """
     campaigns: dict[str, list[EnzEngDBObservation]] = defaultdict(list)
     for observation in observations:
         campaigns[observation.campaign_id].append(observation)
@@ -144,6 +153,9 @@ def select_primary_reactant(reaction_smiles: str) -> str:
     EnzEngDB campaigns use one reaction for all variants. The largest concrete
     carbon-containing reactant is retained; wildcard-only assay definitions are
     rejected because they cannot form a meaningful molecular graph.
+    中文：从 EnzEngDB 反应中确定性地选出分子输入。EnzEngDB 各 campaign 的全部
+    变体共用同一反应；保留最大的含碳具体反应物，仅含通配符的测定定义会被拒绝，
+    因为其无法构成有意义的分子图。
     """
     if reaction_smiles.count(">>") != 1:
         raise ValueError("reaction SMILES must contain exactly one >> separator")
@@ -250,7 +262,9 @@ def _read_campaign(path: Path) -> tuple[list[EnzEngDBObservation], list[EnzEngDB
 
 
 def read_enzengdb_directory(path: PathLike) -> EnzEngDBReadResult:
-    """Read every campaign CSV under ``path`` into observations plus an audit report."""
+    """Read every campaign CSV under ``path`` into observations plus an audit report.
+    中文：读取 path 下所有 campaign CSV，返回观测与审计报告。
+    """
     root = Path(path)
     if not root.is_dir():
         raise ValueError(f"EnzEngDB experiments path is not a directory: {root}")

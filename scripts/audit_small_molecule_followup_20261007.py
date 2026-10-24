@@ -8,6 +8,13 @@ measurements as pending. Writes
 small-molecule-followup-20261007/staged-measurements.json and audit.json with
 accepted_additions=0; holds and deprioritizations are recorded without
 inferring mutations or reconciling source inconsistencies.
+
+中文：本脚本做可复现的序列/溯源审计，不自动准入、不出预测：在 import 时断言时间协议与
+两份受保护产物的冻结 SHA256，解析 GenBank/PDB 记录以记录 LcOE229 天然序列与 PDB 序列的
+冲突，按钉住阈值复检每条预计算 MMseqs 命中行，并把三条 PMC11312515 Table 1 测量 staged
+为 pending。写出 small-molecule-followup-20261007/staged-measurements.json 与
+audit.json，其中 accepted_additions=0；挂起与降优先级如实记录，不推断突变、不调和来源
+矛盾。治理角色：冻结协议哈希绑定的审计收据。
 """
 from pathlib import Path
 from collections import defaultdict
@@ -19,10 +26,16 @@ from Bio import SeqIO
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/external/small-molecule-followup-20261007'
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 def cds(name):
-    """Return the first CDS translation from a GenBank record in the output folder."""
+    """Return the first CDS translation from a GenBank record in the output folder.
+
+    中文：返回输出目录中某 GenBank 记录的首个 CDS 翻译序列。
+    """
     r = SeqIO.read(OUT / (name + '.gb'), 'genbank')
     return next(f.qualifiers['translation'][0] for f in r.features if f.type == 'CDS')
 

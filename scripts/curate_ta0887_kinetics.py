@@ -15,6 +15,9 @@ and a Vmax/native-mass unit cross-check agrees within 1.5%; any failed marker
 assertion aborts the run before outputs are written. Governance role:
 fail-closed cold-pool curation -- readiness gate stays False, no model
 predictions are generated.
+
+中文：整理四个 Ta0887 酯酶一级测量（存档已处理构建体）：读暂存原始证据，
+精确处理构建体（GPH+Q9HJS7）对 SHA256 钉住的参考筛查后按冻结门分流。
 """
 import csv
 import hashlib
@@ -42,7 +45,9 @@ VERSION='5d152c612b6ad2a56f657b7a02c127eceaea2a75'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    """Validate evidence, run the pinned homology screen, and emit accepted records."""
+    """Validate evidence, run the pinned homology screen, and emit accepted records.
+中文：解析参数并运行策展。
+"""
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json', ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
     RAW.mkdir(parents=True,exist_ok=True)

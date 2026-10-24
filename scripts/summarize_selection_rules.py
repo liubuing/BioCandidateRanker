@@ -7,6 +7,9 @@ their recorded hashes, and writes ``selection-summary.json``. Governance role:
 validation-only diagnostic -- explicitly biased because selection uses the same
 validation history it is measured on, no test inference occurs, and a
 pre-existing summary aborts the run.
+
+中文：对照完整共同验证历史审计两种选择器：读完成训练清单与逐种子全量
+epoch 日志，重推 NLL 与 RMSE 各会选的 epoch，确认后写选择汇总。
 """
 from pathlib import Path
 import json,hashlib
@@ -17,7 +20,9 @@ BASE=ROOT/'artifacts/selection-rule-comparison'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    """Re-derive both selection rules per seed and write the selection summary."""
+    """Re-derive both selection rules per seed and write the selection summary.
+中文：逐种子重推两种选择规则并写选择汇总。
+"""
     out=BASE/'selection-summary.json'
     if out.exists():raise FileExistsError(out)
     manifest=json.loads((BASE/'completed-training-manifest.json').read_text())

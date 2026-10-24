@@ -2,6 +2,8 @@
 accepted with a metadata payload whose width matches both the checkpoint's
 fba_context_dim and the per-row feature vectors, and invalid metadata fails
 closed before any context is used.
+
+中文：钉住预测路径的 FBA 元数据契约：可选 FBA 上下文必须带宽度匹配的元数据，非法元数据在使用前即失败。
 """
 
 import json

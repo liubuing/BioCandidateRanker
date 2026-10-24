@@ -7,6 +7,12 @@ paragraphs from the source XMLs. Writes
 targeted-followup-20261004/source-evidence.json and closeout.json with
 new_accepted_records=0; the frozen protocol and prior global audit hashes are
 re-verified and no recluster or predictions are run.
+
+中文：本脚本收口公开来源跟进而不提升任何未决测量：把 deposited 的 9QEV/9QEZ/5JGY 构建
+体序列与 CaCA 参考比对，复检预计算的同源性命中，并记录逐源挂起（突变环差异、成熟 N 端
+边界）以及来自源 XML 的证据段落。写出 targeted-followup-20261004/source-evidence.json
+与 closeout.json，其中 new_accepted_records=0；冻结协议与先前全局审计哈希被复验，不运行
+重聚类或预测。治理角色：fail-closed 收口审计收据（接受池保持不变）。
 """
 import hashlib
 import json
@@ -20,12 +26,18 @@ OUT = BASE / 'targeted-followup-20261004'
 
 
 def sha(path):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
-    """Verify constructs, record source dispositions, and write the closeout."""
+    """Verify constructs, record source dispositions, and write the closeout.
+
+    中文：校验构建体、记录来源处置并写出收尾收据。
+    """
     refs = json.loads((BASE / 'public-batch2-20261004/sequence-register.json').read_text())
     native = next(r['sequence'] for r in refs if r['name'] == 'CaCA')
     sequences = {}

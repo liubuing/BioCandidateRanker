@@ -8,6 +8,13 @@ holoenzyme), provenance.json, construct_sequences.fasta, and homology-audit.json
 A row is admitted only when at least one saturation curve held its fixed cosubstrate at
 >=5x its fitted Km; surviving rows must then be homology-cold against the frozen
 development reference and stay within the per-family cap of 20 records.
+
+中文：整理 DOI 10.1021/acs.biochem.3c00551 的 Acinetobacter baumannii ATP 磷酸核糖转移酶
+（ATPPRT）动力学。接受/排除逻辑要点：仅当至少一条饱和曲线把固定共底物维持在 >=5 倍其
+拟合 Km 时该行被接受；幸存行还须对冻结开发参考库同源冷（零命中），并遵守每家族 20 条
+的上限。证据写入 artifacts/external/temporal-absolute-kinetics/biostudies-S-EPMC10795190：
+candidate_records.csv（HisGS 与 HisGS4:HisZ4 ATPPRT 全酶的 9 条表列 kcat 行）、
+provenance.json、construct_sequences.fasta 与 homology-audit.json。
 """
 from __future__ import annotations
 
@@ -66,13 +73,19 @@ ROWS = [
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of the file at ``path``."""
+    """Return the SHA-256 hex digest of the file at ``path``.
+
+    中文：返回 ``path`` 文件的 SHA-256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path, expected_accession: str, expected_length: int) -> str:
     """Read a FASTA, failing unless the header carries ``expected_accession`` and the sequence has
-    the exact length."""
+    the exact length.
+
+    中文：读取 FASTA，除非头部含 ``expected_accession`` 且序列长度精确一致，否则失败。
+    """
     lines = path.read_text(encoding="ascii").splitlines()
     if not lines or expected_accession not in lines[0]:
         raise ValueError(f"Expected {expected_accession} in {path.name} header")
@@ -84,7 +97,10 @@ def read_fasta(path: Path, expected_accession: str, expected_length: int) -> str
 
 def load_sequences() -> dict[str, tuple[str, str]]:
     """Load and validate the exact native RefSeq chains; return sequence_id -> (accession,
-    sequence)."""
+    sequence).
+
+    中文：加载并校验精确的天然 RefSeq 链；返回 sequence_id -> (accession, sequence)。
+    """
     sequences = {}
     for sequence_id, (accession, relative_path, length) in SEQUENCE_SOURCES.items():
         sequences[sequence_id] = (
@@ -96,7 +112,11 @@ def load_sequences() -> dict[str, tuple[str, str]]:
 
 def verify_raw_evidence() -> None:
     """Fail closed unless the article XML, supplement PDF, archive, and PubChem records carry the
-    tabulated values."""
+    tabulated values.
+
+    中文：除非文章 XML、补充 PDF、补充材料压缩包与 PubChem 记录都带有表列数值，否则
+    fail closed。
+    """
     raw = SOURCE / "raw"
     article_root = ET.parse(raw / "PMC10795190-fullText.xml").getroot()
     doi = article_root.findtext(".//article-id[@pub-id-type='doi']")
@@ -133,7 +153,10 @@ def verify_raw_evidence() -> None:
 
 def assay_limits(state: str) -> tuple[float, float]:
     """Return the fixed cosubstrate concentrations (mM) used by the paper for (PRPP, nucleotide)
-    curves."""
+    curves.
+
+    中文：返回论文中（PRPP 曲线、核苷酸曲线）使用的固定共底物浓度（mM）。
+    """
     if state == "ATPPRT":
         return 1.6, 1.6
     return 3.2, 6.4
@@ -141,7 +164,10 @@ def assay_limits(state: str) -> tuple[float, float]:
 
 def build_records() -> list[dict[str, object]]:
     """Turn the frozen ROWS table into candidate records, flagging saturation-qualifying curves per
-    row."""
+    row.
+
+    中文：把冻结的 ROWS 表转换为候选记录，并逐行标记符合饱和判定的曲线。
+    """
     records = []
     for index, row in enumerate(ROWS, 1):
         (
@@ -232,7 +258,10 @@ def build_records() -> list[dict[str, object]]:
 
 
 def component_hits(path: Path) -> set[str]:
-    """Return the distinct query names (first TSV column) with a frozen-development homology hit."""
+    """Return the distinct query names (first TSV column) with a frozen-development homology hit.
+
+    中文：返回在冻结开发库中有同源命中的不同查询名（TSV 第一列）。
+    """
     if not path.exists():
         return set()
     return {
@@ -244,7 +273,11 @@ def component_hits(path: Path) -> set[str]:
 
 def apply_selection(records: list[dict[str, object]]) -> None:
     """Re-status accepted rows fail-closed: homology hits exclude, then a per-catalytic-family cap
-    of FAMILY_CAP applies."""
+    of FAMILY_CAP applies.
+
+    中文：以 fail-closed 方式重定已接受行的状态：同源命中即排除，随后应用每催化家族
+    FAMILY_CAP 上限。
+    """
     hits = component_hits(SOURCE / "homology" / "homology_hits.tsv")
     family_counts: dict[str, int] = {}
     cluster_path = SOURCE / "homology" / "family-cluster" / "proteins_cluster.tsv"
@@ -273,7 +306,10 @@ def apply_selection(records: list[dict[str, object]]) -> None:
 
 def write_outputs() -> None:
     """Verify raw evidence, build and select records, then write the CSV/FASTA/provenance/audit
-    evidence bundle."""
+    evidence bundle.
+
+    中文：校验原始证据、构建并筛选记录，然后写出 CSV/FASTA/provenance/audit 证据包。
+    """
     verify_raw_evidence()
     sequences = load_sequences()
     records = build_records()
@@ -393,7 +429,11 @@ def verify_outputs(
     records: list[dict[str, object]], sequences: dict[str, tuple[str, str]]
 ) -> None:
     """Fail closed on cardinality, finite parameters, the 8-accepted/1-excluded split, and required
-    output files."""
+    output files.
+
+    中文：对记录基数、参数有限性、8 条接受/1 条排除的拆分以及必需输出文件做
+    fail-closed 校验。
+    """
     if len(records) != 9 or len(sequences) != 2:
         raise ValueError("Unexpected curation cardinality")
     for record in records:

@@ -4,6 +4,11 @@
 task-head knob. It is serialized verbatim into each checkpoint, and
 ``load_checkpoint`` rebuilds the model from that payload, so any field added
 here needs a stable default to keep old checkpoints loadable.
+
+中文：训练、推理和检查点共享的模型架构配置。``ModelConfig`` 是所有架构与任务头
+参数的唯一事实来源。它会被逐字序列化进每个检查点，``load_checkpoint`` 依据该
+载荷重建模型，因此此处新增的任何字段都必须提供稳定默认值，以保证旧检查点
+仍可加载。
 """
 
 from __future__ import annotations
@@ -13,7 +18,10 @@ from dataclasses import asdict, dataclass
 
 @dataclass(slots=True)
 class ModelConfig:
-    """Architecture, modality, and task-head settings for :class:`BioCandidateRanker`."""
+    """Architecture, modality, and task-head settings for :class:`BioCandidateRanker`.
+
+    中文：:class:`BioCandidateRanker` 的架构、模态与任务头设置。
+    """
 
     d_model: int = 128
     num_heads: int = 8
@@ -63,12 +71,18 @@ class ModelConfig:
                 "uncertainty_mode must be heteroscedastic or fixed_variance_mse")
 
     def to_dict(self) -> dict:
-        """Return the configuration as a plain JSON-serializable dict."""
+        """Return the configuration as a plain JSON-serializable dict.
+
+        中文：以可直接 JSON 序列化的普通 dict 形式返回本配置。
+        """
         return asdict(self)
 
     @classmethod
     def from_dict(cls, values: dict) -> "ModelConfig":
-        """Rebuild a config from :meth:`to_dict` output, coercing task_names back to a tuple."""
+        """Rebuild a config from :meth:`to_dict` output, coercing task_names back to a tuple.
+
+        中文：依据 :meth:`to_dict` 的输出重建配置，并将 task_names 还原为元组。
+        """
         values = dict(values)
         if "task_names" in values:
             values["task_names"] = tuple(values["task_names"])

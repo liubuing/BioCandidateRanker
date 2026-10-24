@@ -1,6 +1,8 @@
 """Pins the experimental flux audit's fail-closed behavior: inspection never
 guesses missing reaction mappings or column semantics, and incomplete
 governance yields only a training blocker, never derived training data.
+
+中文：钉住实验通量审计的 fail-closed：绝不猜测缺失的反应映射或列语义，不完整治理只产出训练阻塞器。
 """
 
 import hashlib

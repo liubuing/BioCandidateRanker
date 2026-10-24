@@ -7,6 +7,13 @@ substrate and reported conditions. Writes
 artifacts/research-scope-20261005-v2/ranking-metadata-feasibility.json.
 Numeric response columns are never read; the three-signature threshold is an
 inventory display threshold, not a frozen evaluation gate.
+
+中文：本脚本做仅元数据的清单盘点，不涉及标签、预测或排序选择：重新哈希全局接受映射，
+从各来源 candidate_records.csv 只按白名单读取四个元数据字段（assay_pH、
+assay_temperature_C、condition_id、reaction_direction），再按来源、底物与报告条件对保留
+记录分桶。写出 artifacts/research-scope-20261005-v2/ranking-metadata-feasibility.json。
+数值响应列从不读取；三签名阈值只是清单展示阈值，不是冻结评估门。治理角色：可行性清单
+收据（只读盘点，不做任何资格判定）。
 """
 import csv
 import hashlib
@@ -21,17 +28,26 @@ OUT = ROOT / 'artifacts/research-scope-20261005-v2'
 
 
 def missing_condition(value):
-    """Return True when a reported condition is blank or an explicit unknown marker."""
+    """Return True when a reported condition is blank or an explicit unknown marker.
+
+    中文：当报告条件为空白或显式未知标记时返回 True。
+    """
     return value.strip().casefold() in {'', 'not reported', 'not specified', 'unknown', 'na', 'n/a', 'none', 'null'}
 
 
 def sha(p):
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
-    """Build the feasibility inventory and write ranking-metadata-feasibility.json."""
+    """Build the feasibility inventory and write ranking-metadata-feasibility.json.
+
+    中文：构建可行性清单并写出 ranking-metadata-feasibility.json。
+    """
     OUT.mkdir(exist_ok=True)
     audit = json.loads((AUDIT / 'readiness-audit.json').read_text())
     mapping = AUDIT / 'global-accepted-mapping.csv'

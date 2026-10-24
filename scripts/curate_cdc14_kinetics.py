@@ -9,6 +9,14 @@ The script is fail-closed on acquisition: when the Purdue repository payload can
 retrieved it writes zero candidates and machine-readable blocker evidence instead of
 inferring rows. S. cerevisiae rows are excluded up front for known exact UniKP development
 overlap; homology stays not-run until exact human construct sequences exist.
+
+中文：把关人类 Cdc14 动力学来源（DOI 10.1016/j.jbc.2024.107644；数据集 DOI
+10.4231/429k-qe94）。接受/排除逻辑要点：脚本对获取环节 fail-closed——当 Purdue 仓库载荷
+无法取回时写出零候选与机器可读的阻断证据，而不是推断数据行；S. cerevisiae 行因已知与
+UniKP 开发语料精确重叠而预先排除；在精确的人类构建体序列存在之前同源审计保持未运行。
+证据写入 artifacts/external/temporal-absolute-kinetics/purdue-429k-qe94：
+acquisition-attempts.json，以及（视 Purdue 仓库结果而定）blocker-evidence.json 或
+provenance.json/candidate-artifact.json，另有 homology-audit.json。
 """
 from __future__ import annotations
 
@@ -74,12 +82,18 @@ PURR_ENDPOINTS = (
 
 
 def utc_now() -> str:
-    """Return the current UTC time as a second-resolution ISO-8601 string."""
+    """Return the current UTC time as a second-resolution ISO-8601 string.
+
+    中文：返回当前 UTC 时间的秒级 ISO-8601 字符串。
+    """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+
+    中文：把 ``path`` 文件流式送入 SHA-256 并返回十六进制摘要。
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -89,7 +103,10 @@ def sha256(path: Path) -> str:
 
 def request(url: str, timeout: int = 180) -> tuple[bytes | None, dict[str, object]]:
     """Fetch ``url`` and return (payload or None, structured attempt record) without raising on
-    transport errors."""
+    transport errors.
+
+    中文：抓取 ``url`` 并返回（载荷或 None、结构化尝试记录），传输错误时不抛异常。
+    """
     started = utc_now()
     req = urllib.request.Request(
         url,
@@ -141,7 +158,10 @@ def request(url: str, timeout: int = 180) -> tuple[bytes | None, dict[str, objec
 
 def acquire() -> list[dict[str, object]]:
     """Download open article/metadata files, probe the Purdue endpoints, and journal every attempt;
-    return the attempt records."""
+    return the attempt records.
+
+    中文：下载开放的文章/元数据文件、探测 Purdue 端点并记录每次尝试；返回尝试记录。
+    """
     RAW.mkdir(parents=True, exist_ok=True)
     attempts: list[dict[str, object]] = []
     for name, url in DOWNLOADS.items():
@@ -193,7 +213,11 @@ def acquire() -> list[dict[str, object]]:
 
 def verify_open_metadata() -> dict[str, object]:
     """Fail closed unless DataCite identity/CC0 and Europe PMC DOI/CC-BY evidence check out; return
-    the metadata summary."""
+    the metadata summary.
+
+    中文：除非 DataCite 身份/CC0 与 Europe PMC DOI/CC-BY 证据核验通过，否则 fail closed；
+    返回元数据摘要。
+    """
     metadata_path = RAW / "datacite-metadata.json"
     xml_path = RAW / "PMC11407943-fullText.xml"
     supplement_path = RAW / "PMC11407943-supplementaryFiles.zip"
@@ -228,7 +252,10 @@ def verify_open_metadata() -> dict[str, object]:
 
 
 def repository_payload_available(attempts: list[dict[str, object]]) -> bool:
-    """Return True only if some Purdue endpoint attempt succeeded with a non-trivial payload."""
+    """Return True only if some Purdue endpoint attempt succeeded with a non-trivial payload.
+
+    中文：仅当某个 Purdue 端点尝试成功且载荷非平凡（>100 字节）时返回 True。
+    """
     return any(
         attempt.get("requested_url") in PURR_ENDPOINTS
         and attempt.get("outcome") == "success"
@@ -241,7 +268,10 @@ def write_blocker(
     attempts: list[dict[str, object]], metadata: dict[str, object]
 ) -> None:
     """Record the repository transport failure and zero-curation consequence in
-    blocker-evidence.json."""
+    blocker-evidence.json.
+
+    中文：在 blocker-evidence.json 中记录仓库传输失败及零整理后果。
+    """
     failed = [
         {
             "url": attempt["requested_url"],
@@ -295,7 +325,10 @@ def write_blocker(
 
 def write_provenance(metadata: dict[str, object], blocked: bool) -> None:
     """Write provenance.json stating source identity, licenses, raw hashes, and the blocked/pending
-    status."""
+    status.
+
+    中文：写出 provenance.json，说明来源身份、许可、原始文件哈希及阻断/待定状态。
+    """
     raw_files = sorted(path for path in RAW.iterdir() if path.is_file())
     provenance = {
         "source_id": SOURCE_ID,
@@ -328,7 +361,10 @@ def write_provenance(metadata: dict[str, object], blocked: bool) -> None:
 
 def write_candidate_artifact(blocked: bool) -> None:
     """Write candidate-artifact.json with zero candidates and the yeast group's known-overlap
-    exclusion."""
+    exclusion.
+
+    中文：写出 candidate-artifact.json，包含零候选与酵母组已知重叠的排除说明。
+    """
     artifact = {
         "schema_version": 1,
         "source_id": SOURCE_ID,
@@ -360,7 +396,10 @@ def write_candidate_artifact(blocked: bool) -> None:
 
 def run_frozen_wsl_mmseqs(blocked: bool) -> None:
     """Probe the WSL Debian mmseqs against the frozen version and record a no-run
-    homology-audit.json status."""
+    homology-audit.json status.
+
+    中文：用冻结版本探测 WSL Debian 的 mmseqs，并在 homology-audit.json 记录未运行状态。
+    """
     if sha256(REFERENCE) != REFERENCE_SHA256:
         raise ValueError("Frozen UniKP reference hash changed")
     query = SOURCE / "construct_sequences.fasta"
@@ -435,7 +474,11 @@ def run_frozen_wsl_mmseqs(blocked: bool) -> None:
 
 def main() -> None:
     """Acquire, verify, and gate the source; write blocker/provenance/candidate/homology evidence
-    without any candidates."""
+    without any candidates.
+
+    中文：获取、校验并把关该来源；写出 blocker/provenance/candidate/homology 证据，不产生
+    任何候选。
+    """
     parser = argparse.ArgumentParser(description="Acquire and gate the Cdc14 kinetics source")
     parser.add_argument("--no-download", action="store_true", help="Only validate local raw files")
     args = parser.parse_args()

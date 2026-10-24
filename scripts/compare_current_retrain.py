@@ -8,6 +8,13 @@ model minus each comparator. Writes
 artifacts/current-code-retrain/internal-test/paired-comparison.json, refusing
 to overwrite. Exploratory diagnostic on the already-observed split: no
 multiplicity correction and a zero-crossing CI is not equivalence.
+
+中文：本脚本对重训练后的当前模型做探索性家族 bootstrap 比较：读取冻结内部测试划分、
+同源家族映射，以及当前重训练模型与其对照（CatPred、CataPro、UniKP、历史回放）的逐种子
+预测 CSV，再计算“当前模型减各对照”的家族分层配对 bootstrap 对比（种子 20260918、
+5000 次重抽样）。写出
+artifacts/current-code-retrain/internal-test/paired-comparison.json，拒绝覆盖。治理角色：
+对已观察划分的探索性诊断收据——无多重性校正，跨零置信区间不构成等效。
 """
 from pathlib import Path
 import json,hashlib
@@ -17,7 +24,10 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/current-code-retrain/internal-test'
 
 def main():
-    """Compute and write the current-vs-comparator paired comparison report."""
+    """Compute and write the current-vs-comparator paired comparison report.
+
+    中文：计算并写出当前模型对各对照的配对比较报告。
+    """
     target=OUT/'paired-comparison.json'
     if target.exists():raise FileExistsError(target)
     data=rows(ROOT/'artifacts/external/sota-homology-cold/data/test.csv');ids=[r['pair_id'] for r in data];y=np.array([float(r['log10_kcat']) for r in data])

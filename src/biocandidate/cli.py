@@ -7,6 +7,11 @@ command re-verifies the frozen SHA256 identities of its inputs (data manifests,
 split manifests, protocols, checkpoints) before doing work and raises on any
 mismatch, so artifacts can only be produced against byte-exact,
 protocol-frozen inputs.
+
+中文：BioCandidateRanker 全部受治理流水线的命令行入口。子命令覆盖协议各阶段：
+数据集审计、同源/冷切分、排序器训练、评估、不确定性校准、外部迁移基准
+（EnzEngDB、Lunzer、DLKcat）与运行汇总。每条命令都会重新校验其输入
+（数据清单、切分清单、检查点）的冻结 SHA256 身份，身份不符即失败。
 """
 
 from __future__ import annotations
@@ -113,7 +118,9 @@ def _calibration_identities(checkpoint: str | Path, task: str) -> dict:
 
 
 def audit_command(args: argparse.Namespace) -> None:
-    """Audit the UniKP source file and report adapter accept/reject counts."""
+    """Audit the UniKP source file and report adapter accept/reject counts.
+中文：审计 UniKP 源文件并报告适配器接受/拒绝计数。
+"""
     manifest = build_manifest(args.data)
     result = read_unikp_json(args.data)
     output = {
@@ -139,7 +146,9 @@ def audit_command(args: argparse.Namespace) -> None:
 
 
 def audit_lunzer_command(args: argparse.Namespace) -> None:
-    """Audit the frozen Lunzer source and report the confirmatory protocol view."""
+    """Audit the frozen Lunzer source and report the confirmatory protocol view.
+中文：审计冻结的 Lunzer 源数据并输出确证性协议视图。
+"""
     source_identity = build_manifest(args.data)
     if (source_identity.sha256 != LUNZER_SOURCE_SHA256
             or source_identity.size_bytes != LUNZER_SOURCE_SIZE_BYTES):
@@ -207,7 +216,9 @@ def _select_enzengdb_observations(observations, *, min_campaign_size: int,
 
     Sorting by a hash of the id makes the frozen selection independent of the
     fitness values, so no label can influence which rows enter the benchmark.
-    """
+    
+中文：与标签无关的选择：按 SHA256(candidate_id) 排序后对每个 campaign 截断。
+"""
     campaigns = defaultdict(list)
     for observation in observations:
         campaigns[observation.campaign_id].append(observation)
@@ -229,7 +240,9 @@ def _select_enzengdb_observations(observations, *, min_campaign_size: int,
 
 
 def audit_enzengdb_command(args: argparse.Namespace) -> None:
-    """Audit EnzEngDB, freeze the label-independent selection, and report UniKP overlap."""
+    """Audit EnzEngDB, freeze the label-independent selection, and report UniKP overlap.
+中文：审计 EnzEngDB，冻结与标签无关的选择，并报告与 UniKP 的重叠。
+"""
     if args.exclude_homology_hits and not args.mmseqs:
         raise ValueError("--exclude-homology-hits requires --mmseqs")
     archive_identity = build_manifest(args.archive)
@@ -370,7 +383,9 @@ def audit_enzengdb_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_enzengdb_command(args: argparse.Namespace) -> None:
-    """Score a checkpoint on the frozen EnzEngDB selection with within-campaign ranking."""
+    """Score a checkpoint on the frozen EnzEngDB selection with within-campaign ranking.
+中文：在冻结的 EnzEngDB 选择上为检查点打分，输出 campaign 内排序指标。
+"""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     if args.task not in model.config.task_names:
@@ -458,7 +473,9 @@ def evaluate_enzengdb_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_lunzer_command(args: argparse.Namespace) -> None:
-    """Score a checkpoint on the frozen Lunzer landscape, ranking within cofactor groups."""
+    """Score a checkpoint on the frozen Lunzer landscape, ranking within cofactor groups.
+中文：在冻结的 Lunzer 景观上为检查点打分，按辅因子组内排序。
+"""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     if args.task not in model.config.task_names:
@@ -548,7 +565,9 @@ def evaluate_lunzer_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_lunzer_dlkcat_output_command(args: argparse.Namespace) -> None:
-    """Score external DLKcat predictions on the same frozen Lunzer landscape."""
+    """Score external DLKcat predictions on the same frozen Lunzer landscape.
+中文：在同一冻结 Lunzer 景观上为外部 DLKcat 预测打分。
+"""
     selection = json.loads(Path(args.selection_manifest).read_text(encoding="utf-8"))
     source_identity = build_manifest(args.data)
     if selection.get("source_identity") != _manifest_dict(source_identity):
@@ -649,7 +668,9 @@ def evaluate_lunzer_dlkcat_output_command(args: argparse.Namespace) -> None:
 
 
 def build_enzengdb_rank_split_command(args: argparse.Namespace) -> None:
-    """Build the campaign-family train/validation split for the EnzEngDB ranker."""
+    """Build the campaign-family train/validation split for the EnzEngDB ranker.
+中文：为 EnzEngDB 排序器构建 campaign-家族 训练/验证切分。
+"""
     archive_identity = build_manifest(args.archive)
     if (archive_identity.sha256 != ENZENGDB_ARCHIVE_SHA256
             or archive_identity.size_bytes != ENZENGDB_ARCHIVE_SIZE_BYTES):
@@ -788,7 +809,9 @@ def _initialize_activity_ranker(base_checkpoint: str, device: torch.device,
     Encoder weights transfer wherever shapes match; the ranking head is randomly
     initialized and the task query is copied from the base model's log10_kcat
     column so the frozen representations stay aligned with it.
-    """
+    
+中文：把基础检查点重建为单任务 activity_rank 模型；形状匹配处迁移编码器权重。
+"""
     base_model, base_payload = load_checkpoint(base_checkpoint, device)
     values = base_model.config.to_dict()
     values.update({
@@ -858,7 +881,9 @@ def _evaluate_campaign_ranker(model, records, device, batch_size: int) -> dict:
 
 
 def train_enzengdb_ranker_command(args: argparse.Namespace) -> None:
-    """Fine-tune the kcat checkpoint into an activity_rank campaign ranker."""
+    """Fine-tune the kcat checkpoint into an activity_rank campaign ranker.
+中文：把 kcat 检查点微调为 activity_rank 的 campaign 排序器。
+"""
     torch.manual_seed(args.seed)
     split = json.loads(Path(args.split_manifest).read_text(encoding="utf-8"))
     archive_identity = build_manifest(args.archive)
@@ -934,7 +959,9 @@ def train_enzengdb_ranker_command(args: argparse.Namespace) -> None:
 
 
 def summarize_enzengdb_runs_command(args: argparse.Namespace) -> None:
-    """Aggregate seed runs into the campaign-level bootstrap summary."""
+    """Aggregate seed runs into the campaign-level bootstrap summary.
+中文：把各种子运行汇总为 campaign 级 bootstrap 报告。
+"""
     runs = [json.loads(Path(path).read_text(encoding="utf-8")) for path in args.inputs]
     summary = summarize_campaign_runs(
         runs, bootstrap_samples=args.bootstrap_samples, seed=args.seed)
@@ -951,7 +978,9 @@ def summarize_enzengdb_runs_command(args: argparse.Namespace) -> None:
 
 
 def train_command(args: argparse.Namespace) -> None:
-    """Train the multimodal ranker under a manifest-verified, seeded protocol."""
+    """Train the multimodal ranker under a manifest-verified, seeded protocol.
+中文：在清单校验、固定种子的协议下训练多模态排序器。
+"""
     torch.manual_seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
@@ -1110,7 +1139,9 @@ def train_command(args: argparse.Namespace) -> None:
 
 
 def homology_command(args: argparse.Namespace) -> None:
-    """Cluster unique proteins with MMseqs2 and write the homology-cold split manifest."""
+    """Cluster unique proteins with MMseqs2 and write the homology-cold split manifest.
+中文：用 MMseqs2 对去重蛋白聚类并写出同源冷切分清单。
+"""
     manifest_payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**manifest_payload["identity"]))
     records = read_unikp_json(args.data).records
@@ -1147,7 +1178,9 @@ def homology_command(args: argparse.Namespace) -> None:
 
 
 def cold_split_command(args: argparse.Namespace) -> None:
-    """Write a development cold-split manifest (protein, scaffold, or double cold)."""
+    """Write a development cold-split manifest (protein, scaffold, or double cold).
+中文：写出开发用冷切分清单（蛋白、骨架或双冷）。
+"""
     manifest_payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**manifest_payload["identity"]))
     records = read_unikp_json(args.data).records
@@ -1165,7 +1198,9 @@ def cold_split_command(args: argparse.Namespace) -> None:
 
 
 def predict_command(args: argparse.Namespace) -> None:
-    """Predict per-task means/deviations for candidate JSON, with optional calibrated intervals."""
+    """Predict per-task means/deviations for candidate JSON, with optional calibrated intervals.
+中文：为候选 JSON 输出逐任务均值/标准差，可选校准区间。
+"""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     calibrator = None
@@ -1302,7 +1337,9 @@ def predict_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_command(args: argparse.Namespace) -> None:
-    """Evaluate a checkpoint on a manifest-verified partition of the source data."""
+    """Evaluate a checkpoint on a manifest-verified partition of the source data.
+中文：在清单校验过的源数据分区上评估检查点。
+"""
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device)
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
@@ -1376,7 +1413,9 @@ def evaluate_command(args: argparse.Namespace) -> None:
 
 
 def evaluate_classical_baselines_command(args: argparse.Namespace) -> None:
-    """Fit ridge baselines on classical features with a validation-selected alpha grid."""
+    """Fit ridge baselines on classical features with a validation-selected alpha grid.
+中文：在经典特征上拟合 ridge 基线，alpha 网格由验证集选择。
+"""
     try:
         import numpy as np
         from sklearn.linear_model import Ridge
@@ -1443,7 +1482,9 @@ def evaluate_classical_baselines_command(args: argparse.Namespace) -> None:
 
 
 def summarize_fusion_runs_command(args: argparse.Namespace) -> None:
-    """Paired task_query versus late_concat seed summary with checkpoint identity checks."""
+    """Paired task_query versus late_concat seed summary with checkpoint identity checks.
+中文：task_query 与 late_concat 的配对种子汇总，附检查点身份校验。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds or not all(isinstance(seed, int) for seed in seeds):
@@ -1500,7 +1541,9 @@ def summarize_fusion_runs_command(args: argparse.Namespace) -> None:
 
 
 def train_feature_mlp_command(args: argparse.Namespace) -> None:
-    """Train the feature MLP for one registered seed and feature set under the frozen protocol."""
+    """Train the feature MLP for one registered seed and feature set under the frozen protocol.
+中文：在冻结协议下为注册种子与特征集训练特征 MLP。
+"""
     import numpy as np
 
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
@@ -1590,7 +1633,9 @@ def train_feature_mlp_command(args: argparse.Namespace) -> None:
 
 
 def summarize_feature_mlp_runs_command(args: argparse.Namespace) -> None:
-    """Aggregate feature-MLP seed runs after verifying protocol and checkpoint identities."""
+    """Aggregate feature-MLP seed runs after verifying protocol and checkpoint identities.
+中文：校验协议与检查点身份后汇总特征 MLP 种子运行。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1641,7 +1686,9 @@ def summarize_feature_mlp_runs_command(args: argparse.Namespace) -> None:
 
 
 def summarize_internal_ablations_command(args: argparse.Namespace) -> None:
-    """Compare ablation checkpoints against the baseline under one frozen protocol."""
+    """Compare ablation checkpoints against the baseline under one frozen protocol.
+中文：在同一冻结协议下将消融检查点与基线对比。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     expected_source = protocol.get("source_identity")
     expected_split = protocol.get("split_identity")
@@ -1699,7 +1746,9 @@ def summarize_internal_ablations_command(args: argparse.Namespace) -> None:
 
 
 def summarize_uncertainty_ablation_command(args: argparse.Namespace) -> None:
-    """Paired heteroscedastic versus fixed-variance summary across the registered seeds."""
+    """Paired heteroscedastic versus fixed-variance summary across the registered seeds.
+中文：跨注册种子汇总异方差 vs 固定方差的配对结果。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1782,7 +1831,9 @@ def _collect_task_outputs(model, records, task: str, batch_size: int, device: to
 
 
 def fit_calibration_command(args: argparse.Namespace) -> None:
-    """Fit a calibrator on validation outputs and save the identity-bound artifact."""
+    """Fit a calibrator on validation outputs and save the identity-bound artifact.
+中文：在验证输出上拟合校准器并保存身份绑定的工件。
+"""
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     verify_manifest(args.data, FileManifest(**source_manifest["identity"]))
     split_identity = _manifest_dict(build_manifest(args.split_manifest))
@@ -1874,7 +1925,9 @@ def fit_calibration_command(args: argparse.Namespace) -> None:
 
 
 def calibrate_uncertainty_command(args: argparse.Namespace) -> None:
-    """Apply the validation-fitted scalar scale and report test coverage before and after."""
+    """Apply the validation-fitted scalar scale and report test coverage before and after.
+中文：应用验证拟合的标量尺度，报告测试覆盖率的前后对比。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     source_manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     if source_manifest.get("identity") != protocol.get("source_identity"):
@@ -1926,7 +1979,9 @@ def calibrate_uncertainty_command(args: argparse.Namespace) -> None:
 
 
 def summarize_uncertainty_calibration_command(args: argparse.Namespace) -> None:
-    """Aggregate per-seed uncertainty calibration runs into before/after summaries."""
+    """Aggregate per-seed uncertainty calibration runs into before/after summaries.
+中文：把各种子的不确定性校准运行汇总为前后对比报告。
+"""
     protocol = json.loads(Path(args.protocol).read_text(encoding="utf-8"))
     seeds = protocol.get("seeds")
     if not isinstance(seeds, list) or not seeds:
@@ -1981,7 +2036,9 @@ def summarize_uncertainty_calibration_command(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Assemble the full subcommand tree; each subcommand binds its handler through ``func``."""
+    """Assemble the full subcommand tree; each subcommand binds its handler through ``func``.
+中文：组装全部子命令树；每个子命令经 ``func`` 绑定处理器。
+"""
     parser = argparse.ArgumentParser(description="BioCandidateRanker research CLI")
     commands = parser.add_subparsers(dest="command", required=True)
     audit = commands.add_parser("audit-data")
@@ -2268,7 +2325,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """Parse arguments and dispatch to the selected command handler."""
+    """Parse arguments and dispatch to the selected command handler.
+中文：解析参数并分发到所选命令处理器。
+"""
     args = build_parser().parse_args()
     args.func(args)
 

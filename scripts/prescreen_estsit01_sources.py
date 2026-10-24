@@ -13,6 +13,9 @@ status ``pending_construct_and_substrate_audit`` and ``accepted_additions``
 stays 0 (reference cores are not the assayed fusion proteins; cross-paper WT
 duplication is unresolved); protected config/audit hashes are re-verified at
 the end, and no predictions are generated.
+
+中文：仅参考核心的预筛（输出不得进入接受数据）：对暂存的 EstSit01 证据
+构建参考核心、暂挂测量并写收据。
 """
 import csv
 import hashlib
@@ -33,11 +36,15 @@ def seq(p):
     return ''.join(p.read_text().splitlines()[1:])
 
 def linux(p):
-    """Map a Windows path to its /mnt/d WSL equivalent."""
+    """Map a Windows path to its /mnt/d WSL equivalent.
+中文：把 Windows 路径映射为其 /mnt/d WSL 等价路径。
+"""
     return '/mnt/d/'+p.relative_to(Path('D:/')).as_posix()
 
 def main():
-    """Screen reference cores, stage pending measurements, and write the receipt."""
+    """Screen reference cores, stage pending measurements, and write the receipt.
+中文：筛查参考核心、暂挂测量并写收据。
+"""
     assert sha(REF)=='69cbc91b88b69f7d4e8fe97f55d7ab157d7c438795989cd6a18fdb0ce28ab2f9'
     protected=[ROOT/'configs/temporal_absolute_kinetics_protocol.json',ROOT/'artifacts/external/temporal-global-family-audit/readiness-audit.json']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in protected}

@@ -5,6 +5,8 @@ capabilities": ranker checkpoints trained on scenario grids so they predict
 growth without cobra. Tests cover the scenario contract, the inference-side
 carrier that must match training records, and a miniature end-to-end training
 run (small grids keep it fast).
+
+中文：FBA 代理蒸馏测试：场景网格上训练的排序器检查点无需 cobra 即可预测生长；覆盖场景契约与推理侧载体一致性。
 """
 
 from __future__ import annotations

@@ -11,6 +11,9 @@ Exclusion-only fail-closed: the exact assay construct cannot be reconstructed fr
 contradictory source statements, fixed-cosubstrate saturation is asserted without any
 series, reported kcat/Vmax/enzyme-concentration arithmetic is inconsistent, and the frozen
 MMseqs2 prescreen finds development hits to the native sequence.
+
+中文：整理 Pa-RmlA 葡糖-1-磷酸胸苷酰转移酶（DOI 10.3390/microorganisms14051070）：
+两行 Table 1 kcat 全部排除（构建体证据矛盾、算术不一致），空候选表，预筛序列仅作参考。
 """
 from __future__ import annotations
 
@@ -92,7 +95,9 @@ URLS = {
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -102,7 +107,9 @@ def sha256(path: Path) -> str:
 
 def download_raw() -> None:
     """Fetch article/supplement/assembly/compound files, unpack the nested SI PDF, and extract
-    assembly members."""
+    assembly members.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -152,7 +159,9 @@ def read_fasta_record(path: Path, accession: str) -> str:
 
 def validate_raw() -> None:
     """Fail closed unless article/supplement/assembly/PubChem markers and the frozen reference all
-    corroborate."""
+    corroborate.
+中文：校验原始证据的完整性与哈希。
+"""
     required = [*URLS, "microorganisms-14-01070-s001.zip", "microorganisms-4240565-supplementary.pdf", "genomic.gbff", "genomic.gff", "protein.faa", "sequence_report.jsonl", "assembly_data_report.jsonl"]
     missing = [name for name in required if not (RAW / name).is_file()]
     if missing:
@@ -230,7 +239,9 @@ def run_checked(args: list[str]) -> str:
 
 def run_mmseqs(query: Path, executable: str, threads: int) -> str:
     """Easy-search the native prescreen sequence against the frozen reference; return the verified
-    version."""
+    version.
+中文：运行钉住的 WSL MMseqs2 同源搜索。
+"""
     version = run_checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs version {version!r} is not frozen version {MMSEQS_VERSION!r}")
@@ -273,7 +284,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 def write_outputs(executable: str, threads: int, run_homology: bool) -> None:
     """Validate raw evidence, run the prescreen homology search, and write the exclusion-only
-    evidence bundle."""
+    evidence bundle.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     validate_raw()
     SOURCE.mkdir(parents=True, exist_ok=True)
     query = SOURCE / "native_prescreen_sequence.fasta"
@@ -456,7 +469,9 @@ def write_outputs(executable: str, threads: int, run_homology: bool) -> None:
 
 
 def main() -> int:
-    """Run the acquire/verify/homology/write pipeline; every reported row stays excluded."""
+    """Run the acquire/verify/homology/write pipeline; every reported row stays excluded.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--acquire", action="store_true")
     parser.add_argument("--run-mmseqs", action="store_true")

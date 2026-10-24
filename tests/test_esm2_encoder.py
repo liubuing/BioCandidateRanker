@@ -1,4 +1,7 @@
-"""Tests for ESM-2 protein encoder and LR scheduler."""
+"""Tests for ESM-2 protein encoder and LR scheduler.
+
+中文：ESM-2 蛋白编码器与学习率调度器测试。
+"""
 from __future__ import annotations
 
 import math

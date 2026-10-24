@@ -1,6 +1,9 @@
 """Pins FeatureMLP preprocessing and training: standardization uses train-split
 statistics (constant columns get unit stddev) and checkpoint selection always
-yields a finite test RMSE."""
+yields a finite test RMSE.
+
+中文：钉住 FeatureMLP 预处理与训练：标准化只用训练切分统计（常数列单位方差），检查点选择必得有限测试 RMSE。
+"""
 import unittest
 
 import numpy as np

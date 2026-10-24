@@ -12,6 +12,9 @@ Governance role: fail-closed staging only -- every entry carries scope
 "published catalytic component; full assayed construct unresolved"; length
 discrepancies are recorded, never repaired; fetch/validation failures are
 captured per row instead of aborting the batch; ``accepted_additions`` stays 0.
+
+中文：暂存已发表的良性酶组件；同源性只是筛查而非接受：取全文清单列出的
+核苷酸 accession，校验并暂存组件，写登记册。
 """
 import hashlib
 import json
@@ -32,7 +35,9 @@ SOURCES=[
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
-    """Fetch, validate, and stage each published component; write the register."""
+    """Fetch, validate, and stage each published component; write the register.
+中文：取数、校验并暂存每个已发表组件；写登记册。
+"""
     rows=[];seqs={}
     for name,accession,pmc,length in SOURCES:
         article=OUT/(pmc+'.xml'); assert accession in article.read_text(encoding='utf-8')

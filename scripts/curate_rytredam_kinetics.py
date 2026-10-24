@@ -14,6 +14,9 @@ allylamine) have no reported matching Km, so the frozen >=5x saturation gate
 cannot be demonstrated. Every row is therefore written to ``exclusions.csv``
 and ``candidate_records.csv`` stays schema-only. Governance role: fail-closed
 curation -- no accepted labels, no model predictions, readiness gate False.
+
+中文：整理 RytRedAm 亚胺还原酶动力学（DOI 10.1021/acscatal.4c04935，CC-BY-4.0）：
+读 BioStudies 存档与 SHA256 钉住的 UniKP 参考 FASTA，写出标准策展束；两行主表值因固定底物无匹配 Km 无法证饱和而排除。
 """
 from __future__ import annotations
 
@@ -147,7 +150,9 @@ def pdb_sequence(path: Path) -> str:
 
 
 def validate_sources() -> str:
-    """Validate every deposited raw marker and return the exact 291-aa RytRedAm sequence."""
+    """Validate every deposited raw marker and return the exact 291-aa RytRedAm sequence.
+中文：校验各来源证据的完整性。
+"""
     metadata = json.loads((RAW / "metadata.json").read_text(encoding="utf-8"))
     if metadata["accno"] != "S-EPMC11705230":
         raise ValueError("Unexpected BioStudies accession")
@@ -259,7 +264,9 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def write_outputs() -> None:
-    """Verify the pinned target, then write every curation artifact under SOURCE."""
+    """Verify the pinned target, then write every curation artifact under SOURCE.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     if sha256(TARGET) != TARGET_SHA256:
         raise ValueError("Frozen UniKP development target identity mismatch")
     sequence = validate_sources()

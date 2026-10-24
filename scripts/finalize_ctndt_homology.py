@@ -10,6 +10,9 @@ Governance role: fail-closed finalization -- the run aborts unless the CSV
 still matches the audit's recorded SHA-256, the audit is a zero-hit audit, and
 it accepts every candidate row; only the status column's pending marker is
 promoted, no values or rows are altered.
+
+中文：把 CtNDT 候选状态与已冻结的同源审计同步：只有冻结审计全部守卫通过，
+pending 行才晋级。
 """
 
 from __future__ import annotations
@@ -37,7 +40,9 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
-    """Promote pending CtNDT rows only after every frozen-audit guard passes."""
+    """Promote pending CtNDT rows only after every frozen-audit guard passes.
+中文：冻结审计全部守卫通过后才晋级 CtNDT 的 pending 行。
+"""
     audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
     candidate = audit.get("candidate_records", {})
     expected_hash = candidate.get("sha256")

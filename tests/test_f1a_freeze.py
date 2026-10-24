@@ -3,6 +3,8 @@
 The manifest exists so the predicted ordering cannot be adjusted after the assay.
 These tests check that it resolves to real stored predictions, records their
 identity, and states honestly whether the ordering is distinguishable at all.
+
+中文：F1a 前瞻预测冻结测试：清单解析到真实存档预测、记录其身份、诚实陈述排序是否可区分，防止测定后调整预测顺序。
 """
 
 from __future__ import annotations

@@ -9,6 +9,15 @@ zenodo-10517668/{provenance.json, blocker.json} (status
 scientifically_blocked_no_curated_records; zero candidate records) and
 homology-audit.json plus homology/pf-k.fasta when a Pf-K homology run exists.
 Diagnostic fit values are never emitted as curated labels.
+
+中文：本脚本审计 Zenodo 10517668（犬尿氨酸酶 Fig. 2b）并生成 fail-closed 阻断记录：
+对照钉住的 EXPECTED_SHA256 校验三个原始文件（工作簿、训练 FASTA、元数据），把工作簿
+重复样以三种方式重新拟合仅作拟合敏感性诊断，且只把 Pf-K 映射到其 deposited 序列。
+K1/K2/K3/K31 发现标签没有序列映射、作者拟合方法声明不足，故该记录被科学性阻断。写出
+zenodo-10517668/{provenance.json, blocker.json}（状态
+scientifically_blocked_no_curated_records；零候选记录），并在存在 Pf-K 同源性运行时
+附写 homology-audit.json 与 homology/pf-k.fasta。诊断拟合值绝不作为策展标签输出。
+治理角色：fail-closed 科学阻断收据。
 """
 
 from __future__ import annotations
@@ -52,12 +61,18 @@ REPLICATE_START_ROWS = (22, 27, 32, 37, 42, 47)
 
 
 def sha256(path: Path) -> str:
-    """Return the SHA256 hex digest of a file."""
+    """Return the SHA256 hex digest of a file.
+
+    中文：返回文件的 SHA256 十六进制摘要。
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_fasta(path: Path) -> list[tuple[str, str]]:
-    """Parse a simple multi-record FASTA file into (header, sequence) tuples."""
+    """Parse a simple multi-record FASTA file into (header, sequence) tuples.
+
+    中文：把简单多记录 FASTA 文件解析为 (header, sequence) 元组列表。
+    """
     records: list[tuple[str, str]] = []
     header = ""
     sequence: list[str] = []
@@ -75,12 +90,18 @@ def read_fasta(path: Path) -> list[tuple[str, str]]:
 
 
 def michaelis_menten(substrate: np.ndarray, kcat: float, km: float) -> np.ndarray:
-    """Standard Michaelis-Menten saturation curve used for the diagnostic refits."""
+    """Standard Michaelis-Menten saturation curve used for the diagnostic refits.
+
+    中文：诊断性重新拟合所使用的标准 Michaelis-Menten 饱和曲线。
+    """
     return kcat * substrate / (km + substrate)
 
 
 def fit(substrate: np.ndarray, rates: np.ndarray, sigma: np.ndarray | None = None) -> dict[str, float]:
-    """Fit kcat and km by bounded least squares, optionally inverse-sigma weighted."""
+    """Fit kcat and km by bounded least squares, optionally inverse-sigma weighted.
+
+    中文：用有界最小二乘法拟合 kcat 与 km，可选按逆 sigma 加权。
+    """
     parameters, _ = curve_fit(
         michaelis_menten,
         substrate,
@@ -95,7 +116,10 @@ def fit(substrate: np.ndarray, rates: np.ndarray, sigma: np.ndarray | None = Non
 
 
 def workbook_audit() -> tuple[dict[str, object], dict[str, list[list[float]]]]:
-    """Extract Fig. 2b replicates and run the three diagnostic fit variants per enzyme."""
+    """Extract Fig. 2b replicates and run the three diagnostic fit variants per enzyme.
+
+    中文：提取 Fig. 2b 的重复样并对每个酶运行三种诊断性拟合变体。
+    """
     formulas = load_workbook(WORKBOOK, data_only=False, read_only=False)["Fig. 2b"]
     values = load_workbook(WORKBOOK, data_only=True, read_only=False)["Fig. 2b"]
     results: dict[str, object] = {}
@@ -129,7 +153,10 @@ def workbook_audit() -> tuple[dict[str, object], dict[str, list[list[float]]]]:
 
 
 def main() -> None:
-    """Verify source hashes, assemble the blocker and provenance records, write all outputs."""
+    """Verify source hashes, assemble the blocker and provenance records, write all outputs.
+
+    中文：校验来源哈希，组装阻断记录与溯源记录，并写出全部产物。
+    """
     observed_hashes = {name: sha256(RAW / name) for name in EXPECTED_SHA256}
     if observed_hashes != EXPECTED_SHA256:
         raise ValueError(f"Source hash mismatch: {observed_hashes}")

@@ -6,6 +6,9 @@ ordinary loads and the mmap-backed loader, then memory-maps every entry and
 reports resident RSS, elapsed time, and logical feature bytes to
 ``mmap-verification.json``. Governance role: feasibility and exact-value
 verification only -- training memory is explicitly not measured here.
+
+中文：校验 mmap 值并同时映射完整开发缓存：探测最小/中间/最大缓存条目的
+逐位相等性并写收据。
 """
 from pathlib import Path
 import json,os,time,hashlib
@@ -15,7 +18,9 @@ BASE=ROOT/'artifacts/catpred-mode-b'
 os.environ['CATPRED_CACHE_PATH']=str(BASE/'cache')
 
 def main():
-    """Probe representative entries, map the full cache, and write the receipt."""
+    """Probe representative entries, map the full cache, and write the receipt.
+中文：探测代表性条目、映射完整缓存并写收据。
+"""
     import torch,psutil
     from catpred_memory_entry import install_memory_adapter
     import catpred.data.cache_utils as cache

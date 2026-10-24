@@ -7,6 +7,9 @@ construct_sequences.fasta (ten exact Strep-tagged WT/mutant constructs cross-che
 
 Exclusion-only fail-closed: every row comes from the PMS-DCIP coupled assay with no
 electron-acceptor saturation evidence, so no apparent kcat becomes a candidate label.
+
+中文：整理小鼠 D-乳酸脱氢酶（mLDHD，Q7TNG8，DOI 10.1038/s41467-023-42456-3）：
+九行 kcat 全部排除（PMS-DCIP 受体门控）；十个 Strep 标签构建体对照 18 个 PDB 聚合体交叉核验。
 """
 from __future__ import annotations
 
@@ -134,7 +137,9 @@ def downloads() -> dict[str, str]:
 
 
 def download_raw() -> None:
-    """Download every file from downloads() with retry/backoff, skipping files already present."""
+    """Download every file from downloads() with retry/backoff, skipping files already present.
+中文：下载并校验原始证据文件。
+"""
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in downloads().items():
         path = RAW / name
@@ -156,7 +161,9 @@ def download_raw() -> None:
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+中文：计算文件的 SHA256 摘要。
+"""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -165,7 +172,9 @@ def sha256(path: Path) -> str:
 
 
 def read_fasta(path: Path) -> str:
-    """Return the concatenated sequence lines (headers stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (headers stripped) of a FASTA file.
+中文：把 FASTA 读成标识符到序列的映射。
+"""
     return "".join(
         line.strip()
         for line in path.read_text(encoding="ascii").splitlines()
@@ -318,7 +327,9 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str] | Non
 
 def write_outputs() -> None:
     """Verify raw evidence, build constructs, and write the exclusion-only evidence bundle with
-    audits."""
+    audits.
+中文：写出策展证据束（候选/排除/构建体/同源审计）。
+"""
     verify_raw()
     sequences = build_sequences()
     exclusions = exclusion_records()
@@ -493,7 +504,9 @@ def verify_outputs(
 
 def main() -> None:
     """Run the download/verify/write pipeline for the mLDHD source; zero candidate labels are
-    produced."""
+    produced.
+中文：解析参数并运行策展。
+"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args()

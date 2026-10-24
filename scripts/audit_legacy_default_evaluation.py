@@ -8,13 +8,24 @@ plus a per-seed receipt; a predictions CSV is written only when RMSE/MAE/
 Pearson deltas against the recorded historical metrics are all within 1e-5,
 and the seed loop stops at the first failure. The frozen paired-family
 protocol files and the UniKP source identity are re-hashed before inference.
+
+中文：本脚本以 CLI 默认 batch size 64 复现历史评估：先对照
+configs/legacy_default_replay_protocol.json 校验本脚本自身 SHA256 与遗留 encoder 模块，
+再对每个种子以历史 ESM2 encoder 前向（batch size 64）回放冻结测试划分，写出
+artifacts/paired-family-analysis/legacy-default/reference-seed{seed}.csv 及逐种子收据；
+仅当 RMSE/MAE/Pearson 相对历史记录指标的偏差全部在 1e-5 以内时才写预测 CSV，且种子循环
+在首个失败处停止。推理前对冻结的 paired-family 协议文件与 UniKP 源身份重新哈希。
+治理角色：冻结回放协议的哈希绑定复现脚本。
 """
 import importlib.util,json,csv
 import torch
 import recover_reference_predictions as r
 
 def main():
-    """Replay the legacy evaluation per seed under the frozen protocol."""
+    """Replay the legacy evaluation per seed under the frozen protocol.
+
+    中文：按冻结协议逐种子回放历史评估。
+    """
     protocol=r.read(r.ROOT/'configs/legacy_default_replay_protocol.json')
     assert r.sha(__file__)==protocol['script_sha256']
     legacy=r.ROOT/protocol['legacy_source']

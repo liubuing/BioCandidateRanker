@@ -6,6 +6,9 @@ training smoke with the given seed, and prints the resulting metrics as JSON.
 Fail-closed: any pipeline failure clears partial outputs, writes blocker.json
 carrying the claim boundary, and this wrapper prints a {"status": "blocked"}
 record and exits non-zero.
+
+中文：端到端冒烟受治理的模拟 FBA 通量任务：对只读 Yeast-MetaTwin YAML 模型
+调用 run_pipeline，生成模拟通量数据集并跑 CPU 训练冒烟；受阻即非零退出。
 """
 
 from __future__ import annotations
@@ -17,7 +20,9 @@ from biocandidate.simulated_flux import run_pipeline
 
 
 def main() -> int:
-    """Run the smoke pipeline, mapping a blocked run to a non-zero exit code."""
+    """Run the smoke pipeline, mapping a blocked run to a non-zero exit code.
+中文：跑冒烟流水线；被阻塞的运行映射为非零退出码。
+"""
     parser = argparse.ArgumentParser(
         description="Generate and train a governed simulated FBA flux smoke task")
     parser.add_argument("--model", required=True, help="Read-only Yeast-MetaTwin YAML model")

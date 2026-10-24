@@ -4,6 +4,10 @@ Reads the external UniKP corpus through the same adapter and median-aggregation
 pipeline used by every reported BioCandidateRanker run, applies the frozen
 homology split manifest with source-identity validation, and writes one CSV per
 partition plus a SHA256 manifest under artifacts/external/sota-homology-cold/.
+
+中文：把冻结同源冷切分导出为逐分区 CSV（SOTA 对比用）：经与所有已报告运行
+相同的适配器与中位数聚合管线读外部 UniKP 语料，写 train/validation/test
+与 SHA256 清单（13,157/1,640/1,646）。
 """
 
 from __future__ import annotations

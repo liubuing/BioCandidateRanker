@@ -8,6 +8,9 @@ code, and writes per-seed predictions and receipts (with explicit
 difference-from-historical metrics) under ``artifacts/paired-family-analysis/
 current-code``. Governance role: fail-closed side-by-side audit -- existing
 outputs abort the run, and historical artifacts are never overwritten.
+
+中文：独立的当前代码回放审计，绝不替代历史预测或指标：校验全部钉住文件
+（含本脚本自身 SHA-256），以当前代码回放检查点并记录指标差值。
 """
 import json
 import sys
@@ -18,7 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import recover_reference_predictions as replay
 
 def main():
-    """Replay the checkpoints with current code and record metric differences."""
+    """Replay the checkpoints with current code and record metric differences.
+中文：用当前代码回放检查点并记录指标差异。
+"""
     protocol_path = replay.ROOT/'configs/current_implementation_replay_protocol.json'
     protocol = replay.read(protocol_path)
     assert replay.sha(__file__) == protocol['script_sha256']

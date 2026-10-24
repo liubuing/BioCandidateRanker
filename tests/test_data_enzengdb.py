@@ -1,6 +1,8 @@
 """Pins the EnzEngDB adapter and campaign-ranking primitives: primary-reactant
 selection, fail-closed row auditing, tie-aware percentile ranks, deterministic
 consensus representatives, and ranking metric edge cases.
+
+中文：钉住 EnzEngDB 适配器与 campaign 排序原语：主反应物选择、fail-closed 行审计、并列感知百分位排名、确定性共识代表。
 """
 
 import csv

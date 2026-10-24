@@ -1,6 +1,8 @@
 """Pins the PcHB control-kinetics curation verdict: constructs without an
 exact assayed sequence are terminally excluded, the readiness gate still
 passes, and the source contributes zero admitted records.
+
+中文：钉住 PcHB 对照动力学裁定：无精确测定序列的构建体终局排除，就绪门仍通过，零入选记录。
 """
 
 import csv

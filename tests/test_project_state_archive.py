@@ -1,6 +1,8 @@
 """Pins the 2026-07-27 project-state archive: every receipted file still matches
 its recorded SHA256 (live pointers excepted), RESUME_HERE.md names a current
 release manifest, and the archived claim boundary stays honestly blocked.
+
+中文：钉住 2026-07-27 项目状态归档：回执文件仍与记录的 SHA256 一致、RESUME_HERE 指向当前 release 清单、主张边界保持诚实阻塞。
 """
 
 import hashlib

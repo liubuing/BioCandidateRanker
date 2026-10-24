@@ -8,6 +8,9 @@ and writes ``summary.json`` with per-variant means, SDs, and paired
 variant-to-variant differences. Governance role: fail-closed verification and
 aggregation only -- any identity or partition mismatch aborts before the
 summary is written, and no model is re-run.
+
+中文：校验并汇总冻结的 ESM-2 模态诊断结果：逐变体/种子读 test_metrics.json，
+核对身份后聚合指标并写模态汇总。
 """
 
 from __future__ import annotations
@@ -27,14 +30,18 @@ VARIANTS = ("protein-only", "protein-molecule", "full")
 
 
 def metric_path(variant: str, seed: int) -> Path:
-    """Locate the frozen test-metrics file for one variant/seed pair."""
+    """Locate the frozen test-metrics file for one variant/seed pair.
+中文：定位一个变体/种子对的冻结测试指标文件。
+"""
     if variant == "full":
         return ROOT / "artifacts" / f"esm2-t6-opt-seed{seed}" / "test_metrics.json"
     return OUTPUT / f"{variant}-seed{seed}" / "test_metrics.json"
 
 
 def main() -> None:
-    """Verify identities, aggregate metrics, and write the modality summary."""
+    """Verify identities, aggregate metrics, and write the modality summary.
+中文：核对身份、聚合指标并写模态汇总。
+"""
     values: dict[str, dict[int, dict[str, float]]] = {}
     for variant in VARIANTS:
         values[variant] = {}

@@ -10,6 +10,14 @@ and provenance.json under artifacts/external/temporal-absolute-kinetics/europepm
 Every row is excluded: dioxygenase O2 saturation is unresolved, several varied-substrate
 ranges fall below 5x Km, the Ro1,2-CTD and commercial-trypsin assay sequences are unresolved
 (exclusion-only evidence), and Ro1,2-CTD/trypsin hit the frozen development reference.
+
+中文：整理 PMC10620931（DOI 10.1021/acsomega.3c02835）：BLC23O、Ro1,2-CTD 与牛胰蛋白酶
+动力学。接受/排除逻辑要点：全部 11 条直接 kcat 行均被排除（excluded_fail_closed，附排除
+码）——双加氧酶 O2 饱和度未解决、若干变化底物浓度上限低于 5 倍 Km、Ro1,2-CTD 与商品
+胰蛋白酶的测定序列未解决（仅可作排除证据）、且 Ro1,2-CTD/胰蛋白酶命中冻结开发参考库。
+产出文件写入 artifacts/external/temporal-absolute-kinetics/europepmc-PMC10620931：
+excluded_records.csv、空的 candidate_records.csv、construct-resolution.json、
+homology-audit.json、saturation-audit.json、raw-file-hashes.json 与 provenance.json。
 """
 from __future__ import annotations
 
@@ -59,7 +67,10 @@ BLC23O_PREFIX = "MGSSHHHHHHSSGLVPRGSHM"
 
 
 def sha256(path: Path) -> str:
-    """Stream the file at ``path`` through SHA-256 and return the hex digest."""
+    """Stream the file at ``path`` through SHA-256 and return the hex digest.
+
+    中文：把 ``path`` 文件流式送入 SHA-256 并返回十六进制摘要。
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -69,7 +80,10 @@ def sha256(path: Path) -> str:
 
 def acquire() -> None:
     """Download every raw article/supplement/sequence/compound file in URLS into RAW, skipping
-    existing files."""
+    existing files.
+
+    中文：把 URLS 中的全部原始文章/补充材料/序列/化合物文件下载到 RAW，已存在的跳过。
+    """
     RAW.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
         path = RAW / name
@@ -88,18 +102,27 @@ def acquire() -> None:
 
 
 def fasta_sequence(path: Path) -> str:
-    """Return the concatenated sequence lines (header stripped) of a FASTA file."""
+    """Return the concatenated sequence lines (header stripped) of a FASTA file.
+
+    中文：返回 FASTA 文件（去掉头部行）拼接后的序列字符串。
+    """
     return "".join(line.strip() for line in path.read_text(encoding="ascii").splitlines() if not line.startswith(">"))
 
 
 def write_fasta(path: Path, header: str, sequence: str) -> None:
-    """Write ``header``/``sequence`` as an 80-column-wrapped FASTA file."""
+    """Write ``header``/``sequence`` as an 80-column-wrapped FASTA file.
+
+    中文：把 ``header``/``sequence`` 按 80 列换行写成 FASTA 文件。
+    """
     path.write_text(">" + header + "\n" + "\n".join(sequence[i:i + 80] for i in range(0, len(sequence), 80)) + "\n", encoding="ascii", newline="\n")
 
 
 def command(executable: str, *args: str) -> list[str]:
     """Build the argv for ``executable``, mapping a ``wsl:<distro>:<binary>`` handle onto a wsl
-    invocation."""
+    invocation.
+
+    中文：构造 ``executable`` 的 argv，把 ``wsl:<distro>:<binary>`` 句柄映射为 wsl 调用。
+    """
     if not executable.startswith("wsl:"):
         return [executable, *args]
     _, distribution, binary = executable.split(":", 2)
@@ -107,7 +130,10 @@ def command(executable: str, *args: str) -> list[str]:
 
 
 def tool_path(path: Path, executable: str) -> str:
-    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires."""
+    """Translate a Windows path to the /mnt/<drive>/... form the WSL mmseqs binary requires.
+
+    中文：把 Windows 路径转换为 WSL mmseqs 二进制所需的 /mnt/<drive>/... 形式。
+    """
     if not executable.startswith("wsl:"):
         return str(path)
     resolved = path.resolve()
@@ -115,7 +141,10 @@ def tool_path(path: Path, executable: str) -> str:
 
 
 def checked(args: list[str]) -> str:
-    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit."""
+    """Run ``args`` and return its output, raising RuntimeError on a non-zero exit.
+
+    中文：运行 ``args`` 并返回其输出，退出码非零时抛出 RuntimeError。
+    """
     result = subprocess.run(args, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"Command failed: {' '.join(args)}\n{result.stderr}")
@@ -124,7 +153,10 @@ def checked(args: list[str]) -> str:
 
 def run_mmseqs(executable: str, threads: int) -> str:
     """Easy-search each family query against the frozen development reference; return the verified
-    mmseqs version."""
+    mmseqs version.
+
+    中文：把每个家族查询对冻结开发参考库做 easy-search；返回已校验的 mmseqs 版本。
+    """
     version = checked(command(executable, "version")).splitlines()[-1]
     if version != MMSEQS_VERSION:
         raise ValueError(f"MMseqs version {version!r} does not match frozen {MMSEQS_VERSION!r}")
@@ -150,7 +182,10 @@ def run_mmseqs(executable: str, threads: int) -> str:
 
 def prepare_queries() -> None:
     """Derive the exact BLC23O construct and mature-trypsin query FASTAs from the acquired raw
-    sequences."""
+    sequences.
+
+    中文：从已获取的原始序列推导出精确 BLC23O 构建体与成熟胰蛋白酶查询 FASTA。
+    """
     native_blc23o = fasta_sequence(RAW / "WP_017726464.1.fasta")
     exact_blc23o = BLC23O_PREFIX + native_blc23o[1:]
     write_fasta(
@@ -166,7 +201,10 @@ def prepare_queries() -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> None:
-    """Write ``rows`` to ``path`` as CSV with exactly ``fields`` as the header order."""
+    """Write ``rows`` to ``path`` as CSV with exactly ``fields`` as the header order.
+
+    中文：把 ``rows`` 写入 ``path`` 的 CSV，表头顺序严格取自 ``fields``。
+    """
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
@@ -175,7 +213,10 @@ def write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> N
 
 def write_outputs(version: str) -> None:
     """Write the exclusion CSVs plus construct/homology/saturation/provenance evidence, hash-bound
-    to the raw inputs."""
+    to the raw inputs.
+
+    中文：写出排除记录 CSV 及构建体/同源/饱和度/溯源证据文件，并与原始输入的哈希绑定。
+    """
     rows: list[dict[str, object]] = []
     definitions = [
         ("blc-hepes-76", "BLC23O", "HEPES", 7.6, 32.5, 0.54, 0.02, 0.45, 0.01, 3.0, "3-methylcatechol", 340, "OBLIGATE_O2_SATURATION_UNRESOLVED"),
@@ -276,7 +317,10 @@ def write_outputs(version: str) -> None:
 
 def validate_raw() -> None:
     """Fail closed unless every raw file exists and carries the expected article/sequence/compound
-    markers."""
+    markers.
+
+    中文：除非每个原始文件都存在且带有预期的文章/序列/化合物标记，否则 fail closed。
+    """
     missing = [name for name in URLS if not (RAW / name).is_file()]
     if missing:
         raise FileNotFoundError(f"Missing raw files: {missing}; run with --acquire")
@@ -317,7 +361,10 @@ def validate_raw() -> None:
 
 
 def main() -> int:
-    """Run the acquire/validate/homology/write pipeline; homology only reruns under --run-mmseqs."""
+    """Run the acquire/validate/homology/write pipeline; homology only reruns under --run-mmseqs.
+
+    中文：运行 acquire/validate/homology/write 流水线；同源比对仅在 --run-mmseqs 下重跑。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--acquire", action="store_true")
     parser.add_argument("--run-mmseqs", action="store_true")

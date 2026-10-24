@@ -19,6 +19,9 @@ Usage:
         --predecessor configs/software_implementation_release_v6.json \
         --release-id software-implementation-v7 \
         --note "Fixes the MMseqs2 subprocess decoding ..." --write
+
+中文：在当前工作树重冻软件实现发布：从前任清单重建下一版（同文件清单、
+重钉哈希、标注漂移、递增版本号），冻结范围不得悄悄扩大或缩小。
 """
 
 from __future__ import annotations
@@ -34,7 +37,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def binary_identity(path: Path) -> dict[str, Any]:
-    """Return the SHA-256 and byte size used to pin a frozen file."""
+    """Return the SHA-256 and byte size used to pin a frozen file.
+中文：返回钉住冻结文件的 SHA-256 与字节数。
+"""
     payload = path.read_bytes()
     return {
         "sha256": hashlib.sha256(payload).hexdigest(),
@@ -43,7 +48,9 @@ def binary_identity(path: Path) -> dict[str, Any]:
 
 
 def verify_against(manifest: dict[str, Any], root: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    """Return the drift entries and the paths missing from disk."""
+    """Return the drift entries and the paths missing from disk.
+中文：返回漂移条目与磁盘缺失路径。
+"""
     drift: list[dict[str, Any]] = []
     missing: list[str] = []
     for entry in manifest["frozen_files"]:
@@ -72,7 +79,9 @@ def rebuild(
     drift: list[dict[str, Any]],
     root: Path,
 ) -> dict[str, Any]:
-    """Build the next manifest: same file list, re-pinned hashes, drift annotated."""
+    """Build the next manifest: same file list, re-pinned hashes, drift annotated.
+中文：构建下一版清单：同清单、重钉哈希、漂移注释。
+"""
     changed = {entry["path"] for entry in drift}
     frozen_files = []
     for entry in predecessor["frozen_files"]:
